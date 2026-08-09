@@ -1,0 +1,42 @@
+---
+title: Deploy with Alchemy
+description: Alchemy owns provision and deploy; wrangler stays a local escape.
+---
+
+Alchemy v2 is the sole owner of provisioned Cloudflare resources, secret bindings, and production deploys. Entry points: `alchemy.run.ts` and `infra/*`.
+
+## Local full stack
+
+```bash
+pnpm dev:services
+pnpm alchemy:dev
+```
+
+Hyperdrive origin is Compose. PlanetScale is not created.
+
+## Cloud deploy
+
+```bash
+alchemy login
+export BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
+pnpm alchemy:deploy
+```
+
+Deploy provisions PlanetScale Postgres and Hyperdrive for the cloud origin. Optional `PLANETSCALE_REGION` defaults to `us-east`. Cluster size follows the template (`PS_DEV`, Postgres 18 to match Compose).
+
+## Wrangler escape
+
+```bash
+pnpm --filter @zstack/api dev
+```
+
+Use wrangler for local dry-runs. Do not grow a parallel Wrangler deploy path beside Alchemy.
+
+## Escape hatches (design, not scaffolded second paths)
+
+Alchemy can stay while you swap platform adapters (for example R2→S3 later). SST is the first TypeScript/Cloudflare IaC alternative if Alchemy beta risk becomes unacceptable. OpenTofu is the durable provider-oriented option. Application code talks to product ports, so migration changes adapters and resource declarations, not domain behavior.
+
+## Related
+
+- [Capabilities](/docs/concepts/capabilities)
+- [Local development](/docs/local-development)

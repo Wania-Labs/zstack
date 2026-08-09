@@ -1,19 +1,59 @@
 ---
 title: Getting started
-description: Scaffold a product or work in this repository.
+description: Scaffold a product with create-zstack and run the local stack.
 ---
 
-## Scaffold a consumer product
+You will scaffold a consumer product, start Compose Postgres, migrate, and open the customer app.
+
+## Scaffold
 
 ```bash
 pnpm create-zstack my-product
-# or from a clone of this repo:
-pnpm create-zstack my-product --template file:./
 ```
 
-`create-zstack` downloads the template with giget, strips authoring-only paths (this docs site, the architecture guide, the CLI itself), and installs with nypm.
+From a clone of this authoring repo you can point at the local tree:
 
-Default remote: `gh:Wania-Labs/zstack`.
+```bash
+pnpm create-zstack my-product --template file:./
+# or:
+ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force
+```
+
+`create-zstack` downloads the template with giget, strips authoring-only paths, and installs with nypm. Default remote: `gh:Wania-Labs/zstack`.
+
+## First run in the clone
+
+```bash
+cd my-product
+cp apps/api/.dev.vars.example apps/api/.dev.vars
+pnpm dev:services
+pnpm db:migrate && pnpm db:seed
+pnpm alchemy:dev
+```
+
+| Surface       | URL                   |
+| ------------- | --------------------- |
+| Customer app  | http://localhost:3000 |
+| Staff console | http://localhost:3001 |
+| API Worker    | http://localhost:8787 |
+
+Sign up on the customer app. Promote yourself to staff with:
+
+```bash
+STAFF_EMAIL=you@example.com pnpm db:seed
+```
+
+Then open the staff console.
+
+## Secrets for local smoke
+
+Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars`. Keep `BETTER_AUTH_URL=http://localhost:3000`. Generate `BETTER_AUTH_SECRET` with `openssl rand -base64 32` when Alchemy needs it in the process env.
+
+Optional vendors (Bento, Sentry, AI Gateway) stay off until you set their env vars. See [Capabilities](/docs/concepts/capabilities).
+
+## Prefer Alchemy for full stack
+
+`pnpm alchemy:dev` starts api, web, and admin together and points Hyperdrive at Compose. The wrangler + Vite dual-process path is an escape hatch. Details live in [Local development](/docs/local-development).
 
 ## Work on zstack itself
 
@@ -27,9 +67,7 @@ cp apps/api/.dev.vars.example apps/api/.dev.vars
 pnpm alchemy:dev
 ```
 
-Customer app: `http://localhost:3000` · Staff: `http://localhost:3001` · API: `http://localhost:8787`
-
-## These docs
+Docs for the authoring site:
 
 ```bash
 cd docs
@@ -37,4 +75,4 @@ pnpm install
 pnpm dev
 ```
 
-Docs run on `http://localhost:4000` and use a **separate** lockfile — not the product workspace.
+Docs run on http://localhost:4000 with a separate lockfile.

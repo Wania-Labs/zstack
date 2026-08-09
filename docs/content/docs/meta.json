@@ -1,14 +1,15 @@
 {
   "title": "zstack",
-  "description": "Opinionated TypeScript product starter",
+  "description": "Cloneable TypeScript product starter for Cloudflare-first SaaS.",
   "root": true,
   "pages": [
     "index",
     "getting-started",
     "local-development",
-    "architecture",
-    "ai",
-    "create-zstack",
+    "for-agents",
+    "concepts",
+    "guides",
+    "reference",
     "authoring"
   ]
 }

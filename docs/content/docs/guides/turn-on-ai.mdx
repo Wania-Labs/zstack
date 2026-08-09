@@ -1,0 +1,39 @@
+---
+title: Turn on AI
+description: Bind AI Gateway so capability IDs resolve to live models instead of fakes.
+---
+
+AI is `configured`. Product code asks for capability IDs such as `chat.fast`. Model strings live only in `apps/api/src/platform/ai/`.
+
+## Steps
+
+1. Create a Vercel AI Gateway key (or your gateway that `@ai-sdk/gateway` accepts).
+2. Set on the API Worker:
+
+```bash
+AI_GATEWAY_API_KEY=…
+```
+
+3. Restart `alchemy:dev` or redeploy.
+4. Call `ai.capabilities` (public) or `ai.complete` (signed-in) through oRPC.
+
+## What you should see
+
+Empty key → deterministic fake models, no spend. Key bound → gateway models from the capability registry.
+
+## Capability IDs today
+
+| ID                   | Role                  |
+| -------------------- | --------------------- |
+| `chat.fast`          | Low-latency chat      |
+| `chat.smart`         | Higher-quality chat   |
+| `extract.structured` | Structured extraction |
+
+## Evals
+
+`vitest-evals` runs in product CI with fake models. Live gateway evals are opt-in and never the default gate.
+
+## Related
+
+- [Swap AI provider](/docs/guides/swap-ai-provider)
+- [AI reference](/docs/reference/ai)

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# https://llmstxt.org/
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /docs/*.md

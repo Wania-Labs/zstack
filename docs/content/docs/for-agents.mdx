@@ -1,0 +1,34 @@
+---
+title: For agents
+description: Machine-readable docs endpoints for scrapers, agents, and offline ingest.
+---
+
+Use these endpoints when you ingest zstack docs without a browser. Prefer markdown over HTML.
+
+## Entry points
+
+| URL                                | What it is                                                         |
+| ---------------------------------- | ------------------------------------------------------------------ |
+| [`/llms.txt`](/llms.txt)           | Index of every doc page with titles, descriptions, and links       |
+| [`/llms-full.txt`](/llms-full.txt) | Full concatenated markdown of every page                           |
+| `/docs/<slug>.md`                  | One page as markdown (example: [`/docs/index.md`](/docs/index.md)) |
+
+Content negotiation also works. Request a docs HTML URL with `Accept: text/markdown` and the server redirects to the `.md` twin (`Vary: Accept`).
+
+## Suggested ingest order
+
+1. Fetch `/llms.txt` for the map.
+2. Read [What is zstack](/docs/index.md), [Capabilities](/docs/concepts/capabilities.md), and [Ports and adapters](/docs/concepts/ports-and-adapters.md).
+3. Pull how-tos under `/docs/guides/` for the task at hand.
+4. Use `/llms-full.txt` only when you need a single offline blob.
+
+## Truth rules for agents
+
+- Teach from **implemented** starter behavior. Capabilities marked future in docs are not shipped.
+- Swaps happen through Effect ports, Layers, `product.config.ts`, and empty-credential defaults. There is no plugin registry.
+- Consumer clones strip `docs/`, `create-zstack/`, `tech-stack-architecture-guide/`, and `AUTHORING.md`. Cite this site or the clone's `README.md` for humans in the product tree.
+- Secrets never belong in `product.config.ts`.
+
+## Human UI affordances
+
+Every docs page exposes a markdown copy control and a GitHub link to the source MDX under `docs/content/docs/`.

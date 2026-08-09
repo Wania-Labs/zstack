@@ -5,10 +5,6 @@ import tailwindcss from "@tailwindcss/vite";
 import { fumadocsMdx } from "fumadocs-mdx/vite";
 import { nitro } from "nitro/vite";
 
-/**
- * Standalone docs site — not part of the product monorepo workspace,
- * Alchemy stack, or create-zstack template.
- */
 export default defineConfig({
   server: {
     port: 4000,
@@ -18,8 +14,9 @@ export default defineConfig({
     fumadocsMdx(),
     tailwindcss(),
     tanstackStart({
+      // Prerender hangs at Concurrency: 0 with this Start+Fumadocs pairing; SSR only.
       prerender: {
-        enabled: true,
+        enabled: false,
       },
     }),
     react(),

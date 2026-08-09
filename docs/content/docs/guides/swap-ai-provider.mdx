@@ -1,0 +1,30 @@
+---
+title: Swap AI provider
+description: Keep capability IDs; change how resolveAiModel maps them to language models.
+---
+
+Goal: route `chat.fast` (and siblings) through a different provider without teaching React or oRPC about model strings.
+
+## Keep
+
+- Capability IDs in `@zstack/contracts` / `apps/api/src/platform/ai/capabilities.ts`
+- `AiService` and oRPC `ai.complete` / `ai.capabilities`
+- Feature code that asks for capabilities, not model names
+
+## Change
+
+1. Open `apps/api/src/platform/ai/registry.ts` and `capabilities.ts`.
+2. Keep `AI_CAPABILITY_POLICIES` as the product policy table.
+3. Change `resolveAiModel` so a live route builds your provider model instead of (or in addition to) `@ai-sdk/gateway`.
+4. Keep the empty-`AI_GATEWAY_API_KEY` path on fake models, or introduce a clear env gate for your provider.
+5. Update evals if they assume gateway-only live routing.
+
+## Checks
+
+- `listAiCapabilityPolicies()` still returns the same IDs.
+- With no live key, responses stay deterministic fakes.
+- With the key set, completions use your provider without imports leaking into `apps/web`.
+
+## Escape hatch from the design ledger
+
+Direct providers (Fireworks, Workers AI, and similar) are allowed as registry targets. The product still speaks capability IDs.

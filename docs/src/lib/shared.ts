@@ -6,7 +6,6 @@ export const gitConfig = {
   user: "Wania-Labs",
   repo: "zstack",
   branch: "main",
-  /** Content lives under the isolated docs/ tree, not apps/. */
   contentRoot: "docs/content/docs",
 };
 
@@ -21,7 +20,6 @@ export function encodeMarkdownUrl(slugs: string[], locale?: string) {
   return "/" + [locale, ...docsRoute.split("/"), ...segments].filter(Boolean).join("/");
 }
 
-/** @returns page slugs */
 export function decodeMarkdownUrl(segments: string[]) {
   if (segments.length === 0) return [];
 

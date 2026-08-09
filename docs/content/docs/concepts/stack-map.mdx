@@ -1,0 +1,59 @@
+---
+title: Stack map
+description: Apps, packages, request path, and what lives outside consumer clones.
+---
+
+## Request path
+
+```text
+Browser (web or admin)
+  → same-origin /api/*
+  → apps/api Hono Worker
+  → oRPC + Zod contracts  |  Better Auth
+  → Effect use cases
+  → ports (EmailService, AiService, Database, …)
+  ← adapters (console / Bento / fake / gateway / Drizzle)
+  ← Alchemy bindings (Hyperdrive, secrets, Workers)
+```
+
+Frontends import `@zstack/contracts` only. They do not import `apps/api` source.
+
+## Apps
+
+| Path         | Package         | Role                                                                                        |
+| ------------ | --------------- | ------------------------------------------------------------------------------------------- |
+| `apps/api`   | `@zstack/api`   | Hono Worker: auth, oRPC, Effect services, DB. Workflows and queues live here when selected. |
+| `apps/web`   | `@zstack/web`   | Customer TanStack Start shell                                                               |
+| `apps/admin` | `@zstack/admin` | Staff TanStack Start shell (`staff.me` gate)                                                |
+
+## Packages
+
+| Path                 | Package             | Role                               |
+| -------------------- | ------------------- | ---------------------------------- |
+| `packages/contracts` | `@zstack/contracts` | Zod + oRPC contracts (client-safe) |
+| `packages/email`     | `@zstack/email`     | React Email templates              |
+
+## Infrastructure
+
+Alchemy (`alchemy.run.ts` + `infra/*`) owns Cloudflare resources and deploy. `product.config.ts` declares capability intent. Never put secrets there.
+
+Local Postgres is Compose (`compose.yaml`). Deploy uses PlanetScale Postgres through Hyperdrive.
+
+## Inside the API
+
+| Area      | Path                     | Role                                                      |
+| --------- | ------------------------ | --------------------------------------------------------- |
+| HTTP edge | `apps/api/src/http/`     | Session, mount auth/oRPC/health                           |
+| Modules   | `apps/api/src/modules/`  | Product verticals (auth, ai, staff, health)               |
+| Platform  | `apps/api/src/platform/` | Ports and adapters (email, ai, db, observability, effect) |
+
+## Not in consumer clones
+
+| Path                             | Why                      |
+| -------------------------------- | ------------------------ |
+| `docs/`                          | This documentation site  |
+| `create-zstack/`                 | Scaffold CLI             |
+| `tech-stack-architecture-guide/` | Internal design ledger   |
+| `AUTHORING.md`                   | Maintainer wiring policy |
+
+See [create-zstack](/docs/reference/create-zstack) for the ignore list.

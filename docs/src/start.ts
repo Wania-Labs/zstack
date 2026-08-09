@@ -21,7 +21,6 @@ const llmMiddleware = createMiddleware().server(({ next, request }) => {
       .filter((v) => v.length > 0);
     url.pathname = encodeMarkdownUrl(slugs);
 
-    // this URL has two representations, selected by `Accept`
     throw redirect({ href: url.href, headers: { Vary: "Accept" } });
   }
 

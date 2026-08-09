@@ -1,0 +1,14 @@
+{
+  "title": "Guides",
+  "description": "Turn capabilities on and swap adapters.",
+  "pages": [
+    "turn-on-email",
+    "turn-on-ai",
+    "turn-on-observability",
+    "swap-email-transport",
+    "swap-ai-provider",
+    "deploy",
+    "staff-console"
+  ],
+  "defaultOpen": true
+}

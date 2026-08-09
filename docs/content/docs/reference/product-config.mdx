@@ -1,0 +1,31 @@
+---
+title: product.config.ts
+description: Capability intent file. No secrets. Alchemy and Layers should agree.
+---
+
+Path: `product.config.ts` at the monorepo root.
+
+## Shape today
+
+```ts
+export const product = {
+  name: "zstack",
+  capabilities: {
+    workflows: "absent",
+    queues: "absent",
+    email: "configured",
+    observability: "configured",
+    ai: "configured",
+    database: "planetscale",
+  },
+} as const;
+```
+
+## Rules
+
+- Secrets never live here.
+- `absent` means no Layer and no Alchemy resource for that capability.
+- `configured` means scaffolded code exists; empty credentials keep the safe default.
+- Database value names the deploy target (`planetscale`). Local dev still uses Compose under `alchemy:dev`.
+
+See [Capabilities](/docs/concepts/capabilities) for the human-facing state table.

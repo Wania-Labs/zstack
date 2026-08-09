@@ -1,0 +1,31 @@
+---
+title: Turn on email
+description: Keep React Email templates; send through Bento when credentials are bound.
+---
+
+Email is `configured` in `product.config.ts`. Templates and `EmailService` always exist. Transport is console until Bento credentials are set.
+
+## Steps
+
+1. Create a Bento site and API keys.
+2. Set in the API Worker env (`.dev.vars` locally, Alchemy secrets on deploy):
+
+```bash
+EMAIL_FROM=noreply@your-domain.com
+BENTO_SITE_UUID=…
+BENTO_PUBLISHABLE_KEY=…
+BENTO_SECRET_KEY=…
+```
+
+3. Restart `alchemy:dev` or redeploy so the Worker sees the env.
+4. Trigger a verification or password-reset email from the customer app.
+
+## What you should see
+
+With credentials bound, mail leaves through Bento. Without them, the console adapter logs the rendered message and spends nothing.
+
+## Related
+
+- [Swap email transport](/docs/guides/swap-email-transport) if Bento is the wrong vendor
+- Templates live in `packages/email`
+- Service and Layers live in `apps/api/src/platform/email/email-service.ts`

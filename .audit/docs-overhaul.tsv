@@ -1,0 +1,7 @@
+ts	phase	decision	why	evidence	result
+2026-08-09T22:17:00Z	frame	locked Diataxis IA with agent scrape surfaces as a done predicate	user greenlit teaching docs plus agent friendly ingest	phase-a framing; explore e9d4b8d1	open
+2026-08-09T22:18:00Z	harness	added docs/scripts/check-docs-completeness.mjs and local decision log	build the lever so page inventory is checkable	docs/scripts/check-docs-completeness.mjs	script written
+2026-08-09T22:25:00Z	ia	Diataxis folders Concepts Guides Reference plus for-agents	experience first teaching path without porting 27 guide chapters	docs/content/docs/meta.json	VERIFIED
+2026-08-09T22:26:00Z	agent-surfaces	preface on llms.txt, richer getLLMText, robots.txt, for-agents page	user asked for scrape friendly ingest on top of existing fumadocs routes	curl localhost:4000/llms.txt for-agents.md	VERIFIED
+2026-08-09T22:27:00Z	build	disabled tanstack prerender after hang at Concurrency 0	prove it works against real build; SSR path still serves pages	docs/vite.config.ts pnpm build exit 0	VERIFIED
+2026-08-09T22:28:00Z	harness	check:docs in package.json and docs CI workflow	encode lessons in structure so thin pages fail CI	.github/workflows/docs.yml	VERIFIED

@@ -8,16 +8,16 @@ export const Route = createFileRoute("/")({
 
 const pillars = [
   {
-    title: "Cloudflare-first",
-    body: "Hono API Worker, Hyperdrive, and Alchemy-owned deploys — Wrangler stays local-only.",
+    title: "Clone a product shape",
+    body: "Three apps, thin contracts, one Effect-backed Worker. Not a framework you drop into an existing repo.",
   },
   {
-    title: "Effect + Zod",
-    body: "Domain work in Effect; Zod at boundaries; Drizzle 1.0 RC for SQL.",
+    title: "Swap with ports",
+    body: "Domain code calls EmailService and AiService. Layers and secrets pick console, fake, or live vendors.",
   },
   {
-    title: "Ready to wire",
-    body: "Optional vendors scaffold off until a clone binds secrets. Compose Postgres for day one.",
+    title: "Agent-ready docs",
+    body: "llms.txt, llms-full.txt, and per-page .md endpoints so scrapers get markdown first.",
   },
 ] as const;
 
@@ -32,11 +32,11 @@ function Home() {
               zstack
             </p>
             <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-              Product starter docs
+              Teach the starter. Ship the swap.
             </h1>
             <p className="max-w-xl text-lg text-fd-muted-foreground text-pretty">
-              Opinionated TypeScript stack for shipping on Cloudflare — Alchemy, Effect, TanStack
-              Start, and vendors that stay quiet until you turn them on.
+              Opinionated TypeScript product starter for Cloudflare. Scaffold with create-zstack,
+              run on Compose, turn vendors on when you bind secrets.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <Link
@@ -44,15 +44,20 @@ function Home() {
                 params={{ _splat: "" }}
                 className="rounded-md bg-fd-primary px-4 py-2.5 text-sm font-medium text-fd-primary-foreground transition-opacity hover:opacity-90"
               >
-                Read the docs
+                Get started
+              </Link>
+              <Link
+                to="/docs/$"
+                params={{ _splat: "for-agents" }}
+                className="rounded-md border border-fd-border bg-fd-background px-4 py-2.5 text-sm font-medium text-fd-foreground transition-colors hover:bg-fd-muted"
+              >
+                For agents
               </Link>
               <a
-                href="https://github.com/Wania-Labs/zstack"
+                href="/llms.txt"
                 className="rounded-md border border-fd-border bg-fd-background px-4 py-2.5 text-sm font-medium text-fd-foreground transition-colors hover:bg-fd-muted"
-                rel="noreferrer"
-                target="_blank"
               >
-                GitHub
+                llms.txt
               </a>
             </div>
           </div>

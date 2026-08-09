@@ -1,0 +1,29 @@
+---
+title: Swap email transport
+description: Keep EmailService; replace the Bento Layer with another provider adapter.
+---
+
+Goal: change how mail is delivered without rewriting auth or invitation call sites.
+
+## Keep
+
+- `EmailService` methods (`sendVerificationEmail`, `sendPasswordResetEmail`, `sendInvitationEmail`)
+- React Email templates in `packages/email`
+- Call sites that depend on the port
+
+## Change
+
+1. Open `apps/api/src/platform/email/email-service.ts`.
+2. Study `ConsoleEmailLive` and `BentoEmailLive` as the adapter pattern.
+3. Implement a new Layer that delivers `EmailMessage` through your provider (Resend, Postmark, Cloudflare Email Routing, and so on).
+4. Teach `emailLiveFromEnv` (or the edge equivalent) to select your Layer when your env vars are present.
+5. Leave Bento selection behind your own credentials check, or remove it if the clone will never use Bento.
+6. Update [Capabilities](/docs/concepts/capabilities) notes in your clone's README if the default vendor story changes.
+
+## Checks
+
+- Empty credentials still take the console path (or your explicit local adapter).
+- A verification email still renders the same template subject and body.
+- Domain modules still import `EmailService`, not the provider SDK.
+
+That is the whole swap. Ports stay; Layers move.

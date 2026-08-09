@@ -1,0 +1,34 @@
+---
+title: create-zstack
+description: Scaffold consumer products from the GitHub template.
+---
+
+Authoring-only CLI: citty + giget + nypm. Not present in consumer clones.
+
+## Commands
+
+```bash
+pnpm create-zstack my-app
+pnpm create-zstack my-app --template file:$(pwd) --force
+pnpm create-zstack my-app --no-install
+```
+
+Environment override: `ZSTACK_TEMPLATE`. Default remote: `gh:Wania-Labs/zstack`.
+
+## Ignored from clones
+
+```text
+tech-stack-architecture-guide/**
+AUTHORING.md
+.cursor/**
+create-zstack/**
+docs/**
+```
+
+Keep `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`) and `AUTHORING.md` in sync when you add authoring-only paths.
+
+## Local smoke
+
+```bash
+ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force
+```

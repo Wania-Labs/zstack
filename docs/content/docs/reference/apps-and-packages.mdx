@@ -1,0 +1,35 @@
+---
+title: Apps and packages
+description: Paths, package names, and ownership for the product monorepo.
+---
+
+## Apps
+
+| Path         | Package         | Role                                     |
+| ------------ | --------------- | ---------------------------------------- |
+| `apps/api`   | `@zstack/api`   | Hono Worker: auth, oRPC, Effect, Drizzle |
+| `apps/web`   | `@zstack/web`   | Customer TanStack Start                  |
+| `apps/admin` | `@zstack/admin` | Staff TanStack Start                     |
+
+## Packages
+
+| Path                         | Package                     | Role                  |
+| ---------------------------- | --------------------------- | --------------------- |
+| `packages/contracts`         | `@zstack/contracts`         | Zod + oRPC contracts  |
+| `packages/email`             | `@zstack/email`             | React Email templates |
+| `packages/typescript-config` | `@zstack/typescript-config` | Shared TS config      |
+
+## Root toolchain
+
+| Path                  | Role                                                       |
+| --------------------- | ---------------------------------------------------------- |
+| `pnpm-workspace.yaml` | Workspace members: `apps/*`, `packages/*`, `create-zstack` |
+| `turbo.json`          | Product tasks (docs are not included)                      |
+| `alchemy.run.ts`      | Alchemy stack entry                                        |
+| `infra/`              | api / web / admin / database resources                     |
+| `product.config.ts`   | Capability intent                                          |
+| `compose.yaml`        | Local Postgres 18                                          |
+
+## Authoring-only (stripped from clones)
+
+`docs/`, `create-zstack/`, `tech-stack-architecture-guide/`, `AUTHORING.md`, `.cursor/`.

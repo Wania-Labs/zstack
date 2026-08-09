@@ -1,0 +1,28 @@
+---
+title: Turn on observability
+description: Bind Sentry DSNs so the scaffolded SDK and drain actually report.
+---
+
+Observability is `configured`. Sentry and evlog are wired. Empty DSNs keep SDKs and the Sentry drain off.
+
+## Steps
+
+1. Create Sentry projects for the API Worker and the web/admin apps as needed.
+2. Set:
+
+```bash
+SENTRY_DSN=…
+VITE_SENTRY_DSN=…          # customer app, if used
+VITE_SENTRY_DSN_ADMIN=…    # staff app, if used
+```
+
+Exact Vite names follow the template's `.env` / Alchemy bindings. Prefer empty defaults over dummy projects.
+
+3. Restart or redeploy.
+4. Trigger an error or a traced request and confirm it in Sentry.
+
+## What you should see
+
+Without DSNs, reporting stays quiet. With DSNs, errors and traces reach your Sentry projects.
+
+Product analytics (PostHog) is not started in the tree yet. Do not treat guide chapters about it as shipped.

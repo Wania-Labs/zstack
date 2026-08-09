@@ -13,6 +13,10 @@ export function baseOptions(): BaseLayoutProps {
     },
     links: [
       {
+        text: "llms.txt",
+        url: "/llms.txt",
+      },
+      {
         text: "GitHub",
         url: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
         external: true,
