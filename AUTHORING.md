@@ -127,6 +127,8 @@ Docs gate: `.github/workflows/docs.yml` — install/typecheck/lint/format/build 
 cd docs && pnpm install && pnpm dev   # :4000
 ```
 
+Product `pnpm lint` uses `--disable-nested-config` so the isolated `docs/.oxlintrc.json` / `docs/tsconfig.json` are never loaded (they require docs' own `node_modules`, which product CI does not install).
+
 ## Testing and evals
 
 - **Unit:** Vitest (node) in `apps/api` — `pnpm --filter @zstack/api test:unit`

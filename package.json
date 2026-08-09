@@ -16,7 +16,7 @@
     "alchemy:dev": "alchemy dev",
     "alchemy:deploy": "alchemy deploy",
     "alchemy:destroy": "alchemy destroy",
-    "lint": "oxlint --no-error-on-unmatched-pattern .",
+    "lint": "oxlint --no-error-on-unmatched-pattern --disable-nested-config .",
     "typecheck": "turbo run typecheck && tsc --noEmit -p tsconfig.alchemy.json",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
