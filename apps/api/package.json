@@ -26,6 +26,7 @@
     "@orpc/server": "1.15.0",
     "@sentry/cloudflare": "10.69.0",
     "@sentry/hono": "10.69.0",
+    "@zstack/auth-access": "workspace:*",
     "@zstack/contracts": "workspace:*",
     "@zstack/email": "workspace:*",
     "ai": "^7.0.58",

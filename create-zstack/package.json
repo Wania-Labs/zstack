@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "tsx src/cli.ts",
     "start": "tsx src/cli.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test src/prepare-consumer.test.ts"
   },
   "dependencies": {
     "citty": "^0.2.2",

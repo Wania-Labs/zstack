@@ -1,0 +1,21 @@
+{
+  "name": "@zstack/auth-access",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./admin-roles": "./src/admin-roles.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@zstack/contracts": "workspace:*",
+    "better-auth": "1.6.26"
+  },
+  "devDependencies": {
+    "@zstack/typescript-config": "workspace:*",
+    "typescript": "7.0.2"
+  }
+}

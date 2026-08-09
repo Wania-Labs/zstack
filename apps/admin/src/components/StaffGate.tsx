@@ -12,21 +12,39 @@ type StaffGateProps = {
   children: ReactNode;
 };
 
-/**
- * Console chrome and private routes render only after `staff.me` succeeds.
- * Session presence is enforced in `_console` beforeLoad.
- */
 export function StaffGate({ children }: StaffGateProps) {
   const session = authClient.useSession();
   const email = session.data?.user.email;
+  const hasUser = Boolean(session.data?.user);
 
   const staffQuery = useQuery({
     ...orpc.staff.me.queryOptions(),
-    enabled: Boolean(session.data?.user),
+    enabled: hasUser,
     retry: false,
   });
 
-  if (session.isPending || staffQuery.isPending) {
+  if (session.isPending) {
+    return (
+      <div className="flex min-h-svh items-center justify-center gap-2 text-sm text-muted-foreground">
+        <Spinner />
+        Checking staff access…
+      </div>
+    );
+  }
+
+  if (!hasUser) {
+    return (
+      <div className="mx-auto flex min-h-svh w-full max-w-lg flex-col justify-center gap-4 px-4">
+        <Alert variant="destructive">
+          <AlertTitle>Signed out</AlertTitle>
+          <AlertDescription>Sign in again to open the staff console.</AlertDescription>
+        </Alert>
+        <SignOutButton />
+      </div>
+    );
+  }
+
+  if (staffQuery.isPending) {
     return (
       <div className="flex min-h-svh items-center justify-center gap-2 text-sm text-muted-foreground">
         <Spinner />

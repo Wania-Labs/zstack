@@ -9,7 +9,6 @@ export const StaffRole = z.enum(["admin", "support", "operations", "owner"]);
 
 export type StaffRole = z.infer<typeof StaffRole>;
 
-/** Better Auth `admin.setRole` values: staff roles plus `user` to clear staff. */
 export const AssignableUserRole = z.enum([
   "user",
   StaffRole.enum.admin,

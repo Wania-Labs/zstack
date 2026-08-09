@@ -4,7 +4,7 @@ import { installDependencies } from "nypm";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { prepareConsumerClone } from "./prepare-consumer.js";
+import { stripAuthoringManifest } from "./prepare-consumer.js";
 
 /**
  * Paths that belong to zstack authoring — never ship into consumer clones.
@@ -77,7 +77,7 @@ const main = defineCommand({
     });
 
     console.log(`Template ready at ${result.dir}`);
-    await prepareConsumerClone(result.dir);
+    await stripAuthoringManifest(result.dir);
 
     if (args.install) {
       console.log("Installing dependencies…");

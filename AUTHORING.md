@@ -19,7 +19,7 @@ agent-transcripts/**
 
 Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template). The ignore list is encoded in `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`) — keep both in sync.
 
-After download, `create-zstack/src/prepare-consumer.ts` rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and root script, and remove `.github/workflows/docs.yml`.
+After download, `create-zstack/src/prepare-consumer.ts` (`stripAuthoringManifest`) rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and root script, remove `.github/workflows/docs.yml`, and scrub authoring-only README lines.
 
 ## What consumers get
 

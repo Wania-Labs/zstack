@@ -1,9 +1,9 @@
+import { betterAuthAdminRoleNames, betterAuthAdminRoles } from "@zstack/auth-access/admin-roles";
 import type { BetterAuthOptions } from "better-auth";
 import { admin, organization } from "better-auth/plugins";
 import { Effect, type Layer } from "effect";
 
 import { ConsoleEmailLive, EmailService, runEmailEffect } from "../../platform/email/email-service";
-import { betterAuthAdminRoleNames, betterAuthAdminRoles } from "./admin-roles";
 
 export type BetterAuthOptionsInput = {
   baseURL: string;

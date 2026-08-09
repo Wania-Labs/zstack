@@ -1,9 +1,6 @@
 import { adminAc, defaultAc, userAc } from "better-auth/plugins/admin/access";
 import { StaffRole } from "@zstack/contracts/staff";
 
-/**
- * Better Auth Admin access for staff who can look up users but not change roles.
- */
 const staffReaderAc = defaultAc.newRole({
   user: ["list", "get"],
   session: [],

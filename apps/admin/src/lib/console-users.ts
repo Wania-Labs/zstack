@@ -87,10 +87,9 @@ export function parseListUsersResponse(value: unknown): ListUsersResponse {
   const users: ConsoleUser[] = [];
   for (const entry of value.users) {
     const user = parseConsoleUser(entry);
-    if (!user) {
-      throw new Error("Invalid user row in list users response");
+    if (user) {
+      users.push(user);
     }
-    users.push(user);
   }
 
   return { users, total: value.total };
