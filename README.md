@@ -7,7 +7,7 @@ Opinionated TypeScript product starter: pnpm, Turborepo, Cloudflare-first backen
 - pnpm + Turborepo + TypeScript 7 + Oxlint/Oxfmt
 - `apps/api` Hono + Effect + Zod + Drizzle 1.0 RC + Better Auth + oRPC
 - `apps/web` TanStack Start + shadcn (Base UI / nova) + TanStack Query
-- `@zstack/email` React Email templates + console EmailService (Bento later)
+- `@zstack/email` React Email + EmailService (console default, Bento when secrets set)
 - Alchemy v2 (`alchemy@2.0.0-beta.70`) owns deploy / Hyperdrive / secrets
 
 Workflows and queues (when selected) live **inside** `apps/api` — same Hono Worker, not separate apps.

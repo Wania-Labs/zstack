@@ -1,18 +1,25 @@
 import type { BetterAuthOptions } from "better-auth";
 import { admin, organization } from "better-auth/plugins";
-import { Effect } from "effect";
+import { Effect, type Layer } from "effect";
 
-import { EmailService, runEmailEffect } from "../../platform/email/email-service";
+import {
+  ConsoleEmailLive,
+  EmailService,
+  runEmailEffect,
+} from "../../platform/email/email-service";
 
 export type BetterAuthOptionsInput = {
   baseURL: string;
+  emailLive?: Layer.Layer<EmailService>;
 };
 
 /**
  * Shared Better Auth options. Database/baseURL/secret are supplied per runtime.
- * Transactional mail goes through EmailService (console locally; Bento later).
+ * Transactional mail goes through EmailService (console or Bento).
  */
 export function createBetterAuthOptions(input: BetterAuthOptionsInput) {
+  const emailLive = input.emailLive ?? ConsoleEmailLive;
+
   return {
     emailAndPassword: {
       enabled: true,
@@ -27,6 +34,7 @@ export function createBetterAuthOptions(input: BetterAuthOptionsInput) {
               url,
             });
           }),
+          emailLive,
         );
       },
     },
@@ -41,6 +49,7 @@ export function createBetterAuthOptions(input: BetterAuthOptionsInput) {
               url,
             });
           }),
+          emailLive,
         );
       },
     },
@@ -58,6 +67,7 @@ export function createBetterAuthOptions(input: BetterAuthOptionsInput) {
                 url: `${input.baseURL}/accept-invitation/${data.id}`,
               });
             }),
+            emailLive,
           );
         },
       }),

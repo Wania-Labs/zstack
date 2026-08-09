@@ -57,7 +57,11 @@ Interactive `shadcn init` prompts are flaky under TanStack Start; `components.js
 
 ## Email
 
-`@zstack/email` owns React Email templates. `EmailService` in `apps/api` is the Effect boundary; local transport logs to the Worker console. Bento lands with Alchemy secrets. Preview templates with `pnpm email:dev`.
+`@zstack/email` owns React Email templates. `EmailService` in `apps/api` is the Effect boundary.
+
+- Default transport: console (`[email:console]`).
+- Bento: set `EMAIL_FROM`, `BENTO_SITE_UUID`, `BENTO_PUBLISHABLE_KEY`, and `BENTO_SECRET_KEY` (wrangler `.dev.vars` or Alchemy stage env). Sends use `POST /api/v1/batch/emails` with `transactional: true`.
+- Preview templates with `pnpm email:dev`.
 
 ## Drizzle 1.0 RC
 

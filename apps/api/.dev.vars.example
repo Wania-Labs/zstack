@@ -1,2 +1,8 @@
 BETTER_AUTH_URL=http://localhost:3000
 BETTER_AUTH_SECRET=replace-me-run-openssl-rand-or-auth-secret
+
+# Optional Bento transport (omit → console EmailService)
+# EMAIL_FROM=noreply@your-verified-domain.com
+# BENTO_SITE_UUID=
+# BENTO_PUBLISHABLE_KEY=
+# BENTO_SECRET_KEY=

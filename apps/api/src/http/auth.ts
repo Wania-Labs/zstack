@@ -7,12 +7,28 @@ import type { ApiBindings } from "../platform/cloudflare/bindings";
 import { schema } from "../platform/db/schema";
 import type { ApiVariables, RequestContext } from "./context";
 
-function requireAuthEnv(env: ApiBindings): { BETTER_AUTH_URL: string; BETTER_AUTH_SECRET: string } {
+function requireAuthEnv(env: ApiBindings): {
+  BETTER_AUTH_URL: string;
+  BETTER_AUTH_SECRET: string;
+  EMAIL_FROM?: string;
+  BENTO_SITE_UUID?: string;
+  BENTO_PUBLISHABLE_KEY?: string;
+  BENTO_SECRET_KEY?: string;
+} {
   const { BETTER_AUTH_URL, BETTER_AUTH_SECRET } = env;
   if (!BETTER_AUTH_URL || !BETTER_AUTH_SECRET) {
     throw new Error("BETTER_AUTH_URL and BETTER_AUTH_SECRET are required");
   }
-  return { BETTER_AUTH_URL, BETTER_AUTH_SECRET };
+  return {
+    BETTER_AUTH_URL,
+    BETTER_AUTH_SECRET,
+    ...(env.EMAIL_FROM ? { EMAIL_FROM: env.EMAIL_FROM } : {}),
+    ...(env.BENTO_SITE_UUID ? { BENTO_SITE_UUID: env.BENTO_SITE_UUID } : {}),
+    ...(env.BENTO_PUBLISHABLE_KEY
+      ? { BENTO_PUBLISHABLE_KEY: env.BENTO_PUBLISHABLE_KEY }
+      : {}),
+    ...(env.BENTO_SECRET_KEY ? { BENTO_SECRET_KEY: env.BENTO_SECRET_KEY } : {}),
+  };
 }
 
 function createAuthDb(client: Client) {
