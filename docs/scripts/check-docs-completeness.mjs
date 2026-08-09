@@ -3,16 +3,19 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const ROOT = join(import.meta.dirname, "..", "content", "docs");
-const MIN_BYTES = 400;
+const MIN_BYTES = 700;
+const INDEX_MIN_BYTES = 250;
 
 const REQUIRED = [
   "index",
   "getting-started",
   "local-development",
   "for-agents",
+  "concepts/index",
   "concepts/stack-map",
   "concepts/capabilities",
   "concepts/ports-and-adapters",
+  "guides/index",
   "guides/turn-on-email",
   "guides/turn-on-ai",
   "guides/turn-on-observability",
@@ -20,6 +23,7 @@ const REQUIRED = [
   "guides/swap-ai-provider",
   "guides/deploy",
   "guides/staff-console",
+  "reference/index",
   "reference/apps-and-packages",
   "reference/create-zstack",
   "reference/product-config",
@@ -34,6 +38,8 @@ const MUST_MENTION = {
   "for-agents": ["llms.txt", "llms-full.txt", ".md"],
   "guides/swap-email-transport": ["EmailService", "Bento"],
   "guides/swap-ai-provider": ["capability", "AI_GATEWAY"],
+  "guides/turn-on-observability": ["VITE_SENTRY_DSN_WEB", "VITE_SENTRY_DSN_ADMIN"],
+  "reference/create-zstack": [".audit/**", "agent-transcripts/**"],
 };
 
 function collectMdx(dir, acc = []) {
@@ -62,8 +68,9 @@ for (const id of REQUIRED) {
     continue;
   }
   const bytes = Buffer.byteLength(body, "utf8");
-  if (bytes < MIN_BYTES) {
-    errors.push(`thin page (${bytes}B < ${MIN_BYTES}B): ${id}.mdx`);
+  const min = id.endsWith("/index") || id === "index" ? INDEX_MIN_BYTES : MIN_BYTES;
+  if (bytes < min) {
+    errors.push(`thin page (${bytes}B < ${min}B): ${id}.mdx`);
   }
   const needles = MUST_MENTION[id];
   if (needles) {

@@ -8,15 +8,15 @@ Observability is `configured`. Sentry and evlog are wired. Empty DSNs keep SDKs 
 ## Steps
 
 1. Create Sentry projects for the API Worker and the web/admin apps as needed.
-2. Set:
+2. Set Alchemy-facing secrets (see `.env.example`):
 
 ```bash
 SENTRY_DSN=…
-VITE_SENTRY_DSN=…          # customer app, if used
-VITE_SENTRY_DSN_ADMIN=…    # staff app, if used
+VITE_SENTRY_DSN_WEB=…      # Alchemy → apps/web VITE_SENTRY_DSN
+VITE_SENTRY_DSN_ADMIN=…    # Alchemy → apps/admin VITE_SENTRY_DSN
 ```
 
-Exact Vite names follow the template's `.env` / Alchemy bindings. Prefer empty defaults over dummy projects.
+For the wrangler + Vite escape hatch, set `VITE_SENTRY_DSN` in each app's Vite env instead. Prefer empty defaults over dummy projects.
 
 3. Restart or redeploy.
 4. Trigger an error or a traced request and confirm it in Sentry.

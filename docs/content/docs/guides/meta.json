@@ -2,6 +2,7 @@
   "title": "Guides",
   "description": "Turn capabilities on and swap adapters.",
   "pages": [
+    "index",
     "turn-on-email",
     "turn-on-ai",
     "turn-on-observability",

@@ -20,12 +20,14 @@ cd docs && pnpm install && pnpm dev    # :4000
 
 ## CI
 
-| Workflow                     | Scope                                                   |
-| ---------------------------- | ------------------------------------------------------- |
-| `.github/workflows/ci.yml`   | Product monorepo — ignores `docs/**`                    |
-| `.github/workflows/docs.yml` | Docs only — install/typecheck/lint/build inside `docs/` |
+| Workflow                     | Scope                                                                            |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| `.github/workflows/ci.yml`   | Product monorepo — ignores `docs/**`                                             |
+| `.github/workflows/docs.yml` | Docs only — install, `check:docs`, typecheck, lint, format, build inside `docs/` |
 
 Never fold docs typecheck or install into the product CI job.
+
+When you add or rename a teaching page, update `REQUIRED` in `docs/scripts/check-docs-completeness.mjs` or CI fails.
 
 ## Template wiring policy
 
