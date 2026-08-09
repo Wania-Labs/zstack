@@ -6,7 +6,7 @@ import { test } from "node:test";
 
 import { stripAuthoringManifest } from "./prepare-consumer.js";
 
-test("stripAuthoringManifest removes create-zstack workspace, script, and docs workflow", async () => {
+void test("stripAuthoringManifest removes create-zstack workspace, script, and docs workflow", async () => {
   const root = await mkdtemp(join(tmpdir(), "zstack-strip-"));
   try {
     await writeFile(
