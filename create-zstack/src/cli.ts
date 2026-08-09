@@ -17,7 +17,7 @@ export const CONSUMER_IGNORE = [
 ] as const;
 
 /** Override with ZSTACK_TEMPLATE (e.g. `file:../zstack` or `gh:org/zstack`). */
-const DEFAULT_TEMPLATE = process.env.ZSTACK_TEMPLATE?.trim() || "gh:wanialabs/zstack";
+const DEFAULT_TEMPLATE = process.env.ZSTACK_TEMPLATE?.trim() || "gh:Wania-Labs/zstack";
 
 const main = defineCommand({
   meta: {

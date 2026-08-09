@@ -34,7 +34,7 @@ Local smoke against this tree:
 ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force
 ```
 
-Default remote template: `gh:wanialabs/zstack` (override with `--template` or `ZSTACK_TEMPLATE`).
+Default remote template: `gh:Wania-Labs/zstack` (override with `--template` or `ZSTACK_TEMPLATE`).
 
 ## Notes from scaffolding
 
