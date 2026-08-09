@@ -60,11 +60,8 @@ export function StaffGate({ children }: StaffGateProps) {
           <AlertTitle>Not staff</AlertTitle>
           <AlertDescription>
             Signed in as {email ?? "unknown"}, but this account has no staff role. Bootstrap the
-            first admin with{" "}
-            <code>
-              STAFF_EMAIL={email ?? "you@example.com"} pnpm db:seed
-            </code>
-            , then promote others from Users.
+            first admin with <code>STAFF_EMAIL={email ?? "you@example.com"} pnpm db:seed</code>,
+            then promote others from Users.
           </AlertDescription>
         </Alert>
         <SignOutButton />

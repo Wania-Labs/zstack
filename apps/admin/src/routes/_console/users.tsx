@@ -157,9 +157,7 @@ function UsersPage() {
       {usersQuery.isError ? (
         <Field data-invalid>
           <FieldError>
-            {usersQuery.error instanceof Error
-              ? usersQuery.error.message
-              : "Failed to load users"}
+            {usersQuery.error instanceof Error ? usersQuery.error.message : "Failed to load users"}
           </FieldError>
         </Field>
       ) : null}

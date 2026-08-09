@@ -184,9 +184,7 @@ function TeamMembersPage() {
           <Alert variant="destructive">
             <AlertTitle>Could not load members</AlertTitle>
             <AlertDescription>
-              {membersQuery.error instanceof Error
-                ? membersQuery.error.message
-                : "Unknown error"}
+              {membersQuery.error instanceof Error ? membersQuery.error.message : "Unknown error"}
             </AlertDescription>
           </Alert>
         ) : null}

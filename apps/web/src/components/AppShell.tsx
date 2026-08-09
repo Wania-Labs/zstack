@@ -69,10 +69,7 @@ export default function AppShell({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     render={
-                      <Link
-                        to="/t/$organizationSlug/members"
-                        params={{ organizationSlug }}
-                      />
+                      <Link to="/t/$organizationSlug/members" params={{ organizationSlug }} />
                     }
                     tooltip="Members"
                   >

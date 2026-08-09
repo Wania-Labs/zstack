@@ -27,7 +27,10 @@ export async function stripAuthoringManifest(root: string): Promise<void> {
   try {
     let readme = await readFile(readmePath, "utf8");
     readme = readme
-      .replace(/^- `create-zstack` authoring CLI \(citty \+ giget \+ nypm; excluded from clones\)\n/m, "")
+      .replace(
+        /^- `create-zstack` authoring CLI \(citty \+ giget \+ nypm; excluded from clones\)\n/m,
+        "",
+      )
       .replace(
         /Product PRs run `\.github\/workflows\/ci\.yml` \(ignores `docs\/\*\*`\)\. Docs changes run `\.github\/workflows\/docs\.yml` against the standalone `docs\/` lockfile\./,
         "Product PRs run `.github/workflows/ci.yml`.",
@@ -35,7 +38,10 @@ export async function stripAuthoringManifest(root: string): Promise<void> {
       .replace(/\npnpm create-zstack my-app\n/g, "\n")
       .replace(/\ncd docs && pnpm install && pnpm dev {3}# authoring docs :4000\n/g, "\n")
       .replace(/\ncreate-zstack\/ {13}# authoring-only scaffold CLI \(not in clones\)\n/g, "\n")
-      .replace(/\ndocs\/ {22}# authoring-only docs site \(own lockfile\/CI; not in clones\)\n/g, "\n")
+      .replace(
+        /\ndocs\/ {22}# authoring-only docs site \(own lockfile\/CI; not in clones\)\n/g,
+        "\n",
+      )
       .replace(/\nSee \[AUTHORING\.md\]\(AUTHORING\.md\)\.\n/g, "\n");
     await writeFile(readmePath, readme);
   } catch {
