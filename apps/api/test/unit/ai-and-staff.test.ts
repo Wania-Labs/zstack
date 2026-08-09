@@ -16,6 +16,19 @@ describe("staffCapabilitiesForRole", () => {
     expect(caps.has("staff.console")).toBe(true);
   });
 
+  it("maps support, operations, and owner", () => {
+    for (const role of ["support", "operations", "owner"] as const) {
+      const caps = staffCapabilitiesForRole(role);
+      expect(isStaff(caps)).toBe(true);
+      expect(caps.has("staff.console")).toBe(true);
+    }
+  });
+
+  it("unions comma-separated staff roles", () => {
+    const caps = staffCapabilitiesForRole("support,operations");
+    expect(isStaff(caps)).toBe(true);
+  });
+
   it("returns empty for customers", () => {
     expect(isStaff(staffCapabilitiesForRole("user"))).toBe(false);
     expect(isStaff(staffCapabilitiesForRole(undefined))).toBe(false);
