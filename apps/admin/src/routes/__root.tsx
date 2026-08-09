@@ -2,7 +2,6 @@ import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-r
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 
-import Header from "../components/Header";
 import { createQueryClient } from "../lib/query-client";
 import appCss from "../styles.css?url";
 
@@ -26,7 +25,6 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Header />
       <Outlet />
     </QueryClientProvider>
   );
