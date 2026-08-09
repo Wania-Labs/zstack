@@ -1,6 +1,6 @@
 ---
 title: Local development
-description: Compose Postgres, Alchemy dev, and dual-process escapes.
+description: Compose Postgres, Alchemy dev, wrangler escape, and optional vendors.
 ---
 
 ## Preferred path
@@ -12,7 +12,16 @@ pnpm alchemy:dev           # api :8787 + web :3000 + admin :3001
 
 Under `ALCHEMY_DEV`, Hyperdrive points at Compose. PlanetScale is **not** created for local smoke.
 
+Migrations and seeds use drizzle-kit against `DATABASE_URL` from Compose:
+
+```bash
+pnpm db:migrate
+pnpm db:seed
+```
+
 ## Wrangler escape hatch
+
+When you need processes apart from Alchemy:
 
 ```bash
 pnpm --filter @zstack/api dev
@@ -20,7 +29,18 @@ pnpm --filter @zstack/web dev
 pnpm --filter @zstack/admin dev
 ```
 
-Vite proxies `/api` to the API Worker. Do not add `@cloudflare/vite-plugin` to web/admin — Alchemy injects its own.
+Vite proxies `/api` to the API Worker. Do not add `@cloudflare/vite-plugin` to web or admin. Alchemy injects its own under `alchemy:dev` and deploy.
+
+## Ports and proxies
+
+| Process          | Port | Notes                        |
+| ---------------- | ---- | ---------------------------- |
+| `@zstack/api`    | 8787 | Hono Worker                  |
+| `@zstack/web`    | 3000 | Customer; public auth origin |
+| `@zstack/admin`  | 3001 | Staff; same API contract     |
+| Compose Postgres | 5432 | Local Hyperdrive origin      |
+
+`BETTER_AUTH_URL` defaults to `http://localhost:3000`. Frontends talk same-origin `/api/*` to the Worker. They never import API source.
 
 ## Optional vendors
 
@@ -30,4 +50,14 @@ Vite proxies `/api` to the API Worker. Do not add `@cloudflare/vite-plugin` to w
 | Observability | Off         | `SENTRY_DSN` / `VITE_SENTRY_DSN*` |
 | AI            | Fake models | `AI_GATEWAY_API_KEY`              |
 
-See the template wiring policy in the authoring notes (not shipped to clones).
+How-tos: [Turn on email](/docs/guides/turn-on-email), [Turn on AI](/docs/guides/turn-on-ai), [Turn on observability](/docs/guides/turn-on-observability).
+
+## Staff promote
+
+After customer sign-up:
+
+```bash
+STAFF_EMAIL=you@example.com pnpm db:seed
+```
+
+See [Staff console](/docs/guides/staff-console).

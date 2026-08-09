@@ -1,7 +1,9 @@
 ---
 title: Authoring this repo
-description: Isolation rules for docs, CI, and the template.
+description: Isolation rules for docs, CI, and the template wiring policy.
 ---
+
+This page is for people who maintain zstack itself. Consumer clones never receive it.
 
 ## Docs isolation
 
@@ -24,3 +26,16 @@ cd docs && pnpm install && pnpm dev    # :4000
 | `.github/workflows/docs.yml` | Docs only — install/typecheck/lint/build inside `docs/` |
 
 Never fold docs typecheck or install into the product CI job.
+
+## Template wiring policy
+
+1. Do not bind the author's real SaaS accounts into the template.
+2. Scaffold ready-to-wire adapters so a clone turns a capability on with config and secrets.
+3. Core local paths use Compose, console, and empty DSN.
+4. Optional vendors stay `absent` or `configured` until a clone flips them.
+
+Full detail lives in `AUTHORING.md` at the repo root (also stripped from clones).
+
+## Agent ingest
+
+Machine-readable surfaces for this site are documented in [For agents](/docs/for-agents).

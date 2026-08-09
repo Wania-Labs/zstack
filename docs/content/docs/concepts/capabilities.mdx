@@ -1,0 +1,39 @@
+---
+title: Capabilities
+description: absent vs configured, secrets as the live switch, and what ships today.
+---
+
+`product.config.ts` records structural capability intent for the clone. It never holds secrets. Alchemy and application Layers should agree with what the file declares.
+
+## States
+
+| State        | Meaning                                                                                   |
+| ------------ | ----------------------------------------------------------------------------------------- |
+| `absent`     | No Effect Layer, no Alchemy resource, no fake production fallback                         |
+| `configured` | Code and bindings exist; behavior stays off, console, or fake until secrets or flags flip |
+| `enabled`    | Reserved for a later readiness gate; not used as a live switch today                      |
+
+Empty credentials are the day-one default. Prefer console, Compose, and fake models over the author's SaaS accounts.
+
+## What ships today
+
+| Capability          | State        | Live default                                     |
+| ------------------- | ------------ | ------------------------------------------------ |
+| Postgres            | core         | Compose locally; PlanetScale on `alchemy:deploy` |
+| Auth / orgs / staff | core         | Better Auth against Compose                      |
+| Email               | `configured` | Console until `EMAIL_FROM` + `BENTO_*`           |
+| Observability       | `configured` | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`      |
+| AI                  | `configured` | Fake models until `AI_GATEWAY_API_KEY`           |
+| Workflows / queues  | `absent`     | Not scaffolded as live infra yet                 |
+
+Billing, analytics, R2, and feature flags are not started in the tree. Treat architecture-guide chapters about those as future design, not shipped docs.
+
+## How to turn one on
+
+1. Confirm the capability is `configured` in `product.config.ts` (or core).
+2. Bind the secrets for that vendor.
+3. Restart `alchemy:dev` or the Worker so env reloads.
+
+Guides: [Turn on email](/docs/guides/turn-on-email), [Turn on AI](/docs/guides/turn-on-ai), [Turn on observability](/docs/guides/turn-on-observability).
+
+Reference: [product.config.ts](/docs/reference/product-config).

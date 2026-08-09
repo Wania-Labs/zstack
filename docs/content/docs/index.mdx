@@ -1,21 +1,30 @@
 ---
-title: Introduction
-description: What zstack is and how to use these docs.
+title: What is zstack
+description: A cloneable TypeScript product shape, not a framework you install into an existing app.
 ---
 
-**zstack** is an opinionated TypeScript product starter: pnpm + Turborepo, Cloudflare-first backend, portable Postgres, TanStack Start frontends, and Alchemy for deploy.
+**zstack** is a cloneable TypeScript product starter for solo founders and small teams who want a Cloudflare-first SaaS monorepo without locking domain code to vendor APIs.
 
-This documentation site lives in the **authoring repository** only. It is not part of the product monorepo that `create-zstack` copies into consumer apps.
+You clone one repository. That repo is one business product: a customer UI, a staff console, and a single Hono Worker backend. Optional vendors stay quiet until you bind credentials. Day-to-day work runs on Compose Postgres and `alchemy:dev`, not a paid cloud account.
 
 ## What you get
 
-- `apps/api` — Hono Worker, Effect, Better Auth, oRPC, Drizzle
-- `apps/web` / `apps/admin` — TanStack Start customer and staff shells
-- Alchemy v2 for Cloudflare + PlanetScale on deploy
-- Optional vendors (Sentry, Bento, AI Gateway) scaffolded and **off** until secrets are bound
+- `apps/web` — customer TanStack Start app
+- `apps/admin` — staff TanStack Start console
+- `apps/api` — Hono Worker with Effect, Better Auth, oRPC, and Drizzle
+- `packages/contracts` — Zod + oRPC contracts shared with the frontends
+- Alchemy as the sole deploy and provision owner for Cloudflare and PlanetScale
+
+## How swap works
+
+zstack is not a plugin marketplace. Domain code depends on Effect **ports** such as `EmailService` and `AiService`. The edge picks a concrete **Layer** from env and secrets. `product.config.ts` records structural intent (`absent` or `configured`). Empty credentials keep the console, fake, or off path.
+
+## Authoring vs consumer clones
+
+This documentation site lives in the **authoring** repository only. `create-zstack` strips `docs/`, the architecture guide, the CLI itself, and `AUTHORING.md` from consumer clones. Clones keep the product monorepo. Humans (and agents) still learn from this site.
 
 ## Next
 
-1. [Getting started](/docs/getting-started) — clone or scaffold
-2. [Local development](/docs/local-development) — Compose + `alchemy:dev`
-3. [Architecture](/docs/architecture) — layering and ownership
+1. [Getting started](/docs/getting-started) — scaffold and run locally
+2. [Stack map](/docs/concepts/stack-map) — request path and ownership
+3. [For agents](/docs/for-agents) — scrape and ingest endpoints

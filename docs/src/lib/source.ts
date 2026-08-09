@@ -21,8 +21,16 @@ export const source = loader({
 
 export async function getLLMText(page: (typeof source)["$inferPage"]) {
   const processed = await page.data.getText("processed");
+  const description = page.data.description?.trim();
 
-  return `# ${page.data.title} (${page.url})
-
-${processed}`;
+  return [
+    `# ${page.data.title}`,
+    "",
+    `Source: ${page.url}.md`,
+    description ? `Summary: ${description}` : null,
+    "",
+    processed,
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
 }

@@ -1,0 +1,52 @@
+---
+title: Ports and adapters
+description: Effect Services as ports, Layers as adapters, and the two meanings of Layer.
+---
+
+Domain and application code depend on named product capabilities. Adapters translate provider details. That split is how you swap vendors without rewriting features.
+
+## Ports
+
+A port is an Effect `Context.Service`. Examples in `apps/api/src/platform/`:
+
+- `EmailService` — send verification, password reset, invitation mail
+- `AiService` — complete against a product capability ID
+- `Database` — Drizzle access through the request runtime
+
+Feature modules call the port. They do not import Bento, the AI Gateway SDK, or console logging directly.
+
+## Adapters (Effect Layers)
+
+A Layer provides a concrete implementation of a port at the edge.
+
+| Port           | Default adapter                         | Live adapter          | Flip                              |
+| -------------- | --------------------------------------- | --------------------- | --------------------------------- |
+| `EmailService` | `ConsoleEmailLive`                      | `BentoEmailLive`      | `EMAIL_FROM` + `BENTO_*`          |
+| `AiService`    | Fake models                             | Vercel AI Gateway     | `AI_GATEWAY_API_KEY`              |
+| `Database`     | Compose via Hyperdrive in `ALCHEMY_DEV` | PlanetScale on deploy | `alchemy:dev` vs `alchemy:deploy` |
+
+Wiring lives under `apps/api/src/platform/` and the Effect runtime at `apps/api/src/platform/effect/runtime.ts`.
+
+## “Layer” means two things
+
+1. **Architecture layers** — UI → contracts → Hono → use cases → ports ← adapters ← Alchemy bindings. Dependency arrows point inward. Domain does not import UI or infra.
+2. **Effect Layers** — the DI graph that installs `ConsoleEmailLive` vs `BentoEmailLive` (and the same idea for AI and DB).
+
+When docs say “swap the Layer,” they mean the Effect adapter, not a new React layout.
+
+## What is not swapped in code today
+
+| Concern | Default                           | Notes                                                                       |
+| ------- | --------------------------------- | --------------------------------------------------------------------------- |
+| Auth    | Better Auth + drizzle adapter     | Org IDs stay opaque so auth can move later without rewriting product tables |
+| UI host | TanStack Start + shadcn base-nova | You can replace the host; keep oRPC contracts                               |
+| Deploy  | Alchemy sole authority            | Wrangler is a local escape, not a second deploy path                        |
+
+## How to swap in practice
+
+1. Keep calling the port from feature code.
+2. Add or select an adapter Layer that implements the same service shape.
+3. Choose the Layer from env at the Worker edge.
+4. Update docs and `product.config.ts` if the capability presence changes.
+
+Concrete walks: [Swap email transport](/docs/guides/swap-email-transport), [Swap AI provider](/docs/guides/swap-ai-provider).

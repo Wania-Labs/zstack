@@ -1,0 +1,29 @@
+---
+title: Staff console
+description: Promote a user and use the admin app behind staff.me.
+---
+
+`apps/admin` is the staff TanStack Start shell. It uses the same Hono API as the customer app. Access is gated by product staff capabilities exposed on `staff.me`.
+
+## Promote a user
+
+1. Sign up on http://localhost:3000.
+2. Run:
+
+```bash
+STAFF_EMAIL=you@example.com pnpm db:seed
+```
+
+3. Open http://localhost:3001 and sign in as that user.
+
+## How the gate works
+
+Better Auth's Admin plugin supplies `user.role` and impersonation fields. Product code maps roles (`admin`, `support`, `operations`, `owner`) to `staffCapabilities` on the request context. oRPC `staff.me` rejects non-staff callers.
+
+## UI stack
+
+Admin uses the same shadcn base-nova setup as web. Add components with:
+
+```bash
+pnpm --filter @zstack/admin exec shadcn add button
+```

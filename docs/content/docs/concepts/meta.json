@@ -1,0 +1,6 @@
+{
+  "title": "Concepts",
+  "description": "How the product shape fits together.",
+  "pages": ["stack-map", "capabilities", "ports-and-adapters"],
+  "defaultOpen": true
+}
