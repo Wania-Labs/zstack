@@ -11,7 +11,7 @@ export const Web = (api: Cloudflare.Worker) =>
   Cloudflare.Website.Vite("Web", {
     rootDir: "./apps/web",
     compatibility: {
-      date: "2026-08-07",
+      date: "2026-07-11",
       flags: ["nodejs_compat"],
     },
     env: {

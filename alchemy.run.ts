@@ -5,15 +5,16 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
 import { Api } from "./infra/api.ts";
-import { Hyperdrive, PlanetscaleDb } from "./infra/database.ts";
+import { Database } from "./infra/database.ts";
 import { Web } from "./infra/web.ts";
 
 /**
  * Alchemy v2 stack — sole deploy / provision authority.
  * Local escape hatch: `pnpm --filter @zstack/api dev` (wrangler) + web Vite.
  *
+ * `alchemy:dev` skips PlanetScale and binds Hyperdrive to Compose
+ * (`pnpm dev:services`). `alchemy:deploy` provisions PlanetScale + cloud Hyperdrive.
  * PlanetScale auth: `alchemy login` / profile credentials (or token env).
- * Hyperdrive `dev` still targets Compose Postgres from `pnpm dev:services`.
  */
 export default Alchemy.Stack(
   "zstack",
@@ -22,20 +23,28 @@ export default Alchemy.Stack(
     state: Cloudflare.state(),
   },
   Effect.gen(function* () {
-    const { database, branch, role } = yield* PlanetscaleDb;
-    const hyperdrive = yield* Hyperdrive(role);
-    const api = yield* Api(hyperdrive);
+    const db = yield* Database;
+    const api = yield* Api(db.hyperdrive);
     const web = yield* Web(api);
 
-    return {
+    const shared = {
       apiUrl: api.url.as<string>(),
       webUrl: web.url.as<string>(),
-      hyperdriveId: hyperdrive.hyperdriveId,
-      databaseId: database.id,
-      databaseName: database.name,
-      branchName: branch.name,
+      hyperdriveId: db.hyperdrive.hyperdriveId,
+    };
+
+    if (db.kind === "compose") {
+      return { ...shared, database: "compose" as const };
+    }
+
+    return {
+      ...shared,
+      database: "planetscale" as const,
+      databaseId: db.database.id,
+      databaseName: db.database.name,
+      branchName: db.branch.name,
       // Role credentials stay off stack outputs — use PlanetScale dashboard / migrate jobs.
-      roleName: role.name,
+      roleName: db.role.name,
     };
   }),
 );

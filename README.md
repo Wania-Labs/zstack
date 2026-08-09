@@ -36,7 +36,7 @@ pnpm --filter @zstack/web dev                      # :3000, proxies /api → api
 alchemy login
 # BETTER_AUTH_SECRET must be in the environment for alchemy
 export BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
-pnpm alchemy:dev                                   # api :8787 + web :3000 (Hyperdrive → Compose)
+pnpm alchemy:dev                                   # api :8787 + web :3000 (Compose only; no PlanetScale)
 pnpm alchemy:deploy                                # provisions PlanetScale + Hyperdrive
 ```
 

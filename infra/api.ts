@@ -9,7 +9,7 @@ export const Api = (hyperdrive: Cloudflare.Hyperdrive.Connection) =>
   Cloudflare.Worker("Api", {
     main: "./apps/api/src/index.ts",
     compatibility: {
-      date: "2026-08-07",
+      date: "2026-07-11",
       flags: ["nodejs_compat"],
     },
     env: {

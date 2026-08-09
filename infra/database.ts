@@ -6,8 +6,8 @@ import * as Effect from "effect/Effect";
 import * as Redacted from "effect/Redacted";
 
 /**
- * Local Compose Postgres — used by Hyperdrive `dev` and by wrangler/drizzle-kit.
- * Cloud request traffic uses PlanetScale via Hyperdrive `origin` from AppRole.
+ * Local Compose Postgres — Hyperdrive origin under `alchemy:dev`, and
+ * Hyperdrive `dev` override under deploy so local still hits Compose.
  */
 export const composeDevOrigin = {
   scheme: "postgres" as const,
@@ -22,9 +22,9 @@ export const composeDevOrigin = {
 /**
  * PlanetScale Postgres database + stage branch + app role.
  *
- * Migrations stay on drizzle-kit (`pnpm db:migrate`) — Alchemy's
- * `migrationsDir` expects flat numeric-prefixed `.sql`, not Drizzle 1.0
- * folder snapshots. Wire Alchemy-applied SQL later if we add a flat export.
+ * Only used outside `alchemy:dev`. Migrations stay on drizzle-kit
+ * (`pnpm db:migrate`) — Alchemy's `migrationsDir` expects flat
+ * numeric-prefixed `.sql`, not Drizzle 1.0 folder snapshots.
  */
 export const PlanetscaleDb = Effect.gen(function* () {
   const { stage } = yield* Alchemy.Stack;
@@ -57,9 +57,38 @@ export const PlanetscaleDb = Effect.gen(function* () {
   return { database, branch, role };
 });
 
-export const Hyperdrive = (role: Planetscale.PostgresRole) =>
+export const composeHyperdrive = () =>
+  Cloudflare.Hyperdrive.Connection("Hyperdrive", {
+    origin: composeDevOrigin,
+    caching: { disabled: true },
+    dev: composeDevOrigin,
+  });
+
+export const planetscaleHyperdrive = (role: Planetscale.PostgresRole) =>
   Cloudflare.Hyperdrive.Connection("Hyperdrive", {
     origin: role.origin,
     caching: { disabled: true },
     dev: composeDevOrigin,
   });
+
+/**
+ * Local (`alchemy:dev`): Compose-only Hyperdrive, no PlanetScale create.
+ * Deploy/plan: PlanetScale DB/branch/role + Hyperdrive origin from AppRole.
+ */
+export const Database = Effect.gen(function* () {
+  if (yield* Alchemy.ALCHEMY_DEV) {
+    return {
+      kind: "compose" as const,
+      hyperdrive: yield* composeHyperdrive(),
+    };
+  }
+
+  const { database, branch, role } = yield* PlanetscaleDb;
+  return {
+    kind: "planetscale" as const,
+    hyperdrive: yield* planetscaleHyperdrive(role),
+    database,
+    branch,
+    role,
+  };
+});
