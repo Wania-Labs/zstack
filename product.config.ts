@@ -2,6 +2,11 @@
  * Reviewed capability / readiness intent for this product clone.
  * Secrets never live here. Alchemy provisions only what is selected.
  *
+ * Template rule: scaffold ready-to-wire adapters; do not bind the author's
+ * real SaaS accounts. Core local paths use Compose / console / empty DSN.
+ * Optional vendors stay off until a clone sets secrets or flips the manifest.
+ * See AUTHORING.md → Template wiring policy.
+ *
  * Workflows and queues are backend capabilities on the Hono Worker
  * (`apps/api`), not separate apps. They stay absent until a feature needs them.
  *

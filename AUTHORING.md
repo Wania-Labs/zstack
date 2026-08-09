@@ -31,6 +31,27 @@ Human architecture docs live on the separate zstack website, not in cloned produ
 
 `create-hono` with an absolute target path under this monorepo wrote into a relative `Users/...` tree inside the workspace. Prefer scaffolding into a temp directory (or use the official `honojs/starter` template via giget) and copy into `apps/*`.
 
+## Template wiring policy
+
+This repo is a **starter template**, not a product under the author's SaaS accounts.
+
+1. **Do not provision or bind real third-party projects** for this repo (Sentry orgs, Bento sites, Polar, PostHog, paid PlanetScale clusters for "smoke," etc.) unless the human explicitly asks to exercise a live path.
+2. **Scaffold ready-to-wire code** — SDKs, adapters, Alchemy env slots, docs — so a clone can turn a capability on by config/secrets.
+3. **Core to local functionality may be always-on with a free/local default:** Compose Postgres, Better Auth against that DB, Hono/oRPC, web/admin shells. Those must work with `pnpm alchemy:dev` + `pnpm dev:services` and no paid vendors.
+4. **Everything else is opt-in** via `product.config.ts` (`absent` | `configured` | later `enabled`) and/or empty credentials:
+   - `absent` — no Effect Layer, no Alchemy resource, no fake production fallback.
+   - `configured` — code + Alchemy bindings exist; behavior stays off/no-op until secrets or flags are set (Bento, Sentry).
+5. Prefer **empty env defaults** over dummy cloud accounts. Prefer **console / Compose / local workerd** over hitting a vendor during template authoring.
+
+| Capability | State today | Live default |
+| --- | --- | --- |
+| Postgres | core | Compose locally; PlanetScale only on `alchemy:deploy` (consumer chooses) |
+| Auth / orgs / staff | core | Better Auth + Compose |
+| Email | configured | Console until `EMAIL_FROM` + `BENTO_*` |
+| Observability | configured | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*` |
+| Workflows / queues | absent | Not scaffolded as live infra yet |
+| Billing / analytics / R2 / flags / AI | not started | Must follow this policy when added |
+
 ## Deploy authority
 
 Alchemy v2 (`alchemy@2.0.0-beta.*`) is the sole owner of provisioned Cloudflare resources, secret bindings, and production deploys. Entry: `alchemy.run.ts` + `infra/*`. Pin the exact beta and upgrade with Effect.

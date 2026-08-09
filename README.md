@@ -2,6 +2,8 @@
 
 Opinionated TypeScript product starter: pnpm, Turborepo, Cloudflare-first backend, portable Postgres.
 
+Optional vendors (Sentry, Bento, …) are scaffolded and **off until a clone binds credentials**. Local core path is Compose Postgres + `alchemy:dev` — no paid cloud required for day-to-day work.
+
 ## Status
 
 - pnpm + Turborepo + TypeScript 7 + Oxlint/Oxfmt
