@@ -75,11 +75,7 @@ function LoginPage() {
             <AlertTitle>Not staff</AlertTitle>
             <AlertDescription>
               Signed in as {session.data?.user.email}, but this account has no staff role. Bootstrap
-              with{" "}
-              <code>
-                STAFF_EMAIL={session.data?.user.email} pnpm db:seed
-              </code>
-              .
+              with <code>STAFF_EMAIL={session.data?.user.email} pnpm db:seed</code>.
             </AlertDescription>
             <div className="mt-3">
               <SignOutButton />

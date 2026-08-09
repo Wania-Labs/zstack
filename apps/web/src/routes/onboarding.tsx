@@ -74,7 +74,9 @@ function OnboardingPage() {
               onChange={(event) => setName(event.target.value)}
               placeholder="Acme"
             />
-            <FieldDescription>You can rename it later. The URL slug is generated for you.</FieldDescription>
+            <FieldDescription>
+              You can rename it later. The URL slug is generated for you.
+            </FieldDescription>
           </Field>
           {error ? (
             <Alert variant="destructive">

@@ -44,9 +44,7 @@ export function UserMenu({ name, email, role }: UserMenuProps) {
             <Avatar size="sm">
               <AvatarFallback>{initials(name, email)}</AvatarFallback>
             </Avatar>
-            <span className="hidden max-w-40 truncate text-left text-sm sm:block">
-              {email}
-            </span>
+            <span className="hidden max-w-40 truncate text-left text-sm sm:block">{email}</span>
           </Button>
         }
       />
@@ -55,9 +53,7 @@ export function UserMenu({ name, email, role }: UserMenuProps) {
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-medium">{name}</span>
             <span className="text-xs text-muted-foreground">{email}</span>
-            {role ? (
-              <span className="text-xs text-muted-foreground">Role: {role}</span>
-            ) : null}
+            {role ? <span className="text-xs text-muted-foreground">Role: {role}</span> : null}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

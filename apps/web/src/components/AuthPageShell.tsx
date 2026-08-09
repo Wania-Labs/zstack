@@ -15,7 +15,10 @@ export default function AuthPageShell({
     <div className="flex min-h-svh flex-col">
       <header className="border-b bg-background/80 backdrop-blur-lg">
         <nav className="mx-auto flex w-full max-w-md items-center gap-3 px-4 py-3">
-          <Link to="/" className="text-sm font-semibold tracking-tight text-foreground no-underline">
+          <Link
+            to="/"
+            className="text-sm font-semibold tracking-tight text-foreground no-underline"
+          >
             zstack
           </Link>
           <div className="ml-auto">

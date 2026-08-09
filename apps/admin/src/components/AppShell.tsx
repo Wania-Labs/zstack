@@ -13,20 +13,23 @@ type AppShellProps = {
   children: ReactNode;
 };
 
-type NavItem = {
-  to: "/";
-  label: string;
-  icon: typeof LayoutDashboardIcon;
-  enabled: true;
-} | {
-  to: "/users";
-  label: string;
-  icon: typeof UsersIcon;
-  enabled: true;
-} | {
-  label: string;
-  enabled: false;
-};
+type NavItem =
+  | {
+      to: "/";
+      label: string;
+      icon: typeof LayoutDashboardIcon;
+      enabled: true;
+    }
+  | {
+      to: "/users";
+      label: string;
+      icon: typeof UsersIcon;
+      enabled: true;
+    }
+  | {
+      label: string;
+      enabled: false;
+    };
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "Overview", icon: LayoutDashboardIcon, enabled: true },
@@ -42,7 +45,10 @@ export function AppShell({ staff, children }: AppShellProps) {
     <div className="flex min-h-svh w-full bg-background">
       <aside className="hidden w-56 shrink-0 flex-col border-r bg-background md:flex">
         <div className="flex items-center gap-2 border-b px-4 py-3">
-          <Link to="/" className="text-sm font-semibold tracking-tight text-foreground no-underline">
+          <Link
+            to="/"
+            className="text-sm font-semibold tracking-tight text-foreground no-underline"
+          >
             zstack admin
           </Link>
           <Badge variant="secondary" className="text-[10px]">
