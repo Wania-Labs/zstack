@@ -19,6 +19,8 @@ agent-transcripts/**
 
 Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template). The ignore list is encoded in `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`) — keep both in sync.
 
+After download, `create-zstack/src/prepare-consumer.ts` rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and root script, and remove `.github/workflows/docs.yml`.
+
 ## What consumers get
 
 The product monorepo: `apps/`, `packages/`, root toolchain configs, and later `AGENTS.md` files that teach agents how to work in the tree.
