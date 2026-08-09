@@ -37,7 +37,9 @@ Alchemy v2 (`alchemy@2.0.0-beta.*`) is the sole owner of provisioned Cloudflare 
 
 `wrangler` in `apps/api` remains a local development / dry-run escape hatch. Do not grow a parallel Wrangler deploy path.
 
-Hyperdrive is declared in `infra/database.ts` (Compose defaults via `DATABASE_*`, `dev` override for local). PlanetScale Postgres replaces the Config origin in a later slice.
+Hyperdrive is declared in `infra/database.ts`. Cloud origin comes from a PlanetScale `PostgresRole` (`AppRole.origin`). Hyperdrive `dev` still points at Compose (`pnpm dev:services`). Migrations stay on drizzle-kit against `DATABASE_URL` — Alchemy `migrationsDir` is not wired yet (expects flat numeric-prefixed `.sql`, not Drizzle 1.0 folders).
+
+PlanetScale auth for `alchemy plan` / `deploy` / `dev`: `alchemy login` (or token credentials). Optional `PLANETSCALE_REGION` (default `us-east`). Cluster size is `PS_DEV`, Postgres major `18` to match Compose.
 
 `BETTER_AUTH_SECRET` for wrangler lives in ignored `apps/api/.dev.vars`. For Alchemy, set it in the process env / stage secret store (`Config.redacted("BETTER_AUTH_SECRET")`). Regenerate with `openssl rand -base64 32` or `pnpm dlx auth@latest secret`.
 

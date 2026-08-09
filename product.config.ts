@@ -7,6 +7,9 @@
  *
  * Email is configured: React Email + EmailService always exist. Transport is
  * console until Bento credentials are bound (`EMAIL_FROM` + `BENTO_*`).
+ *
+ * Database is PlanetScale Postgres (Alchemy) with Compose for local Hyperdrive
+ * `dev` / wrangler / drizzle-kit.
  */
 export const product = {
   name: "zstack",
@@ -14,5 +17,6 @@ export const product = {
     workflows: "absent",
     queues: "absent",
     email: "configured",
+    database: "planetscale",
   },
 } as const;

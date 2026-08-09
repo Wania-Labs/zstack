@@ -8,7 +8,7 @@ Opinionated TypeScript product starter: pnpm, Turborepo, Cloudflare-first backen
 - `apps/api` Hono + Effect + Zod + Drizzle 1.0 RC + Better Auth + oRPC
 - `apps/web` TanStack Start + shadcn (Base UI / nova) + TanStack Query
 - `@zstack/email` React Email + EmailService (console default, Bento when secrets set)
-- Alchemy v2 (`alchemy@2.0.0-beta.70`) owns deploy / Hyperdrive / secrets
+- Alchemy v2 (`alchemy@2.0.0-beta.70`) owns deploy / PlanetScale / Hyperdrive / secrets
 
 Workflows and queues (when selected) live **inside** `apps/api` — same Hono Worker, not separate apps.
 
@@ -32,10 +32,12 @@ pnpm --filter @zstack/web dev                      # :3000, proxies /api → api
 ### Alchemy (preferred full-stack / deploy)
 
 ```bash
+# Cloudflare + PlanetScale auth via Alchemy profiles
+alchemy login
 # BETTER_AUTH_SECRET must be in the environment for alchemy
 export BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
-pnpm alchemy:dev                                   # api :8787 + web :3000
-pnpm alchemy:deploy
+pnpm alchemy:dev                                   # api :8787 + web :3000 (Hyperdrive → Compose)
+pnpm alchemy:deploy                                # provisions PlanetScale + Hyperdrive
 ```
 
 Open http://localhost:3000 for the customer shell (health + sign-in).
