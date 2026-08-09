@@ -27,7 +27,13 @@ agent-transcripts/**
 .audit/**
 ```
 
-Keep `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`), `AUTHORING.md`, and this page in sync when you add authoring-only paths.
+After download, `prepareConsumerClone` also:
+
+- drops the `create-zstack` workspace member from `pnpm-workspace.yaml`
+- removes the root `create-zstack` script from `package.json`
+- deletes `.github/workflows/docs.yml` (docs live only in the authoring tree)
+
+Keep `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`), `create-zstack/src/prepare-consumer.ts`, `AUTHORING.md`, and this page in sync when you add authoring-only paths.
 
 ## Local smoke
 
