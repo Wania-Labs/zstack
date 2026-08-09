@@ -8,11 +8,7 @@ export type InvitationEmailProps = {
   url: string;
 };
 
-export function InvitationEmail({
-  inviterName,
-  organizationName,
-  url,
-}: InvitationEmailProps) {
+export function InvitationEmail({ inviterName, organizationName, url }: InvitationEmailProps) {
   return (
     <EmailLayout preview={`Join ${organizationName} on zstack`}>
       <Text style={heading}>You're invited</Text>

@@ -50,8 +50,7 @@ export default function ThemeToggle() {
   }, [mode]);
 
   function toggleMode() {
-    const nextMode: ThemeMode =
-      mode === "light" ? "dark" : mode === "dark" ? "auto" : "light";
+    const nextMode: ThemeMode = mode === "light" ? "dark" : mode === "dark" ? "auto" : "light";
     setMode(nextMode);
     applyThemeMode(nextMode);
     window.localStorage.setItem("theme", nextMode);
@@ -63,7 +62,14 @@ export default function ThemeToggle() {
       : `Theme mode: ${mode}. Click to switch mode.`;
 
   return (
-    <Button type="button" variant="outline" size="sm" onClick={toggleMode} aria-label={label} title={label}>
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={toggleMode}
+      aria-label={label}
+      title={label}
+    >
       {mode === "auto" ? (
         <MonitorIcon data-icon="inline-start" />
       ) : mode === "dark" ? (

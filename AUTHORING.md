@@ -66,6 +66,10 @@ STAFF_EMAIL=you@example.com pnpm db:seed
 
 Local admin: `http://localhost:3001` (`alchemy:dev` or `pnpm --filter @zstack/admin dev` with API on `:8787`).
 
+## CI
+
+`.github/workflows/ci.yml` is the starter gate: GitHub-hosted `ubuntu-latest`, `pnpm typecheck` / `lint` / `format:check`. No Depot labels, Postgres integration, Playwright, Alchemy plan, or continuous deploy yet — those land as separate slices when the product needs them.
+
 ## Email
 
 `@zstack/email` owns React Email templates. `EmailService` in `apps/api` is the Effect boundary.

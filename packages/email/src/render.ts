@@ -7,14 +7,8 @@ export type RenderedEmail = {
   text: string;
 };
 
-export async function renderEmail(
-  subject: string,
-  element: ReactElement,
-): Promise<RenderedEmail> {
-  const [html, text] = await Promise.all([
-    render(element),
-    render(element, { plainText: true }),
-  ]);
+export async function renderEmail(subject: string, element: ReactElement): Promise<RenderedEmail> {
+  const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
 
   return { subject, html, text };
 }

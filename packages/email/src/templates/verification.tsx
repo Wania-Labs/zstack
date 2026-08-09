@@ -12,9 +12,7 @@ export function VerificationEmail({ name, url }: VerificationEmailProps) {
     <EmailLayout preview="Verify your email address">
       <Text style={heading}>Verify your email</Text>
       <Text style={paragraph}>Hi {name},</Text>
-      <Text style={paragraph}>
-        Confirm your email address to finish setting up your account.
-      </Text>
+      <Text style={paragraph}>Confirm your email address to finish setting up your account.</Text>
       <Button href={url} style={button}>
         Verify email
       </Button>

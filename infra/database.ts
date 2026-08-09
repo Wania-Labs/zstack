@@ -28,9 +28,7 @@ export const composeDevOrigin = {
  */
 export const PlanetscaleDb = Effect.gen(function* () {
   const { stage } = yield* Alchemy.Stack;
-  const regionSlug = yield* Config.string("PLANETSCALE_REGION").pipe(
-    Config.withDefault("us-east"),
-  );
+  const regionSlug = yield* Config.string("PLANETSCALE_REGION").pipe(Config.withDefault("us-east"));
 
   // Preview stages reuse a staging database; personal/prod stages own one.
   const database = stage.startsWith("pr-")

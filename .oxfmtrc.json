@@ -6,6 +6,8 @@
     "**/.turbo/**",
     "**/dist/**",
     "**/.wrangler/**",
+    "**/routeTree.gen.ts",
+    "**/drizzle/**/snapshot.json",
     "pnpm-lock.yaml"
   ]
 }

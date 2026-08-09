@@ -1,10 +1,6 @@
 {
   "extends": "./packages/typescript-config/base.json",
-  "include": [
-    "alchemy.run.ts",
-    "product.config.ts",
-    "infra/**/*.ts"
-  ],
+  "include": ["alchemy.run.ts", "product.config.ts", "infra/**/*.ts"],
   "compilerOptions": {
     "noEmit": true,
     "lib": ["ES2022"],

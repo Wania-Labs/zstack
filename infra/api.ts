@@ -21,12 +21,8 @@ export const Api = (hyperdrive: Cloudflare.Hyperdrive.Connection) =>
       // Empty defaults keep console EmailService until Bento secrets are set.
       EMAIL_FROM: Config.string("EMAIL_FROM").pipe(Config.withDefault("")),
       BENTO_SITE_UUID: Config.string("BENTO_SITE_UUID").pipe(Config.withDefault("")),
-      BENTO_PUBLISHABLE_KEY: Config.redacted("BENTO_PUBLISHABLE_KEY").pipe(
-        Config.withDefault(""),
-      ),
-      BENTO_SECRET_KEY: Config.redacted("BENTO_SECRET_KEY").pipe(
-        Config.withDefault(""),
-      ),
+      BENTO_PUBLISHABLE_KEY: Config.redacted("BENTO_PUBLISHABLE_KEY").pipe(Config.withDefault("")),
+      BENTO_SECRET_KEY: Config.redacted("BENTO_SECRET_KEY").pipe(Config.withDefault("")),
     },
     dev: {
       port: 8787,

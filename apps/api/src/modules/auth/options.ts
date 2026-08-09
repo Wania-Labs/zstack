@@ -2,11 +2,7 @@ import type { BetterAuthOptions } from "better-auth";
 import { admin, organization } from "better-auth/plugins";
 import { Effect, type Layer } from "effect";
 
-import {
-  ConsoleEmailLive,
-  EmailService,
-  runEmailEffect,
-} from "../../platform/email/email-service";
+import { ConsoleEmailLive, EmailService, runEmailEffect } from "../../platform/email/email-service";
 
 export type BetterAuthOptionsInput = {
   baseURL: string;

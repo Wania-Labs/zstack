@@ -49,15 +49,9 @@ export type BentoCredentials = {
 export class EmailService extends Context.Service<
   EmailService,
   {
-    sendVerificationEmail(
-      input: SendVerificationEmailInput,
-    ): Effect.Effect<void, EmailError>;
-    sendPasswordResetEmail(
-      input: SendPasswordResetEmailInput,
-    ): Effect.Effect<void, EmailError>;
-    sendInvitationEmail(
-      input: SendInvitationEmailInput,
-    ): Effect.Effect<void, EmailError>;
+    sendVerificationEmail(input: SendVerificationEmailInput): Effect.Effect<void, EmailError>;
+    sendPasswordResetEmail(input: SendPasswordResetEmailInput): Effect.Effect<void, EmailError>;
+    sendInvitationEmail(input: SendInvitationEmailInput): Effect.Effect<void, EmailError>;
   }
 >()("@zstack/api/platform/email/EmailService") {}
 
@@ -80,10 +74,7 @@ function makeEmailService(
     sendVerificationEmail: (input) =>
       Effect.gen(function* () {
         const rendered = yield* renderOrFail(() =>
-          renderEmail(
-            "Verify your email",
-            VerificationEmail({ name: input.name, url: input.url }),
-          ),
+          renderEmail("Verify your email", VerificationEmail({ name: input.name, url: input.url })),
         );
         yield* deliver({ to: input.to, rendered });
       }),
@@ -133,10 +124,7 @@ function deliverConsole(message: EmailMessage): Effect.Effect<void, EmailError> 
 /**
  * Local/dev transport when Bento credentials are absent.
  */
-export const ConsoleEmailLive = Layer.succeed(
-  EmailService,
-  makeEmailService(deliverConsole),
-);
+export const ConsoleEmailLive = Layer.succeed(EmailService, makeEmailService(deliverConsole));
 
 function deliverBento(
   credentials: BentoCredentials,

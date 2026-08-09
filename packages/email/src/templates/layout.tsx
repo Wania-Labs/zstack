@@ -1,13 +1,4 @@
-import {
-  Body,
-  Container,
-  Head,
-  Hr,
-  Html,
-  Preview,
-  Section,
-  Text,
-} from "react-email";
+import { Body, Container, Head, Hr, Html, Preview, Section, Text } from "react-email";
 import type { ReactNode } from "react";
 
 type EmailLayoutProps = {

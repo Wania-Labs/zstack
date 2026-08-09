@@ -44,6 +44,10 @@ pnpm alchemy:deploy                                # provisions PlanetScale + Hy
 
 Open http://localhost:3000 for the customer shell. Staff console: http://localhost:3001 (promote with `STAFF_EMAIL=… pnpm db:seed` after sign-up).
 
+## CI
+
+Pull requests and pushes to `main` run `.github/workflows/ci.yml`: typecheck, Oxlint, Oxfmt. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
+
 ## Layout
 
 ```text
