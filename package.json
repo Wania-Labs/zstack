@@ -19,7 +19,11 @@
     "lint": "oxlint --no-error-on-unmatched-pattern .",
     "typecheck": "turbo run typecheck && tsc --noEmit -p tsconfig.alchemy.json",
     "format": "oxfmt .",
-    "format:check": "oxfmt --check ."
+    "format:check": "oxfmt --check .",
+    "test": "turbo run test",
+    "test:evals": "pnpm --filter @zstack/api test:evals",
+    "test:workers": "pnpm --filter @zstack/api test:workers",
+    "create-zstack": "pnpm --filter create-zstack start"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",

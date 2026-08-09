@@ -13,4 +13,6 @@ export type ApiBindings = {
   SENTRY_RELEASE?: string;
   /** 0–1; defaults to 1 when DSN is set. Lower in production. */
   SENTRY_TRACES_SAMPLE_RATE?: string;
+  /** Optional. Empty → deterministic fake AI models (no spend). */
+  AI_GATEWAY_API_KEY?: string;
 };

@@ -12,3 +12,6 @@ BETTER_AUTH_SECRET=replace-me-run-openssl-rand-or-auth-secret
 # SENTRY_ENVIRONMENT=development
 # SENTRY_RELEASE=
 # SENTRY_TRACES_SAMPLE_RATE=1
+
+# Optional Vercel AI Gateway (omit → deterministic fake models, no spend)
+# AI_GATEWAY_API_KEY=

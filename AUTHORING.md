@@ -11,9 +11,10 @@ tech-stack-architecture-guide/**
 AUTHORING.md
 .cursor/
 .cursor/plans/
+create-zstack/**
 ```
 
-Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template).
+Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template). The ignore list is encoded in `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`) — keep both in sync.
 
 ## What consumers get
 
@@ -21,11 +22,19 @@ The product monorepo: `apps/`, `packages/`, root toolchain configs, and later `A
 
 Human architecture docs live on the separate zstack website, not in cloned products.
 
-## Packaging stack (later)
+## Packaging stack
 
-- **citty** — `create-zstack` CLI
+- **citty** — `create-zstack` CLI (`create-zstack/` in this repo; authoring-only)
 - **giget** — template download without git history (`ignore` for the paths above)
 - **nypm** — install with the user's package manager
+
+Local smoke against this tree:
+
+```bash
+ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force
+```
+
+Default remote template: `gh:zain/zstack` (override with `--template` or `ZSTACK_TEMPLATE`).
 
 ## Notes from scaffolding
 
@@ -43,14 +52,15 @@ This repo is a **starter template**, not a product under the author's SaaS accou
    - `configured` — code + Alchemy bindings exist; behavior stays off/no-op until secrets or flags are set (Bento, Sentry).
 5. Prefer **empty env defaults** over dummy cloud accounts. Prefer **console / Compose / local workerd** over hitting a vendor during template authoring.
 
-| Capability | State today | Live default |
-| --- | --- | --- |
-| Postgres | core | Compose locally; PlanetScale only on `alchemy:deploy` (consumer chooses) |
-| Auth / orgs / staff | core | Better Auth + Compose |
-| Email | configured | Console until `EMAIL_FROM` + `BENTO_*` |
-| Observability | configured | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*` |
-| Workflows / queues | absent | Not scaffolded as live infra yet |
-| Billing / analytics / R2 / flags / AI | not started | Must follow this policy when added |
+| Capability                       | State today | Live default                                                             |
+| -------------------------------- | ----------- | ------------------------------------------------------------------------ |
+| Postgres                         | core        | Compose locally; PlanetScale only on `alchemy:deploy` (consumer chooses) |
+| Auth / orgs / staff              | core        | Better Auth + Compose                                                    |
+| Email                            | configured  | Console until `EMAIL_FROM` + `BENTO_*`                                   |
+| Observability                    | configured  | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`                              |
+| Workflows / queues               | absent      | Not scaffolded as live infra yet                                         |
+| Billing / analytics / R2 / flags | not started | Must follow this policy when added                                       |
+| AI                               | configured  | Fake models until `AI_GATEWAY_API_KEY`                                   |
 
 ## Deploy authority
 
@@ -100,7 +110,17 @@ Suggested project split: one Sentry project each for api, web, and admin.
 
 ## CI
 
-`.github/workflows/ci.yml` is the starter gate: GitHub-hosted `ubuntu-latest`, `pnpm typecheck` / `lint` / `format:check`. No Depot labels, Postgres integration, Playwright, Alchemy plan, or continuous deploy yet — those land as separate slices when the product needs them.
+`.github/workflows/ci.yml` is the starter gate: GitHub-hosted `ubuntu-latest`, `pnpm typecheck` / `test` / `lint` / `format:check`. `pnpm test` runs API unit tests plus deterministic `vitest-evals` (fake models). Workerd pool tests (`pnpm test:workers`) stay local/optional. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
+
+## Testing and evals
+
+- **Unit:** Vitest (node) in `apps/api` — `pnpm --filter @zstack/api test:unit`
+- **Evals:** `vitest-evals` + `@vitest-evals/harness-ai-sdk` — `test/evals/*.eval.ts`, fake by default
+- **Workers:** `@cloudflare/vitest-pool-workers` — `pnpm test:workers` (needs wrangler/bindings; not CI yet)
+
+## AI
+
+Capability registry + Effect `AiService` in `apps/api/src/platform/ai/`. Product code asks for IDs (`chat.fast`, `chat.smart`, `extract.structured`); model strings live only in the registry. oRPC: `ai.capabilities` (public), `ai.complete` (signed-in). Empty `AI_GATEWAY_API_KEY` → deterministic fake model (no spend). Bind a Vercel AI Gateway key for live routing. AI Elements / chat UI stay deferred until a product surface needs them.
 
 ## Email
 

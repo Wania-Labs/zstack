@@ -13,6 +13,9 @@ Optional vendors (Sentry, Bento, …) are scaffolded and **off until a clone bin
 - `@zstack/email` React Email + EmailService (console default, Bento when secrets set)
 - Alchemy v2 (`alchemy@2.0.0-beta.70`) owns deploy / PlanetScale / Hyperdrive / secrets
 - Sentry + evlog scaffolded (DSN-gated; quiet until consumers bind projects)
+- AI capability registry + Effect AiService (fake until `AI_GATEWAY_API_KEY`)
+- Vitest + vitest-evals (deterministic) in CI; workerd pool optional
+- `create-zstack` authoring CLI (citty + giget + nypm; excluded from clones)
 
 Workflows and queues (when selected) live **inside** `apps/api` — same Hono Worker, not separate apps.
 
@@ -49,19 +52,26 @@ Open http://localhost:3000 for the customer shell. Staff console: http://localho
 
 ## CI
 
-Pull requests and pushes to `main` run `.github/workflows/ci.yml`: typecheck, Oxlint, Oxfmt. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
+Pull requests and pushes to `main` run `.github/workflows/ci.yml`: typecheck, unit + fake AI evals, Oxlint, Oxfmt. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
+
+```bash
+pnpm test              # api unit + vitest-evals (fake)
+pnpm test:workers      # optional workerd pool
+pnpm create-zstack my-app
+```
 
 ## Layout
 
 ```text
 alchemy.run.ts             # Alchemy v2 stack entry
-infra/                     # api / web / database resources
+infra/                     # api / web / admin / database resources
 product.config.ts          # capability intent (no secrets)
 apps/api/                  # Hono Worker (workflows/queues/cron live here)
 apps/web/                  # TanStack Start customer shell
 apps/admin/                # TanStack Start staff console
 packages/contracts/        # Zod + oRPC contracts
 packages/email/            # React Email templates
+create-zstack/             # authoring-only scaffold CLI (not in clones)
 compose.yaml               # local Postgres 18
 ```
 

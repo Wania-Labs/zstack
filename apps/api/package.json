@@ -12,9 +12,15 @@
     "db:migrate": "drizzle-kit migrate",
     "db:up": "drizzle-kit up",
     "db:seed": "tsx scripts/seed.ts",
-    "auth:generate": "auth generate --config ./auth.cli.ts --output ./src/platform/db/auth-schema.ts --yes"
+    "auth:generate": "auth generate --config ./auth.cli.ts --output ./src/platform/db/auth-schema.ts --yes",
+    "test": "vitest run --config vitest.config.ts && vitest run --config vitest.evals.config.ts",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:evals": "vitest run --config vitest.evals.config.ts",
+    "test:workers": "vitest run --config vitest.workers.config.ts",
+    "test:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^4.0.46",
     "@effect/sql-pg": "4.0.0-beta.106",
     "@orpc/client": "1.15.0",
     "@orpc/server": "1.15.0",
@@ -22,6 +28,7 @@
     "@sentry/hono": "10.69.0",
     "@zstack/contracts": "workspace:*",
     "@zstack/email": "workspace:*",
+    "ai": "^7.0.58",
     "better-auth": "1.6.26",
     "dotenv": "17.4.2",
     "drizzle-orm": "1.0.0-rc.1",
@@ -32,14 +39,19 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.20.3",
     "@cloudflare/workers-types": "^4.20250803.0",
+    "@effect/vitest": "^0.30.0",
     "@types/node": "22.19.1",
     "@types/pg": "8.15.5",
+    "@vitest-evals/harness-ai-sdk": "^0.16.1",
     "@zstack/typescript-config": "workspace:*",
     "auth": "1.6.26",
     "drizzle-kit": "1.0.0-rc.1",
     "tsx": "4.23.11",
     "typescript": "7.0.2",
+    "vitest": "^4.1.10",
+    "vitest-evals": "^0.16.1",
     "wrangler": "^4.110.0"
   }
 }

@@ -32,6 +32,8 @@ export const Api = (hyperdrive: Cloudflare.Hyperdrive.Connection) =>
       SENTRY_TRACES_SAMPLE_RATE: Config.string("SENTRY_TRACES_SAMPLE_RATE").pipe(
         Config.withDefault("1"),
       ),
+      // Empty → fake AI registry (no Vercel AI Gateway spend).
+      AI_GATEWAY_API_KEY: Config.redacted("AI_GATEWAY_API_KEY").pipe(Config.withDefault("")),
     },
     dev: {
       port: 8787,

@@ -16,6 +16,9 @@
  * Observability is configured: Sentry + evlog are wired. Empty DSNs keep the
  * SDKs and Sentry drain off until a clone binds project credentials.
  *
+ * AI is configured: capability registry + Effect AiService + oRPC. Empty
+ * `AI_GATEWAY_API_KEY` keeps the deterministic fake model (no spend).
+ *
  * Database is PlanetScale Postgres on deploy (Alchemy). Local `alchemy:dev`
  * and wrangler / drizzle-kit use Compose only — no cloud DB create.
  */
@@ -26,6 +29,7 @@ export const product = {
     queues: "absent",
     email: "configured",
     observability: "configured",
+    ai: "configured",
     database: "planetscale",
   },
 } as const;
