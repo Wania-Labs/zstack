@@ -5,3 +5,4 @@ ts	phase	decision	why	evidence	result
 2026-08-09T22:26:00Z	agent-surfaces	preface on llms.txt, richer getLLMText, robots.txt, for-agents page	user asked for scrape friendly ingest on top of existing fumadocs routes	curl localhost:4000/llms.txt for-agents.md	VERIFIED
 2026-08-09T22:27:00Z	build	disabled tanstack prerender after hang at Concurrency 0	prove it works against real build; SSR path still serves pages	docs/vite.config.ts pnpm build exit 0	VERIFIED
 2026-08-09T22:28:00Z	harness	check:docs in package.json and docs CI workflow	encode lessons in structure so thin pages fail CI	.github/workflows/docs.yml	VERIFIED
+2026-08-09T22:32:00Z	fixup	fixed md 404 status, folder indexes, sentry env names, .audit in CONSUMER_IGNORE	trail review found agent scrape bugs on happy-path-only verification	curl nope.md=404 guides=200; check:docs	VERIFIED

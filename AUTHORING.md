@@ -13,6 +13,8 @@ AUTHORING.md
 .cursor/plans/
 create-zstack/**
 docs/**
+agent-transcripts/**
+.audit/**
 ```
 
 Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template). The ignore list is encoded in `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`) — keep both in sync.

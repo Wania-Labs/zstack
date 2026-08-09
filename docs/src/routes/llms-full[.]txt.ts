@@ -18,6 +18,7 @@ export const Route = createFileRoute("/llms-full.txt")({
         return new Response(`${HEADER}${scanned.join("\n\n---\n\n")}`, {
           headers: {
             "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "public, max-age=60",
           },
         });
       },

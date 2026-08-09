@@ -15,6 +15,7 @@ export const CONSUMER_IGNORE = [
   "create-zstack/**",
   "docs/**",
   "agent-transcripts/**",
+  ".audit/**",
 ] as const;
 
 /** Override with ZSTACK_TEMPLATE (e.g. `file:../zstack` or `gh:org/zstack`). */

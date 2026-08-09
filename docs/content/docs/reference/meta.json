@@ -1,6 +1,6 @@
 {
   "title": "Reference",
   "description": "Lookup for apps, CLI, and config.",
-  "pages": ["apps-and-packages", "create-zstack", "product-config", "ai"],
+  "pages": ["index", "apps-and-packages", "create-zstack", "product-config", "ai"],
   "defaultOpen": true
 }

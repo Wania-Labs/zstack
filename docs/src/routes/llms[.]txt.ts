@@ -25,7 +25,7 @@ const PREFACE = `# zstack docs
 
 - Document implemented starter behavior only. Future architecture-guide chapters are not shipped features.
 - Swaps use Effect ports, Layers, product.config.ts, and empty-credential defaults. No plugin registry.
-- Consumer clones strip docs/, create-zstack/, tech-stack-architecture-guide/, and AUTHORING.md.
+- Consumer clones strip docs/, create-zstack/, tech-stack-architecture-guide/, AUTHORING.md, agent-transcripts/, and .audit/.
 
 `;
 
@@ -36,6 +36,7 @@ export const Route = createFileRoute("/llms.txt")({
         return new Response(`${PREFACE}\n${llms(source).index()}`, {
           headers: {
             "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "public, max-age=60",
           },
         });
       },

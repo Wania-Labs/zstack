@@ -17,14 +17,14 @@ Empty credentials are the day-one default. Prefer console, Compose, and fake mod
 
 ## What ships today
 
-| Capability          | State        | Live default                                     |
-| ------------------- | ------------ | ------------------------------------------------ |
-| Postgres            | core         | Compose locally; PlanetScale on `alchemy:deploy` |
-| Auth / orgs / staff | core         | Better Auth against Compose                      |
-| Email               | `configured` | Console until `EMAIL_FROM` + `BENTO_*`           |
-| Observability       | `configured` | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`      |
-| AI                  | `configured` | Fake models until `AI_GATEWAY_API_KEY`           |
-| Workflows / queues  | `absent`     | Not scaffolded as live infra yet                 |
+| Capability          | State in config                           | Live default                                     |
+| ------------------- | ----------------------------------------- | ------------------------------------------------ |
+| Postgres            | `database: "planetscale"` (deploy target) | Compose locally; PlanetScale on `alchemy:deploy` |
+| Auth / orgs / staff | always on (not a capability key)          | Better Auth against Compose                      |
+| Email               | `configured`                              | Console until `EMAIL_FROM` + `BENTO_*`           |
+| Observability       | `configured`                              | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`      |
+| AI                  | `configured`                              | Fake models until `AI_GATEWAY_API_KEY`           |
+| Workflows / queues  | `absent`                                  | Not scaffolded as live infra yet                 |
 
 Billing, analytics, R2, and feature flags are not started in the tree. Treat architecture-guide chapters about those as future design, not shipped docs.
 
