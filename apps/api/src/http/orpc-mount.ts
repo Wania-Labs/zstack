@@ -21,6 +21,7 @@ export async function mountOrpc(
     context: {
       requestContext: c.get("requestContext"),
       connectionString: c.env.HYPERDRIVE.connectionString,
+      user: c.get("user"),
     },
   });
 

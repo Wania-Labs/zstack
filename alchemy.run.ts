@@ -4,13 +4,14 @@ import * as Planetscale from "alchemy/Planetscale";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
+import { Admin } from "./infra/admin.ts";
 import { Api } from "./infra/api.ts";
 import { Database } from "./infra/database.ts";
 import { Web } from "./infra/web.ts";
 
 /**
  * Alchemy v2 stack — sole deploy / provision authority.
- * Local escape hatch: `pnpm --filter @zstack/api dev` (wrangler) + web Vite.
+ * Local escape hatch: `pnpm --filter @zstack/api dev` (wrangler) + web/admin Vite.
  *
  * `alchemy:dev` skips PlanetScale and binds Hyperdrive to Compose
  * (`pnpm dev:services`). `alchemy:deploy` provisions PlanetScale + cloud Hyperdrive.
@@ -26,10 +27,12 @@ export default Alchemy.Stack(
     const db = yield* Database;
     const api = yield* Api(db.hyperdrive);
     const web = yield* Web(api);
+    const admin = yield* Admin(api);
 
     const shared = {
       apiUrl: api.url.as<string>(),
       webUrl: web.url.as<string>(),
+      adminUrl: admin.url.as<string>(),
       hyperdriveId: db.hyperdrive.hyperdriveId,
     };
 

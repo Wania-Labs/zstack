@@ -49,13 +49,22 @@ Do not add `@cloudflare/vite-plugin` to `apps/web` — Alchemy injects its own u
 
 ## Frontend UI
 
-`apps/web` uses shadcn **base-nova** (Base UI primitives + default neutral theme, light/dark via `.dark`). Add components with:
+`apps/web` (customer) and `apps/admin` (staff) both use shadcn **base-nova** (Base UI primitives + default neutral theme, light/dark via `.dark`). Add components with:
 
 ```bash
 pnpm --filter @zstack/web exec shadcn add button
+pnpm --filter @zstack/admin exec shadcn add button
 ```
 
 Interactive `shadcn init` prompts are flaky under TanStack Start; `components.json` is committed so `add` works non-interactively.
+
+Admin is staff-only: Better Auth Admin plugin supplies `user.role` / impersonation fields; product code maps roles (`admin`, `support`, `operations`, `owner`) to `staffCapabilities` on the request context. `staff.me` oRPC rejects non-staff. Promote a user after customer sign-up:
+
+```bash
+STAFF_EMAIL=you@example.com pnpm db:seed
+```
+
+Local admin: `http://localhost:3001` (`alchemy:dev` or `pnpm --filter @zstack/admin dev` with API on `:8787`).
 
 ## Email
 

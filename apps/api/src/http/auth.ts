@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Client } from "pg";
 
 import { createAuth } from "../modules/auth/server";
+import { staffCapabilitiesForRole } from "../modules/auth/staff";
 import type { ApiBindings } from "../platform/cloudflare/bindings";
 import { schema } from "../platform/db/schema";
 import type { ApiVariables, RequestContext } from "./context";
@@ -24,9 +25,7 @@ function requireAuthEnv(env: ApiBindings): {
     BETTER_AUTH_SECRET,
     ...(env.EMAIL_FROM ? { EMAIL_FROM: env.EMAIL_FROM } : {}),
     ...(env.BENTO_SITE_UUID ? { BENTO_SITE_UUID: env.BENTO_SITE_UUID } : {}),
-    ...(env.BENTO_PUBLISHABLE_KEY
-      ? { BENTO_PUBLISHABLE_KEY: env.BENTO_PUBLISHABLE_KEY }
-      : {}),
+    ...(env.BENTO_PUBLISHABLE_KEY ? { BENTO_PUBLISHABLE_KEY: env.BENTO_PUBLISHABLE_KEY } : {}),
     ...(env.BENTO_SECRET_KEY ? { BENTO_SECRET_KEY: env.BENTO_SECRET_KEY } : {}),
   };
 }
@@ -71,6 +70,7 @@ export async function attachAuthSession(
     const session = await auth.api.getSession({ headers: c.req.raw.headers });
 
     if (session) {
+      const staffCapabilities = staffCapabilitiesForRole(session.user.role);
       const nextContext: RequestContext = {
         ...requestContext,
         actor: session.session.impersonatedBy
@@ -80,6 +80,7 @@ export async function attachAuthSession(
         ...(session.session.activeOrganizationId
           ? { organizationId: session.session.activeOrganizationId }
           : {}),
+        ...(staffCapabilities.size > 0 ? { staffCapabilities } : {}),
       };
 
       c.set("requestContext", nextContext);

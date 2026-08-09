@@ -37,6 +37,8 @@ export function createAuth(db: NodePgDatabase, env: AuthEnv, schemaTables: typeo
       env.BETTER_AUTH_URL,
       "http://localhost:3000",
       "http://127.0.0.1:3000",
+      "http://localhost:3001",
+      "http://127.0.0.1:3001",
       // Direct API curls during local development.
       "http://localhost:8787",
       "http://127.0.0.1:8787",
