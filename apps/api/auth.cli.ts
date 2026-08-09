@@ -6,7 +6,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 
-import { betterAuthOptions } from "./src/modules/auth/options";
+import { createBetterAuthOptions } from "./src/modules/auth/options";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 config({ path: resolve(root, ".env.development") });
@@ -17,6 +17,7 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is required for Better Auth CLI");
 }
 
+const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 const pool = new Pool({ connectionString: databaseUrl });
 const db = drizzle({ client: pool });
 
@@ -24,8 +25,8 @@ const db = drizzle({ client: pool });
  * CLI-only auth export for `auth generate`. Runtime Workers use createAuth().
  */
 export const auth = betterAuth({
-  ...betterAuthOptions,
+  ...createBetterAuthOptions({ baseURL }),
   database: drizzleAdapter(db, { provider: "pg" }),
-  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:8787",
+  baseURL,
   secret: process.env.BETTER_AUTH_SECRET ?? "cli-only-not-for-runtime",
 });

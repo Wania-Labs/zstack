@@ -1,0 +1,64 @@
+import { Button, Link, Text } from "react-email";
+
+import { EmailLayout } from "./layout";
+
+export type PasswordResetEmailProps = {
+  name: string;
+  url: string;
+};
+
+export function PasswordResetEmail({ name, url }: PasswordResetEmailProps) {
+  return (
+    <EmailLayout preview="Reset your password">
+      <Text style={heading}>Reset your password</Text>
+      <Text style={paragraph}>Hi {name},</Text>
+      <Text style={paragraph}>
+        We received a request to reset your password. This link expires soon.
+      </Text>
+      <Button href={url} style={button}>
+        Reset password
+      </Button>
+      <Text style={paragraph}>
+        Or open this link:{" "}
+        <Link href={url} style={link}>
+          {url}
+        </Link>
+      </Text>
+      <Text style={paragraph}>If you did not request this, you can ignore this email.</Text>
+    </EmailLayout>
+  );
+}
+
+export default PasswordResetEmail;
+
+const heading = {
+  color: "#111111",
+  fontSize: "22px",
+  fontWeight: 700,
+  margin: "0 0 16px",
+} as const;
+
+const paragraph = {
+  color: "#333333",
+  fontSize: "14px",
+  lineHeight: "22px",
+  margin: "0 0 14px",
+} as const;
+
+const button = {
+  backgroundColor: "#111111",
+  borderRadius: "6px",
+  color: "#ffffff",
+  display: "inline-block",
+  fontSize: "14px",
+  fontWeight: 600,
+  margin: "8px 0 18px",
+  padding: "12px 18px",
+  textDecoration: "none",
+} as const;
+
+const link = {
+  color: "#111111",
+  textDecoration: "underline",
+  wordBreak: "break-all" as const,
+};

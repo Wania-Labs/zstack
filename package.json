@@ -11,6 +11,7 @@
     "db:migrate": "pnpm --filter @zstack/api db:migrate",
     "db:seed": "pnpm --filter @zstack/api db:seed",
     "auth:generate": "pnpm --filter @zstack/api auth:generate",
+    "email:dev": "pnpm --filter @zstack/email dev",
     "lint": "oxlint --no-error-on-unmatched-pattern .",
     "typecheck": "turbo run typecheck",
     "format": "oxfmt .",

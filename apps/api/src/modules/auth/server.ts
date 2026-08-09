@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import type { schema } from "../../platform/db/schema";
-import { betterAuthOptions } from "./options";
+import { createBetterAuthOptions } from "./options";
 
 export type AuthEnv = {
   BETTER_AUTH_URL: string;
@@ -16,7 +16,7 @@ export type AuthEnv = {
  */
 export function createAuth(db: NodePgDatabase, env: AuthEnv, schemaTables: typeof schema) {
   return betterAuth({
-    ...betterAuthOptions,
+    ...createBetterAuthOptions({ baseURL: env.BETTER_AUTH_URL }),
     database: drizzleAdapter(db, {
       provider: "pg",
       schema: schemaTables,

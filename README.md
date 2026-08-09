@@ -7,6 +7,7 @@ Opinionated TypeScript product starter: pnpm, Turborepo, Cloudflare-first backen
 - pnpm + Turborepo + TypeScript 7 + Oxlint/Oxfmt
 - `apps/api` Hono + Effect + Zod + Drizzle 1.0 RC + Better Auth + oRPC
 - `apps/web` TanStack Start + shadcn (Base UI / nova) + TanStack Query
+- `@zstack/email` React Email templates + console EmailService (Bento later)
 
 Wrangler is local-only. Alchemy will own Hyperdrive/PlanetScale and production secrets.
 
@@ -30,6 +31,7 @@ Open http://localhost:3000 for the customer shell (health + sign-in).
 apps/api/                  # Hono Worker
 apps/web/                  # TanStack Start + shadcn/Base UI
 packages/contracts/        # Zod + oRPC contracts
+packages/email/            # React Email templates
 compose.yaml               # local Postgres 18
 ```
 

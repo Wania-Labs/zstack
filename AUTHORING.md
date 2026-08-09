@@ -51,7 +51,19 @@ Local web is the public origin: set `BETTER_AUTH_URL=http://localhost:3000` in `
 pnpm --filter @zstack/web exec shadcn add button
 ```
 
+## Frontend UI
+
+`apps/web` uses shadcn **base-nova** (Base UI primitives + default neutral theme, light/dark via `.dark`). Add components with:
+
+```bash
+pnpm --filter @zstack/web exec shadcn add button
+```
+
 Interactive `shadcn init` prompts are flaky under TanStack Start; `components.json` is committed so `add` works non-interactively.
+
+## Email
+
+`@zstack/email` owns React Email templates. `EmailService` in `apps/api` is the Effect boundary; local transport logs to the Worker console. Bento lands with Alchemy secrets. Preview templates with `pnpm email:dev`.
 
 ## Drizzle 1.0 RC
 
