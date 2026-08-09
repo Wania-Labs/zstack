@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [
+    "tech-stack-architecture-guide/**",
+    "**/node_modules/**",
+    "**/.turbo/**",
+    "**/dist/**",
+    "**/.wrangler/**",
+    "pnpm-lock.yaml"
+  ]
+}

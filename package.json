@@ -1,0 +1,30 @@
+{
+  "name": "zstack",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "dev:services": "docker compose up -d --wait",
+    "dev:down": "docker compose down",
+    "dev:reset": "docker compose down -v && docker compose up -d --wait && pnpm db:migrate && pnpm db:seed",
+    "db:generate": "pnpm --filter @zstack/api db:generate",
+    "db:migrate": "pnpm --filter @zstack/api db:migrate",
+    "db:seed": "pnpm --filter @zstack/api db:seed",
+    "auth:generate": "pnpm --filter @zstack/api auth:generate",
+    "lint": "oxlint --no-error-on-unmatched-pattern .",
+    "typecheck": "turbo run typecheck",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check ."
+  },
+  "devDependencies": {
+    "oxfmt": "^0.62.0",
+    "oxlint": "^1.77.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "turbo": "^2.10.9",
+    "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.18.0"
+}

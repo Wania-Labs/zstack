@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "options": {
+    "typeAware": true
+  },
+  "ignorePatterns": [
+    "tech-stack-architecture-guide/**",
+    "**/node_modules/**",
+    "**/.turbo/**",
+    "**/dist/**",
+    "**/.wrangler/**"
+  ]
+}

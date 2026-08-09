@@ -1,0 +1,15 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+allowBuilds:
+  esbuild: true
+  workerd: true
+  msgpackr-extract: false
+
+minimumReleaseAgeExclude:
+  - pg-protocol@1.16.0
+  - pg@8.23.0
+
+patchedDependencies:
+  drizzle-orm@1.0.0-rc.1: patches/drizzle-orm@1.0.0-rc.1.patch

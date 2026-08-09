@@ -1,0 +1,22 @@
+{
+  "name": "@zstack/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./health": "./src/health.ts",
+    "./router": "./src/router.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@orpc/contract": "1.15.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@zstack/typescript-config": "workspace:*",
+    "typescript": "7.0.2"
+  }
+}

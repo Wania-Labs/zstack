@@ -1,0 +1,41 @@
+{
+  "name": "@zstack/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir=dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:up": "drizzle-kit up",
+    "db:seed": "tsx scripts/seed.ts",
+    "auth:generate": "auth generate --config ./auth.cli.ts --output ./src/platform/db/auth-schema.ts --yes"
+  },
+  "dependencies": {
+    "@effect/sql-pg": "4.0.0-beta.106",
+    "@orpc/client": "1.15.0",
+    "@orpc/server": "1.15.0",
+    "@zstack/contracts": "workspace:*",
+    "better-auth": "1.6.26",
+    "dotenv": "17.4.2",
+    "drizzle-orm": "1.0.0-rc.1",
+    "effect": "4.0.0-beta.106",
+    "hono": "^4.13.1",
+    "pg": "8.23.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250803.0",
+    "@types/node": "22.19.1",
+    "@types/pg": "8.15.5",
+    "@zstack/typescript-config": "workspace:*",
+    "auth": "1.6.26",
+    "drizzle-kit": "1.0.0-rc.1",
+    "tsx": "4.23.11",
+    "typescript": "7.0.2",
+    "wrangler": "^4.110.0"
+  }
+}
