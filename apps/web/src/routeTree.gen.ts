@@ -10,33 +10,191 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LogoutRouteImport } from './routes/logout'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
+import { Route as TOrganizationSlugRouteImport } from './routes/t.$organizationSlug'
+import { Route as TOrganizationSlugIndexRouteImport } from './routes/t.$organizationSlug.index'
+import { Route as TOrganizationSlugMembersRouteImport } from './routes/t.$organizationSlug.members'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogoutRoute = LogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcceptInvitationInvitationIdRoute =
+  AcceptInvitationInvitationIdRouteImport.update({
+    id: '/accept-invitation/$invitationId',
+    path: '/accept-invitation/$invitationId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const TOrganizationSlugRoute = TOrganizationSlugRouteImport.update({
+  id: '/t/$organizationSlug',
+  path: '/t/$organizationSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TOrganizationSlugIndexRoute = TOrganizationSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TOrganizationSlugRoute,
+} as any)
+const TOrganizationSlugMembersRoute =
+  TOrganizationSlugMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => TOrganizationSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
+  '/onboarding': typeof OnboardingRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sign-up': typeof SignUpRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
+  '/t/$organizationSlug': typeof TOrganizationSlugRouteWithChildren
+  '/t/$organizationSlug/members': typeof TOrganizationSlugMembersRoute
+  '/t/$organizationSlug/': typeof TOrganizationSlugIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
+  '/onboarding': typeof OnboardingRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sign-up': typeof SignUpRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
+  '/t/$organizationSlug/members': typeof TOrganizationSlugMembersRoute
+  '/t/$organizationSlug': typeof TOrganizationSlugIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
+  '/onboarding': typeof OnboardingRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sign-up': typeof SignUpRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
+  '/t/$organizationSlug': typeof TOrganizationSlugRouteWithChildren
+  '/t/$organizationSlug/members': typeof TOrganizationSlugMembersRoute
+  '/t/$organizationSlug/': typeof TOrganizationSlugIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/forgot-password'
+    | '/login'
+    | '/logout'
+    | '/onboarding'
+    | '/reset-password'
+    | '/sign-up'
+    | '/verify-email'
+    | '/accept-invitation/$invitationId'
+    | '/t/$organizationSlug'
+    | '/t/$organizationSlug/members'
+    | '/t/$organizationSlug/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/app'
+    | '/forgot-password'
+    | '/login'
+    | '/logout'
+    | '/onboarding'
+    | '/reset-password'
+    | '/sign-up'
+    | '/verify-email'
+    | '/accept-invitation/$invitationId'
+    | '/t/$organizationSlug/members'
+    | '/t/$organizationSlug'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/forgot-password'
+    | '/login'
+    | '/logout'
+    | '/onboarding'
+    | '/reset-password'
+    | '/sign-up'
+    | '/verify-email'
+    | '/accept-invitation/$invitationId'
+    | '/t/$organizationSlug'
+    | '/t/$organizationSlug/members'
+    | '/t/$organizationSlug/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  LogoutRoute: typeof LogoutRoute
+  OnboardingRoute: typeof OnboardingRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SignUpRoute: typeof SignUpRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
+  AcceptInvitationInvitationIdRoute: typeof AcceptInvitationInvitationIdRoute
+  TOrganizationSlugRoute: typeof TOrganizationSlugRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +206,118 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accept-invitation/$invitationId': {
+      id: '/accept-invitation/$invitationId'
+      path: '/accept-invitation/$invitationId'
+      fullPath: '/accept-invitation/$invitationId'
+      preLoaderRoute: typeof AcceptInvitationInvitationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/t/$organizationSlug': {
+      id: '/t/$organizationSlug'
+      path: '/t/$organizationSlug'
+      fullPath: '/t/$organizationSlug'
+      preLoaderRoute: typeof TOrganizationSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/t/$organizationSlug/': {
+      id: '/t/$organizationSlug/'
+      path: '/'
+      fullPath: '/t/$organizationSlug/'
+      preLoaderRoute: typeof TOrganizationSlugIndexRouteImport
+      parentRoute: typeof TOrganizationSlugRoute
+    }
+    '/t/$organizationSlug/members': {
+      id: '/t/$organizationSlug/members'
+      path: '/members'
+      fullPath: '/t/$organizationSlug/members'
+      preLoaderRoute: typeof TOrganizationSlugMembersRouteImport
+      parentRoute: typeof TOrganizationSlugRoute
+    }
   }
 }
 
+interface TOrganizationSlugRouteChildren {
+  TOrganizationSlugMembersRoute: typeof TOrganizationSlugMembersRoute
+  TOrganizationSlugIndexRoute: typeof TOrganizationSlugIndexRoute
+}
+
+const TOrganizationSlugRouteChildren: TOrganizationSlugRouteChildren = {
+  TOrganizationSlugMembersRoute: TOrganizationSlugMembersRoute,
+  TOrganizationSlugIndexRoute: TOrganizationSlugIndexRoute,
+}
+
+const TOrganizationSlugRouteWithChildren =
+  TOrganizationSlugRoute._addFileChildren(TOrganizationSlugRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  LogoutRoute: LogoutRoute,
+  OnboardingRoute: OnboardingRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SignUpRoute: SignUpRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
+  AcceptInvitationInvitationIdRoute: AcceptInvitationInvitationIdRoute,
+  TOrganizationSlugRoute: TOrganizationSlugRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
