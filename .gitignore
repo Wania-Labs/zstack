@@ -27,6 +27,9 @@ apps/web/.tanstack
 # Alchemy
 .alchemy
 
+# Local agent decision trails (not for the repo or consumer clones)
+.audit/
+
 # Build outputs
 .next/
 out/
