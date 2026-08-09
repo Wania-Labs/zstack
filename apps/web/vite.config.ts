@@ -1,5 +1,4 @@
 import { defineConfig } from "vite";
-import { cloudflare } from "@cloudflare/vite-plugin";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
@@ -7,6 +6,12 @@ import tailwindcss from "@tailwindcss/vite";
 
 const apiTarget = process.env.API_ORIGIN ?? "http://127.0.0.1:8787";
 
+/**
+ * Alchemy injects its Cloudflare Vite plugin under `alchemy dev` / deploy.
+ * Do not add `@cloudflare/vite-plugin` here — it conflicts with Alchemy.
+ * Standalone `vite dev` runs TanStack Start on Node and proxies `/api` to
+ * the wrangler API Worker.
+ */
 export default defineConfig({
   resolve: {
     tsconfigPaths: true,
@@ -23,11 +28,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [
-    devtools(),
-    cloudflare({ viteEnvironment: { name: "ssr" } }),
-    tailwindcss(),
-    tanstackStart(),
-    viteReact(),
-  ],
+  plugins: [devtools(), tailwindcss(), tanstackStart(), viteReact()],
 });

@@ -1,0 +1,57 @@
+--- a/dist/Schema.d.ts
++++ b/dist/Schema.d.ts
+@@ -9857,6 +9857,11 @@
+     };
+ };
+ /**
++ * Compatibility alias for {@link TaggedError} (formerly TaggedErrorClass).
++ */
++export declare const TaggedErrorClass: typeof TaggedError;
++
++/**
+  * Represents a function that builds a fast-check `Arbitrary<T>` from the
+  * `fast-check` module.
+  *
+--- a/dist/Schema.js
++++ b/dist/Schema.js
+@@ -9216,6 +9216,11 @@
+   };
+ };
+ /**
++ * Compatibility alias — Effect renamed TaggedErrorClass → TaggedError.
++ * Kept so Alchemy / distilled.cloud keep working on beta.106.
++ */
++export const TaggedErrorClass = TaggedError;
++/**
+  * Returns an {@link Arbitrary} factory derived from a schema. The generated
+  * values satisfy the schema and use its decoded `Type`.
+  *
+--- a/dist/unstable/cli/Command.d.ts
++++ b/dist/unstable/cli/Command.d.ts
+@@ -1512,6 +1512,11 @@
+  */
+ export declare const unlisted: <const Name extends string, Input, E, R, ContextInput>(self: Command<Name, Input, ContextInput, E, R>) => Command<Name, Input, ContextInput, E, R>;
+ /**
++ * Compatibility alias for {@link unlisted} (Alchemy still imports `withHidden`).
++ */
++export declare const withHidden: typeof unlisted;
++
++/**
+  * Adds a custom annotation to a command.
+  *
+  * **When to use**
+--- a/dist/unstable/cli/Command.js
++++ b/dist/unstable/cli/Command.js
+@@ -556,7 +556,12 @@
+   ...toImpl(self),
+   unlisted: true
+ });
++
+ /**
++ * Compatibility alias — Alchemy still calls this `withHidden`; Effect renamed it to `unlisted`.
++ */
++export const withHidden = unlisted;
++/**
+  * Adds a custom annotation to a command.
+  *
+  * **When to use**

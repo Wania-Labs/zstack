@@ -2,6 +2,7 @@
 node_modules
 .pnp
 .pnp.js
+.pnpm-store
 
 # Local env files
 .env
@@ -22,6 +23,9 @@ coverage
 # TanStack Start
 .tanstack
 apps/web/.tanstack
+
+# Alchemy
+.alchemy
 
 # Build outputs
 .next/

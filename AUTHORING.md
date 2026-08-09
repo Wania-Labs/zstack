@@ -33,23 +33,17 @@ Human architecture docs live on the separate zstack website, not in cloned produ
 
 ## Deploy authority
 
-Alchemy is the sole owner of provisioned Cloudflare/PlanetScale resources, secret bindings, and production deploys. `wrangler` in `apps/api` is a local development / dry-run tool only until Alchemy is wired. Do not grow a parallel Wrangler deploy path.
+Alchemy v2 (`alchemy@2.0.0-beta.*`) is the sole owner of provisioned Cloudflare resources, secret bindings, and production deploys. Entry: `alchemy.run.ts` + `infra/*`. Pin the exact beta and upgrade with Effect.
 
-The Hyperdrive binding id in `apps/api/wrangler.jsonc` is a local placeholder (`localConnectionString` points at Compose Postgres). Alchemy will replace that with a real Hyperdrive resource against PlanetScale.
+`wrangler` in `apps/api` remains a local development / dry-run escape hatch. Do not grow a parallel Wrangler deploy path.
 
-`BETTER_AUTH_SECRET` lives in ignored `apps/api/.dev.vars`. Regenerate with `openssl rand -base64 32` or `pnpm dlx auth@latest secret` before sharing a machine.
+Hyperdrive is declared in `infra/database.ts` (Compose defaults via `DATABASE_*`, `dev` override for local). PlanetScale Postgres replaces the Config origin in a later slice.
 
-`BETTER_AUTH_SECRET` lives in ignored `apps/api/.dev.vars`. Regenerate with `openssl rand -base64 32` or `pnpm dlx auth@latest secret` before sharing a machine.
+`BETTER_AUTH_SECRET` for wrangler lives in ignored `apps/api/.dev.vars`. For Alchemy, set it in the process env / stage secret store (`Config.redacted("BETTER_AUTH_SECRET")`). Regenerate with `openssl rand -base64 32` or `pnpm dlx auth@latest secret`.
 
-Local web is the public origin: set `BETTER_AUTH_URL=http://localhost:3000` in `.dev.vars`. Vite proxies `/api/*` to the API Worker on `:8787`.
+`BETTER_AUTH_URL` defaults to `http://localhost:3000` (web is the public origin). Vite proxies `/api/*` to the API Worker on `:8787` for the dual-process local path.
 
-## Frontend UI
-
-`apps/web` uses shadcn **base-nova** (Base UI primitives + default neutral theme, light/dark via `.dark`). Add components with:
-
-```bash
-pnpm --filter @zstack/web exec shadcn add button
-```
+Do not add `@cloudflare/vite-plugin` to `apps/web` — Alchemy injects its own under `alchemy dev` / deploy.
 
 ## Frontend UI
 
@@ -73,4 +67,10 @@ After `pnpm --filter @zstack/api auth:generate`, strip any RQBv1 `relations(...)
 
 When drizzle-kit says the migrations folder format is outdated, run `pnpm --filter @zstack/api db:up` once, then generate/migrate as usual.
 
-`drizzle-orm@1.0.0-rc.1` still calls `Schema.TaggedErrorClass`, which Effect `4.0.0-beta.106` renamed to `Schema.TaggedError`. Keep the pnpm patch in `patches/drizzle-orm@1.0.0-rc.1.patch` until Drizzle catches up — without it the Worker fails at startup with `(void 0) is not a function`.
+`drizzle-orm@1.0.0-rc.1` still calls `Schema.TaggedErrorClass`, which Effect `4.0.0-beta.106` renamed to `Schema.TaggedError`. Keep:
+
+- `patches/effect@4.0.0-beta.106.patch` — restores `Schema.TaggedErrorClass` and `Command.withHidden` (Alchemy still uses both names; Effect renamed the latter to `unlisted`)
+- `patches/drizzle-orm@1.0.0-rc.1.patch` — drizzle → `TaggedError`
+- `patches/alchemy@2.0.0-beta.70.patch` — alchemy → `TaggedError` (redundant with the Effect alias, kept until Alchemy catches up)
+
+Without the Effect/Alchemy patches the CLI dies at import with `(void 0) is not a function` / missing `withHidden`. Without the drizzle patch the Worker fails the same way at startup.

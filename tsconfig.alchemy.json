@@ -1,0 +1,19 @@
+{
+  "extends": "./packages/typescript-config/base.json",
+  "include": [
+    "alchemy.run.ts",
+    "product.config.ts",
+    "infra/**/*.ts"
+  ],
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2022"],
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "declaration": false,
+    "declarationMap": false,
+    "verbatimModuleSyntax": true
+  }
+}
