@@ -1,4 +1,4 @@
-import type { StaffCapability } from "@zstack/contracts/staff";
+import { StaffRole, type StaffCapability } from "@zstack/contracts/staff";
 
 /**
  * Better Auth `user.role` may be a single role or comma-separated list.
@@ -8,8 +8,7 @@ export const STAFF_CAPABILITY = {
   console: "staff.console",
 } as const satisfies Record<string, StaffCapability>;
 
-const ROLE_CAPABILITIES: Record<string, readonly StaffCapability[]> = {
-  // Better Auth Admin plugin default.
+const ROLE_CAPABILITIES: Record<StaffRole, readonly StaffCapability[]> = {
   admin: [STAFF_CAPABILITY.console],
   support: [STAFF_CAPABILITY.console],
   operations: [STAFF_CAPABILITY.console],
@@ -27,7 +26,9 @@ export function staffCapabilitiesForRole(
   for (const part of role.split(",")) {
     const key = part.trim();
     if (!key) continue;
-    for (const capability of ROLE_CAPABILITIES[key] ?? []) {
+    const parsed = StaffRole.safeParse(key);
+    if (!parsed.success) continue;
+    for (const capability of ROLE_CAPABILITIES[parsed.data]) {
       capabilities.add(capability);
     }
   }

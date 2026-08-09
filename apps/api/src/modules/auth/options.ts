@@ -3,6 +3,7 @@ import { admin, organization } from "better-auth/plugins";
 import { Effect, type Layer } from "effect";
 
 import { ConsoleEmailLive, EmailService, runEmailEffect } from "../../platform/email/email-service";
+import { betterAuthAdminRoleNames, betterAuthAdminRoles } from "./admin-roles";
 
 export type BetterAuthOptionsInput = {
   baseURL: string;
@@ -67,14 +68,26 @@ export function createBetterAuthOptions(input: BetterAuthOptionsInput) {
           );
         },
       }),
-      admin(),
+      admin({
+        roles: betterAuthAdminRoles,
+        adminRoles: [...betterAuthAdminRoleNames],
+      }),
     ],
     advanced: {
       defaultCookieAttributes: {
         sameSite: "lax",
-        secure: false, // local only; Alchemy/production will force secure cookies
+        // Local HTTP needs Secure=false. HTTPS BETTER_AUTH_URL forces Secure cookies.
+        secure: resolveSecureCookies(input.baseURL),
         httpOnly: true,
       },
     },
   } satisfies BetterAuthOptions;
+}
+
+function resolveSecureCookies(baseURL: string): boolean {
+  try {
+    return new URL(baseURL).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
