@@ -10,6 +10,7 @@ Opinionated TypeScript product starter: pnpm, Turborepo, Cloudflare-first backen
 - `apps/admin` staff TanStack Start shell (Better Auth admin role → `staff.me` gate)
 - `@zstack/email` React Email + EmailService (console default, Bento when secrets set)
 - Alchemy v2 (`alchemy@2.0.0-beta.70`) owns deploy / PlanetScale / Hyperdrive / secrets
+- Sentry + evlog scaffolded (DSN-gated; quiet until consumers bind projects)
 
 Workflows and queues (when selected) live **inside** `apps/api` — same Hono Worker, not separate apps.
 

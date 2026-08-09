@@ -6,3 +6,9 @@ BETTER_AUTH_SECRET=replace-me-run-openssl-rand-or-auth-secret
 # BENTO_SITE_UUID=
 # BENTO_PUBLISHABLE_KEY=
 # BENTO_SECRET_KEY=
+
+# Optional Sentry (omit → errors/traces/logs stay local-only)
+# SENTRY_DSN=
+# SENTRY_ENVIRONMENT=development
+# SENTRY_RELEASE=
+# SENTRY_TRACES_SAMPLE_RATE=1

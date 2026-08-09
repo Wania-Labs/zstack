@@ -1,4 +1,6 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
+
+import { initBrowserSentry } from "./lib/sentry";
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
@@ -8,6 +10,8 @@ export function getRouter() {
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
   });
+
+  initBrowserSentry(router, "zstack-admin");
 
   return router;
 }

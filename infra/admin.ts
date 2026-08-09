@@ -1,4 +1,5 @@
 import * as Cloudflare from "alchemy/Cloudflare";
+import * as Config from "effect/Config";
 
 /**
  * Staff TanStack Start console. Same API service binding pattern as web.
@@ -13,6 +14,11 @@ export const Admin = (api: Cloudflare.Worker) =>
     },
     env: {
       API: api,
+      VITE_SENTRY_DSN: Config.string("VITE_SENTRY_DSN_ADMIN").pipe(Config.withDefault("")),
+      VITE_SENTRY_ENVIRONMENT: Config.string("SENTRY_ENVIRONMENT").pipe(
+        Config.withDefault("development"),
+      ),
+      VITE_SENTRY_RELEASE: Config.string("SENTRY_RELEASE").pipe(Config.withDefault("")),
     },
     assets: {
       runWorkerFirst: true,

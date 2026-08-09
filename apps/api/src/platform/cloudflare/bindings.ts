@@ -7,4 +7,10 @@ export type ApiBindings = {
   BENTO_SITE_UUID?: string;
   BENTO_PUBLISHABLE_KEY?: string;
   BENTO_SECRET_KEY?: string;
+  /** Optional. Empty → Sentry SDK + evlog Sentry drain stay off. */
+  SENTRY_DSN?: string;
+  SENTRY_ENVIRONMENT?: string;
+  SENTRY_RELEASE?: string;
+  /** 0–1; defaults to 1 when DSN is set. Lower in production. */
+  SENTRY_TRACES_SAMPLE_RATE?: string;
 };

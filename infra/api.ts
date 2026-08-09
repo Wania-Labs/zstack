@@ -23,6 +23,15 @@ export const Api = (hyperdrive: Cloudflare.Hyperdrive.Connection) =>
       BENTO_SITE_UUID: Config.string("BENTO_SITE_UUID").pipe(Config.withDefault("")),
       BENTO_PUBLISHABLE_KEY: Config.redacted("BENTO_PUBLISHABLE_KEY").pipe(Config.withDefault("")),
       BENTO_SECRET_KEY: Config.redacted("BENTO_SECRET_KEY").pipe(Config.withDefault("")),
+      // Empty → Sentry + evlog Sentry drain stay off (template default).
+      SENTRY_DSN: Config.string("SENTRY_DSN").pipe(Config.withDefault("")),
+      SENTRY_ENVIRONMENT: Config.string("SENTRY_ENVIRONMENT").pipe(
+        Config.withDefault("development"),
+      ),
+      SENTRY_RELEASE: Config.string("SENTRY_RELEASE").pipe(Config.withDefault("")),
+      SENTRY_TRACES_SAMPLE_RATE: Config.string("SENTRY_TRACES_SAMPLE_RATE").pipe(
+        Config.withDefault("1"),
+      ),
     },
     dev: {
       port: 8787,

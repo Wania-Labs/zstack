@@ -66,6 +66,17 @@ STAFF_EMAIL=you@example.com pnpm db:seed
 
 Local admin: `http://localhost:3001` (`alchemy:dev` or `pnpm --filter @zstack/admin dev` with API on `:8787`).
 
+## Observability
+
+Sentry + evlog are scaffolded and **off until DSNs are set** (same pattern as Bento email).
+
+- `apps/api`: `@sentry/hono/cloudflare` + `evlog` with `evlog/sentry` drain. Bind `SENTRY_DSN` (wrangler `.dev.vars` or Alchemy env).
+- `apps/web` / `apps/admin`: `@sentry/tanstackstart-react` in the router. Set `VITE_SENTRY_DSN` (or Alchemy `VITE_SENTRY_DSN_WEB` / `VITE_SENTRY_DSN_ADMIN`).
+- Consumers create their own Sentry projects — this template does not ship org DSNs.
+- Source maps / `SENTRY_AUTH_TOKEN` / Vite upload plugin can be added per-clone when shipping production builds.
+
+Suggested project split: one Sentry project each for api, web, and admin.
+
 ## CI
 
 `.github/workflows/ci.yml` is the starter gate: GitHub-hosted `ubuntu-latest`, `pnpm typecheck` / `lint` / `format:check`. No Depot labels, Postgres integration, Playwright, Alchemy plan, or continuous deploy yet — those land as separate slices when the product needs them.

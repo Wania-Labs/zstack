@@ -7,10 +7,12 @@ allowBuilds:
   workerd: true
   msgpackr-extract: false
   sharp: true
+  "@sentry/cli": true
 
 minimumReleaseAgeExclude:
   - pg-protocol@1.16.0
   - pg@8.23.0
+  - evlog@2.25.0
 
 patchedDependencies:
   alchemy@2.0.0-beta.70: patches/alchemy@2.0.0-beta.70.patch

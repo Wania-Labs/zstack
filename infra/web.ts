@@ -1,4 +1,5 @@
 import * as Cloudflare from "alchemy/Cloudflare";
+import * as Config from "effect/Config";
 
 /**
  * Customer TanStack Start app. Alchemy injects its Cloudflare Vite plugin —
@@ -16,6 +17,12 @@ export const Web = (api: Cloudflare.Worker) =>
     },
     env: {
       API: api,
+      // Public browser DSN — empty keeps client Sentry off.
+      VITE_SENTRY_DSN: Config.string("VITE_SENTRY_DSN_WEB").pipe(Config.withDefault("")),
+      VITE_SENTRY_ENVIRONMENT: Config.string("SENTRY_ENVIRONMENT").pipe(
+        Config.withDefault("development"),
+      ),
+      VITE_SENTRY_RELEASE: Config.string("SENTRY_RELEASE").pipe(Config.withDefault("")),
     },
     assets: {
       runWorkerFirst: true,
