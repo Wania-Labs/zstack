@@ -7,6 +7,8 @@ description: Promote a user and use the admin app behind staff.me.
 
 ## Promote a user
 
+### Bootstrap the first admin
+
 1. Sign up on http://localhost:3000.
 2. Run:
 
@@ -14,11 +16,19 @@ description: Promote a user and use the admin app behind staff.me.
 STAFF_EMAIL=you@example.com pnpm db:seed
 ```
 
-3. Open http://localhost:3001 and sign in as that user.
+3. Open http://localhost:3001/login and sign in as that user.
+
+### Promote more users in the console
+
+After one staff account exists, open **Users** in the admin app. Search by email and set role to `admin`, `support`, `operations`, or `owner`. Set role to `user` to clear staff access. Only `admin` and `owner` can change roles. `support` and `operations` can list users.
 
 ## How the gate works
 
-Better Auth's Admin plugin supplies `user.role` and impersonation fields. Product code maps roles (`admin`, `support`, `operations`, `owner`) to `staffCapabilities` on the request context. oRPC `staff.me` rejects non-staff callers.
+Better Auth's Admin plugin supplies `user.role`. Product code maps roles (`admin`, `support`, `operations`, `owner`) to `staffCapabilities` on the request context. oRPC `staff.me` rejects non-staff callers.
+
+The admin app keeps private console content behind a `/_console` layout. That layout redirects anonymous visitors to `/login`, then waits for `staff.me` before rendering the sidebar shell. Signed-in non-staff users see a reject screen with sign-out.
+
+User list and role changes call Better Auth `admin.listUsers` / `admin.setRole` (not new oRPC staff routes).
 
 ## UI stack
 
