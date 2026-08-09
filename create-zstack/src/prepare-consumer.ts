@@ -1,10 +1,7 @@
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-/**
- * Rewrite authoring leftovers so a clone installs and documents itself correctly.
- */
-export async function prepareConsumerClone(root: string): Promise<void> {
+export async function stripAuthoringManifest(root: string): Promise<void> {
   const workspacePath = join(root, "pnpm-workspace.yaml");
   const workspace = await readFile(workspacePath, "utf8");
   const nextWorkspace = workspace

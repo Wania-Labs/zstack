@@ -198,7 +198,7 @@ export function safeInternalPath(value: unknown): string | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
-  if (!value.startsWith("/") || value.startsWith("//")) {
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
     return undefined;
   }
   return value;
