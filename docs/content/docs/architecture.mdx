@@ -1,0 +1,34 @@
+---
+title: Architecture
+description: Ownership boundaries for the product stack.
+---
+
+## Apps
+
+| Path         | Role                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| `apps/api`   | Hono Worker — auth, oRPC, Effect services, DB. Workflows/queues live here when selected. |
+| `apps/web`   | Customer TanStack Start                                                                  |
+| `apps/admin` | Staff TanStack Start (`staff.me` gate)                                                   |
+
+## Packages
+
+| Path                 | Role                               |
+| -------------------- | ---------------------------------- |
+| `packages/contracts` | Zod + oRPC contracts (client-safe) |
+| `packages/email`     | React Email templates              |
+
+## Infrastructure
+
+Alchemy (`alchemy.run.ts` + `infra/*`) owns Cloudflare resources and deploy. `product.config.ts` declares capability intent — never secrets.
+
+## Not in the product stack
+
+| Path                             | Why                             |
+| -------------------------------- | ------------------------------- |
+| `docs/`                          | Authoring docs site (this site) |
+| `create-zstack/`                 | Scaffold CLI                    |
+| `tech-stack-architecture-guide/` | Internal architecture authoring |
+| `AUTHORING.md`                   | Maintainers only                |
+
+These are excluded from consumer clones.

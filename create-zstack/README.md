@@ -10,4 +10,4 @@ pnpm --filter create-zstack start my-app
 ZSTACK_TEMPLATE=file:$(pwd) pnpm --filter create-zstack start /tmp/zstack-smoke --force
 ```
 
-Defaults to `gh:Wania-Labs/zstack` (override with `--template` or `ZSTACK_TEMPLATE`). Always strips authoring paths via giget `ignore`.
+Defaults to `gh:Wania-Labs/zstack` (override with `--template` or `ZSTACK_TEMPLATE`). Always strips authoring paths via giget `ignore` (guide, AUTHORING, create-zstack, docs, …).

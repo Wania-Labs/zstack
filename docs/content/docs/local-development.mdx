@@ -1,0 +1,33 @@
+---
+title: Local development
+description: Compose Postgres, Alchemy dev, and dual-process escapes.
+---
+
+## Preferred path
+
+```bash
+pnpm dev:services          # Postgres 18 via Compose
+pnpm alchemy:dev           # api :8787 + web :3000 + admin :3001
+```
+
+Under `ALCHEMY_DEV`, Hyperdrive points at Compose. PlanetScale is **not** created for local smoke.
+
+## Wrangler escape hatch
+
+```bash
+pnpm --filter @zstack/api dev
+pnpm --filter @zstack/web dev
+pnpm --filter @zstack/admin dev
+```
+
+Vite proxies `/api` to the API Worker. Do not add `@cloudflare/vite-plugin` to web/admin — Alchemy injects its own.
+
+## Optional vendors
+
+| Capability    | Default     | Turn on with                      |
+| ------------- | ----------- | --------------------------------- |
+| Email         | Console     | `EMAIL_FROM` + `BENTO_*`          |
+| Observability | Off         | `SENTRY_DSN` / `VITE_SENTRY_DSN*` |
+| AI            | Fake models | `AI_GATEWAY_API_KEY`              |
+
+See the template wiring policy in the authoring notes (not shipped to clones).

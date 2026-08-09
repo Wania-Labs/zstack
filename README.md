@@ -52,12 +52,13 @@ Open http://localhost:3000 for the customer shell. Staff console: http://localho
 
 ## CI
 
-Pull requests and pushes to `main` run `.github/workflows/ci.yml`: typecheck, unit + fake AI evals, Oxlint, Oxfmt. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
+Product PRs run `.github/workflows/ci.yml` (ignores `docs/**`). Docs changes run `.github/workflows/docs.yml` against the standalone `docs/` lockfile.
 
 ```bash
 pnpm test              # api unit + vitest-evals (fake)
 pnpm test:workers      # optional workerd pool
 pnpm create-zstack my-app
+cd docs && pnpm install && pnpm dev   # authoring docs :4000
 ```
 
 ## Layout
@@ -72,6 +73,7 @@ apps/admin/                # TanStack Start staff console
 packages/contracts/        # Zod + oRPC contracts
 packages/email/            # React Email templates
 create-zstack/             # authoring-only scaffold CLI (not in clones)
+docs/                      # authoring-only docs site (own lockfile/CI; not in clones)
 compose.yaml               # local Postgres 18
 ```
 

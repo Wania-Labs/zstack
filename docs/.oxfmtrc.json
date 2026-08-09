@@ -1,14 +1,10 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "ignorePatterns": [
-    "docs/**",
-    "tech-stack-architecture-guide/**",
     "**/node_modules/**",
-    "**/.turbo/**",
     "**/dist/**",
-    "**/.wrangler/**",
+    "**/.output/**",
     "**/routeTree.gen.ts",
-    "**/drizzle/**/snapshot.json",
     "pnpm-lock.yaml"
   ]
 }

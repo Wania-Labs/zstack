@@ -1,37 +1,43 @@
-name: CI
+name: Docs
 
 on:
   push:
     branches: [main]
-    paths-ignore:
+    paths:
       - "docs/**"
       - ".github/workflows/docs.yml"
   pull_request:
-    paths-ignore:
+    paths:
       - "docs/**"
       - ".github/workflows/docs.yml"
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: docs-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  fast:
-    name: Fast checks
+  docs:
+    name: Docs checks
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: docs
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
+        with:
+          package_json_file: docs/package.json
 
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: docs/pnpm-lock.yaml
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -39,11 +45,11 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Test
-        run: pnpm test
-
       - name: Lint
         run: pnpm lint
 
       - name: Format
         run: pnpm format:check
+
+      - name: Build
+        run: pnpm build

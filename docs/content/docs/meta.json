@@ -1,0 +1,14 @@
+{
+  "title": "zstack",
+  "description": "Opinionated TypeScript product starter",
+  "root": true,
+  "pages": [
+    "index",
+    "getting-started",
+    "local-development",
+    "architecture",
+    "ai",
+    "create-zstack",
+    "authoring"
+  ]
+}

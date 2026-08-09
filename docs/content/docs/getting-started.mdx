@@ -1,0 +1,40 @@
+---
+title: Getting started
+description: Scaffold a product or work in this repository.
+---
+
+## Scaffold a consumer product
+
+```bash
+pnpm create-zstack my-product
+# or from a clone of this repo:
+pnpm create-zstack my-product --template file:./
+```
+
+`create-zstack` downloads the template with giget, strips authoring-only paths (this docs site, the architecture guide, the CLI itself), and installs with nypm.
+
+Default remote: `gh:Wania-Labs/zstack`.
+
+## Work on zstack itself
+
+```bash
+git clone git@github.com:Wania-Labs/zstack.git
+cd zstack
+pnpm install
+pnpm dev:services
+pnpm db:migrate && pnpm db:seed
+cp apps/api/.dev.vars.example apps/api/.dev.vars
+pnpm alchemy:dev
+```
+
+Customer app: `http://localhost:3000` · Staff: `http://localhost:3001` · API: `http://localhost:8787`
+
+## These docs
+
+```bash
+cd docs
+pnpm install
+pnpm dev
+```
+
+Docs run on `http://localhost:4000` and use a **separate** lockfile — not the product workspace.

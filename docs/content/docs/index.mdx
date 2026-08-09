@@ -1,0 +1,21 @@
+---
+title: Introduction
+description: What zstack is and how to use these docs.
+---
+
+**zstack** is an opinionated TypeScript product starter: pnpm + Turborepo, Cloudflare-first backend, portable Postgres, TanStack Start frontends, and Alchemy for deploy.
+
+This documentation site lives in the **authoring repository** only. It is not part of the product monorepo that `create-zstack` copies into consumer apps.
+
+## What you get
+
+- `apps/api` — Hono Worker, Effect, Better Auth, oRPC, Drizzle
+- `apps/web` / `apps/admin` — TanStack Start customer and staff shells
+- Alchemy v2 for Cloudflare + PlanetScale on deploy
+- Optional vendors (Sentry, Bento, AI Gateway) scaffolded and **off** until secrets are bound
+
+## Next
+
+1. [Getting started](/docs/getting-started) — clone or scaffold
+2. [Local development](/docs/local-development) — Compose + `alchemy:dev`
+3. [Architecture](/docs/architecture) — layering and ownership

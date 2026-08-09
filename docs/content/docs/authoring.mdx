@@ -1,0 +1,26 @@
+---
+title: Authoring this repo
+description: Isolation rules for docs, CI, and the template.
+---
+
+## Docs isolation
+
+`docs/` is a **standalone** pnpm project:
+
+- Own `package.json` and lockfile
+- **Not** in the product `pnpm-workspace.yaml`
+- **Not** in Alchemy / Turborepo product tasks
+- **Not** copied by `create-zstack`
+
+```bash
+cd docs && pnpm install && pnpm dev    # :4000
+```
+
+## CI
+
+| Workflow                     | Scope                                                   |
+| ---------------------------- | ------------------------------------------------------- |
+| `.github/workflows/ci.yml`   | Product monorepo — ignores `docs/**`                    |
+| `.github/workflows/docs.yml` | Docs only — install/typecheck/lint/build inside `docs/` |
+
+Never fold docs typecheck or install into the product CI job.

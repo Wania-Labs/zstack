@@ -13,6 +13,7 @@ export const CONSUMER_IGNORE = [
   "AUTHORING.md",
   ".cursor/**",
   "create-zstack/**",
+  "docs/**",
   "agent-transcripts/**",
 ] as const;
 

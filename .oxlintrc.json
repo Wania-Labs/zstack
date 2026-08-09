@@ -4,6 +4,7 @@
     "typeAware": true
   },
   "ignorePatterns": [
+    "docs/**",
     "tech-stack-architecture-guide/**",
     "**/node_modules/**",
     "**/.turbo/**",

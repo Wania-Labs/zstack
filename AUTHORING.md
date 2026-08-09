@@ -12,6 +12,7 @@ AUTHORING.md
 .cursor/
 .cursor/plans/
 create-zstack/**
+docs/**
 ```
 
 Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template). The ignore list is encoded in `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`) — keep both in sync.
@@ -110,7 +111,19 @@ Suggested project split: one Sentry project each for api, web, and admin.
 
 ## CI
 
-`.github/workflows/ci.yml` is the starter gate: GitHub-hosted `ubuntu-latest`, `pnpm typecheck` / `test` / `lint` / `format:check`. `pnpm test` runs API unit tests plus deterministic `vitest-evals` (fake models). Workerd pool tests (`pnpm test:workers`) stay local/optional. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
+Product gate: `.github/workflows/ci.yml` — typecheck / test / lint / format for the monorepo. **Ignores `docs/**`.**
+
+Docs gate: `.github/workflows/docs.yml` — install/typecheck/lint/format/build **inside `docs/` only** (separate lockfile). Never fold docs into the product job.
+
+`pnpm test` runs API unit tests plus deterministic `vitest-evals` (fake models). Workerd pool tests (`pnpm test:workers`) stay local/optional. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
+
+## Docs site (authoring only)
+
+`docs/` is a standalone TanStack Start + Fumadocs site. Not in `pnpm-workspace.yaml`, not in Alchemy, not in product turbo tasks, excluded from `create-zstack`.
+
+```bash
+cd docs && pnpm install && pnpm dev   # :4000
+```
 
 ## Testing and evals
 
