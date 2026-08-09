@@ -4,9 +4,9 @@ import * as Planetscale from "alchemy/Planetscale";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
-import { Api } from "./infra/api";
-import { Hyperdrive, PlanetscaleDb } from "./infra/database";
-import { Web } from "./infra/web";
+import { Api } from "./infra/api.ts";
+import { Hyperdrive, PlanetscaleDb } from "./infra/database.ts";
+import { Web } from "./infra/web.ts";
 
 /**
  * Alchemy v2 stack — sole deploy / provision authority.

@@ -14,6 +14,7 @@
     "skipLibCheck": true,
     "declaration": false,
     "declarationMap": false,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true
   }
 }
