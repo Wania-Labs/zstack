@@ -6,7 +6,13 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { applyAgentPacks, resolveAgentPackSelection, type AgentTool } from "./apply-agent-packs.js";
-import { stripAuthoringManifest } from "./prepare-consumer.js";
+import {
+  applyPackageManagerChoice,
+  isScaffoldPackageManager,
+  runScriptCommand,
+  stripAuthoringManifest,
+  type ScaffoldPackageManager,
+} from "./prepare-consumer.js";
 
 /**
  * Paths that belong to zstack authoring — never ship into consumer clones.
@@ -25,13 +31,51 @@ export const CONSUMER_IGNORE = [
   ".audit/**",
 ] as const;
 
-/** Override with ZSTACK_TEMPLATE (e.g. `file:../zstack` or `gh:org/zstack`). */
+/** Override with ZSTACK_TEMPLATE (e.g. `git:$(pwd)` or `gh:org/zstack`). */
 const DEFAULT_TEMPLATE = process.env.ZSTACK_TEMPLATE?.trim() || "gh:Wania-Labs/zstack";
+
+const PACKAGE_MANAGERS = ["pnpm", "npm", "yarn", "bun"] as const satisfies readonly ScaffoldPackageManager[];
+
+async function resolvePackageManager(options: {
+  packageManagerArg: string | undefined;
+  yes: boolean;
+  isTTY: boolean;
+}): Promise<ScaffoldPackageManager> {
+  const raw = options.packageManagerArg?.trim().toLowerCase();
+  if (raw) {
+    if (!isScaffoldPackageManager(raw) || !PACKAGE_MANAGERS.includes(raw)) {
+      throw new Error(
+        `Unknown --package-manager "${raw}". Use one of: ${PACKAGE_MANAGERS.join(", ")}.`,
+      );
+    }
+    return raw;
+  }
+
+  if (options.yes || !options.isTTY) {
+    return "pnpm";
+  }
+
+  const chosen = await p.select({
+    message: "Package manager for install + next steps?",
+    options: [
+      { value: "pnpm", label: "pnpm (recommended — template is a pnpm workspace)" },
+      { value: "npm", label: "npm" },
+      { value: "yarn", label: "yarn" },
+      { value: "bun", label: "bun" },
+    ],
+    initialValue: "pnpm",
+  });
+  if (p.isCancel(chosen)) {
+    p.cancel("Scaffold cancelled.");
+    process.exit(1);
+  }
+  return chosen as ScaffoldPackageManager;
+}
 
 const main = defineCommand({
   meta: {
     name: "create-zstack",
-    version: "0.0.0",
+    version: "0.1.0",
     description: "Scaffold a product from the zstack template (giget + nypm).",
   },
   args: {
@@ -60,6 +104,12 @@ const main = defineCommand({
       type: "boolean",
       description: "Install dependencies with nypm after download",
       default: true,
+    },
+    "package-manager": {
+      type: "string",
+      description: "Install + next-step package manager: pnpm (default) | npm | yarn | bun",
+      required: false,
+      alias: "p",
     },
     "agent-tools": {
       type: "string",
@@ -108,6 +158,24 @@ const main = defineCommand({
     console.log(`Template ready at ${result.dir}`);
     await stripAuthoringManifest(result.dir);
 
+    let packageManager: ScaffoldPackageManager;
+    try {
+      packageManager = await resolvePackageManager({
+        packageManagerArg: args["package-manager"],
+        yes: args.yes,
+        isTTY: Boolean(process.stdin.isTTY && process.stdout.isTTY),
+      });
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+    await applyPackageManagerChoice(result.dir, packageManager);
+    if (packageManager !== "pnpm") {
+      console.log(
+        `Note: the template is a pnpm workspace. You chose ${packageManager}; scripts that use pnpm filters may need adjusting.`,
+      );
+    }
+
     let selection;
     try {
       selection = await resolveAgentPackSelection({
@@ -154,21 +222,23 @@ const main = defineCommand({
     }
 
     if (args.install) {
-      console.log("Installing dependencies…");
+      console.log(`Installing dependencies with ${packageManager}…`);
       await installDependencies({
         cwd: result.dir,
         silent: false,
+        packageManager,
       });
       console.log("Dependencies installed.");
     }
 
+    const run = (script: string) => runScriptCommand(packageManager, script);
     console.log(`
 Next:
   cd ${args.dir}
   cp apps/api/.dev.vars.example apps/api/.dev.vars
-  pnpm dev:services
-  pnpm db:migrate && pnpm db:seed
-  pnpm alchemy:dev
+  ${run("dev:services")}
+  ${run("db:migrate")} && ${run("db:seed")}
+  ${run("alchemy:dev")}
 `);
   },
 });

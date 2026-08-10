@@ -1,15 +1,40 @@
 {
-  "name": "create-zstack",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Authoring-only CLI to scaffold consumer products from the zstack template.",
+  "name": "@wanialabs/create-zstack",
+  "version": "0.1.0",
+  "description": "Scaffold a product from the zstack template (giget + nypm).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wania-Labs/zstack.git",
+    "directory": "create-zstack"
+  },
+  "homepage": "https://github.com/Wania-Labs/zstack/tree/main/create-zstack",
+  "bugs": {
+    "url": "https://github.com/Wania-Labs/zstack/issues"
+  },
+  "keywords": [
+    "zstack",
+    "create",
+    "scaffold",
+    "cloudflare",
+    "effect",
+    "tanstack"
+  ],
   "bin": {
     "create-zstack": "./bin/create-zstack.mjs"
   },
   "type": "module",
+  "files": [
+    "bin",
+    "dist",
+    "packs",
+    "README.md"
+  ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "dev": "tsx src/cli.ts",
     "start": "tsx src/cli.ts",
+    "prepublishOnly": "pnpm run build && pnpm test && pnpm typecheck",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "tsx --test src/*.test.ts"
   },
@@ -26,6 +51,10 @@
     "typescript": "7.0.2"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.5"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

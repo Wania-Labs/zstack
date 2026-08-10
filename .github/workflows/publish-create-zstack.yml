@@ -1,0 +1,70 @@
+name: Publish create-zstack
+
+# Trusted publishing (OIDC) — no NPM_TOKEN.
+# After the first manual publish (or once the package exists), configure on npm:
+#   Package → Settings → Trusted Publisher
+#   Organization: Wania-Labs
+#   Repository: zstack
+#   Workflow: publish-create-zstack.yml
+#   Environment: (leave empty unless you add one)
+
+on:
+  push:
+    tags:
+      - "create-zstack@*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Pack and validate only (skip npm publish)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-create-zstack-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish @wanialabs/create-zstack
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: create-zstack
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Ensure npm supports OIDC trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Install workspace
+        working-directory: .
+        run: pnpm install --frozen-lockfile
+
+      - name: Build, test, typecheck
+        run: pnpm run build && pnpm test && pnpm typecheck
+
+      - name: Publish
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run == false }}
+        run: pnpm publish --access public --no-git-checks
+        env:
+          NPM_CONFIG_PROVENANCE: "true"
+
+      - name: Dry run
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: pnpm publish --dry-run --access public --no-git-checks

@@ -18,7 +18,7 @@ agent-transcripts/**
 
 Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template). The ignore list is encoded in `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`) — keep both in sync.
 
-After download, `create-zstack/src/prepare-consumer.ts` (`stripAuthoringManifest`) rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and root script, remove `.github/workflows/docs.yml`, and scrub authoring-only README lines.
+After download, `create-zstack/src/prepare-consumer.ts` (`stripAuthoringManifest`) rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and root script, remove the `create-zstack` importer from `pnpm-lock.yaml`, remove `.github/workflows/docs.yml`, and scrub authoring-only README lines.
 
 Optional coding-agent packs are **not** taken from the authoring tree's `.cursor/` (that path is ignored). They live in `create-zstack/packs/` and are written by `applyAgentPacks` when the user passes `--agent-tools` (or answers the TTY prompt). Skills under `.agent/skills/` can be **copied** or **symlinked** into tool dirs (`--skills=copy|symlink|none`).
 
@@ -34,20 +34,30 @@ Human architecture docs live on the separate zstack website, not in cloned produ
 
 ## Packaging stack
 
-- **citty** — `create-zstack` CLI (`create-zstack/` in this repo; authoring-only)
+- **citty** — `@wanialabs/create-zstack` CLI (`create-zstack/` in this repo; published; excluded from clones)
 - **giget** — template download without git history (`ignore` for the paths above)
-- **nypm** — install with the user's package manager
+- **nypm** — install with the user's chosen package manager (`--package-manager`)
 
-Local smoke against this tree:
+Published consumers:
 
 ```bash
-ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
-ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke-agents --force --yes --agent-tools=all
+npm create @wanialabs/zstack@latest my-app
+pnpm create @wanialabs/zstack my-app
+yarn create @wanialabs/zstack my-app
+bunx @wanialabs/create-zstack my-app
 ```
 
-Default remote template: `gh:Wania-Labs/zstack` (override with `--template` or `ZSTACK_TEMPLATE`).
+Local smoke against this tree (giget local provider is `git:`, not `file:`):
+
+```bash
+ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
+ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke-agents --force --yes --agent-tools=all
+```
+
+Default remote template: `gh:Wania-Labs/zstack` (public; override with `--template` or `ZSTACK_TEMPLATE`). CLI requires Node `>=22.5`.
 
 - Agent pack flags:
+  - `--package-manager` / `-p` — `pnpm` (default with `--yes`) \| `npm` \| `yarn` \| `bun`
   - `--agent-tools=none|all|claude,cursor,opencode,codex` — omit to prompt on a TTY; non-TTY / `--yes` defaults to none
   - `--mcp=defaults|docs|account|all|none|<ids>` — public docs MCPs by default when tools selected
   - `--skills=copy|symlink|none` — how to install `.agent/skills` into Cursor/Claude skill dirs (default `copy`)
