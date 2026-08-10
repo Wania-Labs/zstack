@@ -10,11 +10,7 @@ import {
   assertNoUnapprovedSourceIdentity,
   personalizeClone,
 } from "./personalize-identity.js";
-import {
-  buildProjectIdentity,
-  parseNpmScope,
-  slugifyProjectName,
-} from "./project-identity.js";
+import { buildProjectIdentity, parseNpmScope, slugifyProjectName } from "./project-identity.js";
 
 async function writeMinimalFixture(root: string): Promise<void> {
   await mkdir(join(root, "apps/api"), { recursive: true });
@@ -196,7 +192,10 @@ void test("assertNoUnapprovedSourceIdentity fails on leftover @zstack", async ()
   const root = await mkdtemp(join(tmpdir(), "zstack-residual-"));
   try {
     await writeFile(join(root, "note.md"), "import from `@zstack/contracts`\n");
-    await assert.rejects(() => assertNoUnapprovedSourceIdentity(root), /Unapproved source identity/);
+    await assert.rejects(
+      () => assertNoUnapprovedSourceIdentity(root),
+      /Unapproved source identity/,
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }

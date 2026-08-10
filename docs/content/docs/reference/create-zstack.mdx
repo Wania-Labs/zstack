@@ -60,11 +60,11 @@ apps/*/.cta.json
 
 By default the scaffold personalizes the clone from the target directory basename (or `--name` / `--scope`):
 
-| Flag | Effect |
-| --- | --- |
-| `--name` | Display name (default: title-cased basename) |
-| `--scope` | npm scope for `@scope/*` packages (default: `@<slug>`) |
-| `--keep-identity` | Leave template `zstack` / `@zstack` names alone |
+| Flag              | Effect                                                 |
+| ----------------- | ------------------------------------------------------ |
+| `--name`          | Display name (default: title-cased basename)           |
+| `--scope`         | npm scope for `@scope/*` packages (default: `@<slug>`) |
+| `--keep-identity` | Leave template `zstack` / `@zstack` names alone        |
 
 Identity is validated before download. Personalization covers packages, Compose/Postgres locals, Alchemy stack, Worker names, brand copy, and related filters/imports. A full-tree residual scan aborts if unapproved `zstack` / `@zstack` remains.
 

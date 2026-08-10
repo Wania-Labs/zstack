@@ -712,11 +712,7 @@ function countOccurrences(haystack: string, needle: string): number {
   return count;
 }
 
-function assertOccurrenceCount(
-  path: string,
-  replacement: ExactReplacement,
-  count: number,
-): void {
+function assertOccurrenceCount(path: string, replacement: ExactReplacement, count: number): void {
   if (replacement.occurrences === "exactly-one" && count !== 1) {
     throw new Error(
       `Rewrite precondition failed for ${path}: expected exactly one occurrence of ${JSON.stringify(replacement.source)}, found ${count}`,
@@ -774,12 +770,13 @@ function applyJsonOperations(
   return `${JSON.stringify(obj, null, 2)}\n`;
 }
 
-function rewriteDepMaps(
-  obj: Record<string, unknown>,
-  fromScope: string,
-  toScope: string,
-): void {
-  for (const field of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const) {
+function rewriteDepMaps(obj: Record<string, unknown>, fromScope: string, toScope: string): void {
+  for (const field of [
+    "dependencies",
+    "devDependencies",
+    "peerDependencies",
+    "optionalDependencies",
+  ] as const) {
     const map = obj[field];
     if (!map || typeof map !== "object" || Array.isArray(map)) {
       continue;
@@ -820,10 +817,7 @@ async function readEffectiveText(
   }
 }
 
-async function auditFullTree(
-  root: string,
-  staged: StagedCloneRewrite,
-): Promise<ResidualHit[]> {
+async function auditFullTree(root: string, staged: StagedCloneRewrite): Promise<ResidualHit[]> {
   const files = await listProjectFiles(root);
   const stagedOnly = [...staged.keys()].filter((path) => !files.includes(path));
   const all = [...new Set([...files, ...stagedOnly])];

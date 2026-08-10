@@ -55,9 +55,7 @@ type InteractiveIdentityOptions = Readonly<{
   promptProjectName: (defaultName: string) => Promise<string>;
 }>;
 
-export type ResolveProjectIdentityOptions =
-  | AutomaticIdentityOptions
-  | InteractiveIdentityOptions;
+export type ResolveProjectIdentityOptions = AutomaticIdentityOptions | InteractiveIdentityOptions;
 
 function brand<Value, Name extends string>(value: Value): Brand<Value, Name> {
   return value as Brand<Value, Name>;
@@ -200,9 +198,7 @@ export async function resolveProjectIdentity(
   options: ResolveProjectIdentityOptions,
 ): Promise<ProjectIdentity> {
   const basename = basenameFromTargetDir(options.targetDir);
-  const defaultDisplay = titleCaseFromSlug(
-    slugifyProjectName(basename.replace(/_/g, "-")),
-  );
+  const defaultDisplay = titleCaseFromSlug(slugifyProjectName(basename.replace(/_/g, "-")));
 
   let displayRaw: string;
   if (options.name !== undefined && options.name.trim() !== "") {

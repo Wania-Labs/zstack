@@ -14,11 +14,7 @@ import {
   MCP_CATALOG,
   type McpSelection,
 } from "./apply-agent-packs.js";
-import {
-  buildProjectIdentity,
-  parseNpmScope,
-  slugifyProjectName,
-} from "./project-identity.js";
+import { buildProjectIdentity, parseNpmScope, slugifyProjectName } from "./project-identity.js";
 
 function testIdentity() {
   const slug = slugifyProjectName("Acme Cloud");
