@@ -57,7 +57,6 @@ export type FrameworkReferenceAllowance = Readonly<{
     | "@wanialabs/zstack"
     | "ZSTACK_TEMPLATE"
     | "https://github.com/Wania-Labs/zstack";
-  reason: string;
 }>;
 
 export type ResidualHit = Readonly<{
@@ -101,12 +100,10 @@ const BINARY_EXTENSIONS = new Set([
   ".wasm",
 ]);
 
-/** Framework refs that may remain after personalization (path + exact substring). */
 export const FRAMEWORK_REFERENCE_ALLOWLIST: readonly FrameworkReferenceAllowance[] = [
   {
     path: asPath("AGENTS.md"),
     exactText: "create-zstack",
-    reason: "Documents the scaffold CLI flags for agent packs",
   },
 ];
 
@@ -573,9 +570,7 @@ async function discoverWorkspacePackageJsons(root: string): Promise<string[]> {
       try {
         await stat(join(root, rel));
         out.push(rel);
-      } catch {
-        // not a package dir
-      }
+      } catch {}
     }
   }
   out.sort();
@@ -594,9 +589,7 @@ async function listTextFilesContaining(root: string, needle: string): Promise<st
       if (text.includes(needle)) {
         hits.push(rel);
       }
-    } catch {
-      // skip unreadable
-    }
+    } catch {}
   }
   return hits;
 }

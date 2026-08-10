@@ -24,7 +24,7 @@ void test("slugifyProjectName rejects empty, non-ascii-only, leading digit, and 
   assert.throws(() => slugifyProjectName("!!!"), /ASCII letters or digits/i);
   assert.throws(() => slugifyProjectName("9acme"), /must start with a letter/i);
   const long = `a${"b".repeat(MAX_PROJECT_SLUG_LENGTH)}`;
-  assert.throws(() => slugifyProjectName(long), /Worker names cap at 63/);
+  assert.throws(() => slugifyProjectName(long), /max is 54 \(63 − "-postgres"\)/);
 });
 
 void test("parseNpmScope accepts @scope, bare scope, and defaults from slug", () => {

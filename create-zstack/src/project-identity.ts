@@ -15,8 +15,8 @@ export type PostgresConnectionUrl = Brand<string, "PostgresConnectionUrl">;
 
 export type ServiceRole = "api" | "web" | "admin";
 
-/** Cloudflare Worker name max is 63; we append `-postgres` (9 chars) → slug ≤ 54… use 48 for margin. */
-export const MAX_PROJECT_SLUG_LENGTH = 48;
+const LONGEST_RESOURCE_SUFFIX = "-postgres";
+export const MAX_PROJECT_SLUG_LENGTH = 63 - LONGEST_RESOURCE_SUFFIX.length;
 
 export type ProjectIdentity = Readonly<{
   displayName: ProductDisplayName;
@@ -109,7 +109,7 @@ export function slugifyProjectName(raw: string): ProjectSlug {
 
   if (slug.length > MAX_PROJECT_SLUG_LENGTH) {
     throw new Error(
-      `Project slug "${slug}" is ${slug.length} characters; max is ${MAX_PROJECT_SLUG_LENGTH} because Worker names cap at 63 and we append "-postgres".`,
+      `Project slug "${slug}" is ${slug.length} characters; max is ${MAX_PROJECT_SLUG_LENGTH} (63 − "${LONGEST_RESOURCE_SUFFIX}").`,
     );
   }
 
