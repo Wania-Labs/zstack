@@ -7,6 +7,12 @@ import { resolve } from "node:path";
 
 import { applyAgentPacks, resolveAgentPackSelection, type AgentTool } from "./apply-agent-packs.js";
 import {
+  formatIdentitySummary,
+  resolveProjectIdentity,
+  type ProjectIdentity,
+} from "./project-identity.js";
+import { personalizeClone } from "./personalize-identity.js";
+import {
   applyPackageManagerChoice,
   isScaffoldPackageManager,
   runScriptCommand,
@@ -29,6 +35,8 @@ export const CONSUMER_IGNORE = [
   "docs/**",
   "agent-transcripts/**",
   ".audit/**",
+  ".github/workflows/publish-create-zstack.yml",
+  "apps/*/.cta.json",
 ] as const;
 
 /** Override with ZSTACK_TEMPLATE (e.g. `git:$(pwd)` or `gh:org/zstack`). */
@@ -90,6 +98,21 @@ const main = defineCommand({
       required: false,
       default: "my-product",
     },
+    name: {
+      type: "string",
+      description: "Product display name (default: title-cased directory basename)",
+      required: false,
+    },
+    scope: {
+      type: "string",
+      description: "npm scope for workspace packages, with or without @ (default: @<slug>)",
+      required: false,
+    },
+    "keep-identity": {
+      type: "boolean",
+      description: "Skip product identity personalization (keep template zstack / @zstack names)",
+      default: false,
+    },
     template: {
       type: "string",
       description: `Template source (default: ${DEFAULT_TEMPLATE})`,
@@ -143,12 +166,47 @@ const main = defineCommand({
   },
   async run({ args }) {
     const dir = resolve(process.cwd(), args.dir);
+    const isTTY = Boolean(process.stdin.isTTY && process.stdout.isTTY);
 
     if (existsSync(dir) && !args.force) {
       console.error(
         `Directory already exists: ${dir}\nPass --force to overwrite into it, or choose another path.`,
       );
       process.exit(1);
+    }
+
+    let identity: ProjectIdentity | undefined;
+    if (!args["keep-identity"]) {
+      try {
+        const base = {
+          targetDir: dir,
+          ...(args.name !== undefined ? { name: args.name } : {}),
+          ...(args.scope !== undefined ? { scope: args.scope } : {}),
+        };
+        identity = await resolveProjectIdentity(
+          args.yes || !isTTY
+            ? { ...base, mode: "automatic" as const }
+            : {
+                ...base,
+                mode: "interactive" as const,
+                promptProjectName: async (defaultName: string) => {
+                  const answer = await p.text({
+                    message: "Project name?",
+                    placeholder: defaultName,
+                    defaultValue: defaultName,
+                  });
+                  if (p.isCancel(answer)) {
+                    p.cancel("Scaffold cancelled.");
+                    process.exit(1);
+                  }
+                  return answer;
+                },
+              },
+        );
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
     }
 
     console.log(`Downloading ${args.template} → ${dir}`);
@@ -163,12 +221,24 @@ const main = defineCommand({
     console.log(`Template ready at ${result.dir}`);
     await stripAuthoringManifest(result.dir);
 
+    if (identity) {
+      try {
+        await personalizeClone({ root: result.dir, identity });
+        console.log(formatIdentitySummary(identity));
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    } else {
+      console.log("Keeping template identity (--keep-identity).");
+    }
+
     let packageManager: ScaffoldPackageManager;
     try {
       packageManager = await resolvePackageManager({
         packageManagerArg: args["package-manager"],
         yes: args.yes,
-        isTTY: Boolean(process.stdin.isTTY && process.stdout.isTTY),
+        isTTY,
       });
     } catch (error) {
       console.error(error instanceof Error ? error.message : error);
@@ -188,7 +258,7 @@ const main = defineCommand({
         mcpArg: args.mcp,
         skillsArg: args.skills,
         yes: args.yes,
-        isTTY: Boolean(process.stdin.isTTY && process.stdout.isTTY),
+        isTTY,
         promptTools: async () => {
           p.intro("create-zstack");
           const chosen = await p.multiselect({
@@ -214,7 +284,15 @@ const main = defineCommand({
     }
 
     if (selection.tools.length > 0) {
-      await applyAgentPacks(result.dir, selection);
+      const packIdentity =
+        identity ??
+        (await resolveProjectIdentity({
+          mode: "automatic",
+          targetDir: result.dir,
+          name: "zstack",
+          scope: "@zstack",
+        }));
+      await applyAgentPacks(result.dir, selection, packIdentity);
       const toolLabel = selection.tools.join(", ");
       const mcpLabel = selection.mcp === "none" ? "" : ` + MCP (${selection.mcp.join(", ")})`;
       const skillsLabel = selection.skills === "none" ? "" : ` + skills:${selection.skills}`;
