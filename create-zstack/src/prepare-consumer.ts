@@ -80,13 +80,15 @@ export async function stripCreateZstackLockfileImporter(root: string): Promise<v
   }
 }
 
-const PACKAGE_MANAGER_FIELD: Record<Exclude<PackageManagerName, "deno" | "aube" | "nub">, string> =
-  {
-    npm: "npm@10",
-    yarn: "yarn@1.22.22",
-    pnpm: "pnpm@11.18.0",
-    bun: "bun@1.2.0",
-  };
+const PACKAGE_MANAGER_FIELD: Record<
+  Exclude<PackageManagerName, "deno" | "aube" | "nub">,
+  string
+> = {
+  npm: "npm@10",
+  yarn: "yarn@1.22.22",
+  pnpm: "pnpm@11.18.0",
+  bun: "bun@1.2.0",
+};
 
 export type ScaffoldPackageManager = keyof typeof PACKAGE_MANAGER_FIELD;
 

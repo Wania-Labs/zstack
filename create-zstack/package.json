@@ -2,34 +2,38 @@
   "name": "@wanialabs/create-zstack",
   "version": "0.1.0",
   "description": "Scaffold a product from the zstack template (giget + nypm).",
+  "keywords": [
+    "cloudflare",
+    "create",
+    "effect",
+    "scaffold",
+    "tanstack",
+    "zstack"
+  ],
+  "homepage": "https://github.com/Wania-Labs/zstack/tree/main/create-zstack",
+  "bugs": {
+    "url": "https://github.com/Wania-Labs/zstack/issues"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Wania-Labs/zstack.git",
     "directory": "create-zstack"
   },
-  "homepage": "https://github.com/Wania-Labs/zstack/tree/main/create-zstack",
-  "bugs": {
-    "url": "https://github.com/Wania-Labs/zstack/issues"
-  },
-  "keywords": [
-    "zstack",
-    "create",
-    "scaffold",
-    "cloudflare",
-    "effect",
-    "tanstack"
-  ],
   "bin": {
     "create-zstack": "./bin/create-zstack.mjs"
   },
-  "type": "module",
   "files": [
     "bin",
     "dist",
     "packs",
     "README.md"
   ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx src/cli.ts",
@@ -52,9 +56,5 @@
   },
   "engines": {
     "node": ">=22.5"
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
   }
 }
