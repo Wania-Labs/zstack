@@ -3,19 +3,24 @@ title: create-zstack
 description: Scaffold consumer products from the GitHub template.
 ---
 
-Authoring-only CLI: citty + giget + nypm. Not present in consumer clones.
+Published as `@wanialabs/create-zstack` (citty + giget + nypm). The package source lives in the authoring monorepo and is not present in consumer clones.
 
 ## Commands
 
 ```bash
-pnpm create-zstack my-app
-pnpm create-zstack my-app --template file:$(pwd) --force --yes
-pnpm create-zstack my-app --no-install --yes
-pnpm create-zstack my-app --yes --agent-tools=all
-pnpm create-zstack my-app --yes --agent-tools=cursor,claude --mcp=defaults --skills=symlink
+npm create @wanialabs/zstack@latest my-app
+pnpm create @wanialabs/zstack my-app
+yarn create @wanialabs/zstack my-app
+bunx @wanialabs/create-zstack my-app
+
+pnpm create @wanialabs/zstack my-app --template git:$(pwd) --force --yes
+pnpm create @wanialabs/zstack my-app --no-install --yes
+pnpm create @wanialabs/zstack my-app --yes --package-manager=npm
+pnpm create @wanialabs/zstack my-app --yes --agent-tools=all
+pnpm create @wanialabs/zstack my-app --yes --agent-tools=cursor,claude --mcp=defaults --skills=symlink
 ```
 
-Environment override: `ZSTACK_TEMPLATE`. Default remote: `gh:Wania-Labs/zstack`.
+Environment override: `ZSTACK_TEMPLATE`. Default remote: `gh:Wania-Labs/zstack` (public). Local paths use `git:$(pwd)` or `git:./` (not `file:`). Requires Node.js `>=22.5`.
 
 ## Coding-agent packs
 
@@ -23,12 +28,13 @@ The template always ships root + nested `AGENTS.md`, `.agent/playbooks/`, and `.
 
 Optional tool adapters live in `create-zstack/packs/` and are copied **after** download (so they are not blocked by `.cursor/**` in the ignore list):
 
-| Flag            | Values                                                    | Notes                                                                                                                                      |
-| --------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--agent-tools` | `none`, `all`, or `claude,cursor,opencode,codex`          | Omit to prompt on a TTY. Non-TTY / `--yes` → none                                                                                          |
-| `--mcp`         | `none`, `defaults`/`docs`, `account`, `all`, or comma ids | Docs: `cloudflare-docs`, `context7`, `shadcn`. Account (OAuth): `sentry`, `planetscale`, `cloudflare-bindings`, `cloudflare-observability` |
-| `--skills`      | `copy` (default), `symlink`, `none`                       | Install `.agent/skills` into `.cursor/skills` / `.claude/skills` as a copy or relative symlink (Windows: junction)                         |
-| `--yes` / `-y`  | boolean                                                   | Skip the agent-tools prompt                                                                                                                |
+| Flag                       | Values                                                    | Notes                                                                                                                                      |
+| -------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--package-manager` / `-p` | `pnpm`, `npm`, `yarn`, `bun`                              | TTY prompts when omitted; `--yes` / non-TTY → `pnpm`. Template is a pnpm workspace; non-pnpm still installs via nypm                       |
+| `--agent-tools`            | `none`, `all`, or `claude,cursor,opencode,codex`          | Omit to prompt on a TTY. Non-TTY / `--yes` → none                                                                                          |
+| `--mcp`                    | `none`, `defaults`/`docs`, `account`, `all`, or comma ids | Docs: `cloudflare-docs`, `context7`, `shadcn`. Account (OAuth): `sentry`, `planetscale`, `cloudflare-bindings`, `cloudflare-observability` |
+| `--skills`                 | `copy` (default), `symlink`, `none`                       | Install `.agent/skills` into `.cursor/skills` / `.claude/skills` as a copy or relative symlink (Windows: junction)                         |
+| `--yes` / `-y`             | boolean                                                   | Skip prompts                                                                                                                               |
 
 Packs are coding-environment files. Do not model them as `product.config.ts` capabilities.
 
@@ -52,16 +58,17 @@ After download, `stripAuthoringManifest` also:
 
 - drops the `create-zstack` workspace member from `pnpm-workspace.yaml`
 - removes the root `create-zstack` script from `package.json`
+- removes the `create-zstack` importer from `pnpm-lock.yaml`
 - deletes `.github/workflows/docs.yml` (docs live only in the authoring tree)
 - rewrites consumer README so it no longer points at authoring-only paths
 
-Then `applyAgentPacks` may write selected tool adapters, MCP configs, and skills (copy or symlink).
+Then `applyPackageManagerChoice` may rewrite `packageManager` (and drop `pnpm-lock.yaml` for non-pnpm). `applyAgentPacks` may write selected tool adapters, MCP configs, and skills (copy or symlink).
 
 Keep `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`), `create-zstack/src/prepare-consumer.ts`, `create-zstack/src/apply-agent-packs.ts`, `AUTHORING.md`, and this page in sync when you add authoring-only paths or pack flags.
 
 ## Local smoke
 
 ```bash
-ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
-ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke-agents --force --yes --agent-tools=all --skills=symlink
+ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
+ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke-agents --force --yes --agent-tools=all --skills=symlink
 ```

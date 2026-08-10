@@ -8,20 +8,27 @@ You will scaffold a consumer product, start Compose Postgres, migrate, and open 
 ## Scaffold
 
 ```bash
-pnpm create-zstack my-product
+npm create @wanialabs/zstack@latest my-product
+pnpm create @wanialabs/zstack my-product
+yarn create @wanialabs/zstack my-product
+bunx @wanialabs/create-zstack my-product
+
 # non-interactive + coding-agent packs (symlink skills into Cursor/Claude dirs):
-pnpm create-zstack my-product --yes --agent-tools=cursor,claude --skills=symlink
+pnpm create @wanialabs/zstack my-product --yes --agent-tools=cursor,claude --skills=symlink
+
+# pick install tool explicitly (default with --yes is pnpm):
+pnpm create @wanialabs/zstack my-product --yes --package-manager=npm
 ```
 
-From a clone of this authoring repo you can point at the local tree:
+From a clone of this authoring repo you can point at the local tree (giget uses `git:`, not `file:`):
 
 ```bash
-pnpm create-zstack my-product --template file:./ --yes
+pnpm create-zstack my-product --template git:./ --yes
 # or:
-ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
+ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
 ```
 
-`create-zstack` downloads the template with giget, strips authoring-only paths, optionally writes coding-agent packs (`--agent-tools` / `--mcp` / `--skills`), and installs with nypm. Default remote: `gh:Wania-Labs/zstack`. The clone always includes `AGENTS.md`, `.agent/playbooks/`, and `.agent/skills/`. See [Coding agents](/docs/guides/coding-agents) (includes a paste-ready agent setup prompt).
+`@wanialabs/create-zstack` downloads the template with giget, strips authoring-only paths, optionally writes coding-agent packs (`--agent-tools` / `--mcp` / `--skills`), and installs with nypm. Default remote: `gh:Wania-Labs/zstack`. Requires Node.js `>=22.5`. The clone always includes `AGENTS.md`, `.agent/playbooks/`, and `.agent/skills/`. See [Coding agents](/docs/guides/coding-agents) (includes a paste-ready agent setup prompt).
 
 ## First run in the clone
 

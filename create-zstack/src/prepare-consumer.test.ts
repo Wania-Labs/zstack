@@ -4,9 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { stripAuthoringManifest } from "./prepare-consumer.js";
+import {
+  applyPackageManagerChoice,
+  runScriptCommand,
+  stripAuthoringManifest,
+  stripCreateZstackLockfileImporter,
+} from "./prepare-consumer.js";
 
-void test("stripAuthoringManifest removes create-zstack workspace, script, and docs workflow", async () => {
+void test("stripAuthoringManifest removes create-zstack workspace, script, lockfile importer, and docs workflow", async () => {
   const root = await mkdtemp(join(tmpdir(), "zstack-strip-"));
   try {
     await writeFile(
@@ -18,14 +23,46 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, and d
       `${JSON.stringify(
         {
           name: "zstack",
+          packageManager: "pnpm@11.18.0",
           scripts: {
             build: "turbo run build",
-            "create-zstack": "pnpm --filter create-zstack start",
+            "create-zstack": "pnpm --filter @wanialabs/create-zstack start",
           },
         },
         null,
         2,
       )}\n`,
+    );
+    await writeFile(
+      join(root, "pnpm-lock.yaml"),
+      [
+        "lockfileVersion: '9.0'",
+        "",
+        "importers:",
+        "",
+        "  .:",
+        "    dependencies:",
+        "      turbo:",
+        "        specifier: ^2.10.9",
+        "        version: 2.10.9",
+        "",
+        "  create-zstack:",
+        "    dependencies:",
+        "      citty:",
+        "        specifier: ^0.2.2",
+        "        version: 0.2.2",
+        "    devDependencies:",
+        "      tsx:",
+        "        specifier: 4.23.11",
+        "        version: 4.23.11",
+        "",
+        "  packages/contracts:",
+        "    dependencies:",
+        "      zod:",
+        "        specifier: ^4.0.0",
+        "        version: 4.0.0",
+        "",
+      ].join("\n"),
     );
     await mkdir(join(root, ".github/workflows"), { recursive: true });
     await writeFile(join(root, ".github/workflows/docs.yml"), "name: docs\n");
@@ -34,12 +71,13 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, and d
       [
         "# zstack",
         "",
-        "- `create-zstack` authoring CLI (citty + giget + nypm; excluded from clones)",
+        "- `create-zstack` / `@wanialabs/create-zstack` scaffold CLI (excluded from clones)",
         "",
         "Product PRs run `.github/workflows/ci.yml` (ignores `docs/**`). Docs changes run `.github/workflows/docs.yml` against the standalone `docs/` lockfile.",
         "",
         "```bash",
-        "pnpm create-zstack my-app",
+        "npm create @wanialabs/zstack@latest my-app",
+        "pnpm create @wanialabs/zstack my-app",
         "cd docs && pnpm install && pnpm dev   # authoring docs :4000",
         "```",
         "",
@@ -64,14 +102,56 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, and d
     assert.equal(packageJson.scripts?.["create-zstack"], undefined);
     assert.equal(packageJson.scripts?.build, "turbo run build");
 
+    const lock = await readFile(join(root, "pnpm-lock.yaml"), "utf8");
+    assert.equal(lock.includes("create-zstack:"), false);
+    assert.match(lock, /packages\/contracts:/);
+
     await assert.rejects(readFile(join(root, ".github/workflows/docs.yml")));
 
     const readme = await readFile(join(root, "README.md"), "utf8");
-    assert.equal(readme.includes("pnpm create-zstack"), false);
+    assert.equal(readme.includes("create-zstack"), false);
+    assert.equal(readme.includes("@wanialabs/zstack"), false);
     assert.equal(readme.includes("AUTHORING.md"), false);
     assert.match(readme, /See \[AGENTS\.md\]\(AGENTS\.md\)\./);
     assert.match(readme, /Product PRs run `\.github\/workflows\/ci\.yml`\./);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+void test("stripCreateZstackLockfileImporter is a no-op when lockfile missing", async () => {
+  const root = await mkdtemp(join(tmpdir(), "zstack-strip-nolock-"));
+  try {
+    await stripCreateZstackLockfileImporter(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+void test("applyPackageManagerChoice rewrites packageManager and drops pnpm lock for npm", async () => {
+  const root = await mkdtemp(join(tmpdir(), "zstack-pm-"));
+  try {
+    await writeFile(
+      join(root, "package.json"),
+      `${JSON.stringify({ name: "zstack", packageManager: "pnpm@11.18.0" }, null, 2)}\n`,
+    );
+    await writeFile(join(root, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
+
+    await applyPackageManagerChoice(root, "npm");
+
+    const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as {
+      packageManager?: string;
+    };
+    assert.equal(packageJson.packageManager, "npm@10");
+    await assert.rejects(readFile(join(root, "pnpm-lock.yaml")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+void test("runScriptCommand matches package manager", () => {
+  assert.equal(runScriptCommand("pnpm", "dev:services"), "pnpm dev:services");
+  assert.equal(runScriptCommand("npm", "dev:services"), "npm run dev:services");
+  assert.equal(runScriptCommand("yarn", "db:seed"), "yarn db:seed");
+  assert.equal(runScriptCommand("bun", "alchemy:dev"), "bun run alchemy:dev");
 });

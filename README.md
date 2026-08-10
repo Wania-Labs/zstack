@@ -15,7 +15,7 @@ Optional vendors (Sentry, Bento, …) are scaffolded and **off until a clone bin
 - Sentry + evlog scaffolded (DSN-gated; quiet until consumers bind projects)
 - AI capability registry + Effect AiService (fake until `AI_GATEWAY_API_KEY`)
 - Vitest + vitest-evals (deterministic) in CI; workerd pool optional
-- `create-zstack` authoring CLI (citty + giget + nypm; excluded from clones)
+- `create-zstack` / `@wanialabs/create-zstack` scaffold CLI (excluded from clones)
 
 Workflows and queues (when selected) live **inside** `apps/api` — same Hono Worker, not separate apps.
 
@@ -57,7 +57,8 @@ Product PRs run `.github/workflows/ci.yml` (ignores `docs/**`). Docs changes run
 ```bash
 pnpm test              # api unit + vitest-evals (fake)
 pnpm test:workers      # optional workerd pool
-pnpm create-zstack my-app
+npm create @wanialabs/zstack@latest my-app
+pnpm create @wanialabs/zstack my-app
 cd docs && pnpm install && pnpm dev   # authoring docs :4000
 ```
 
