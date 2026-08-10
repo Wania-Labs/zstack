@@ -5,6 +5,8 @@ description: Machine-readable docs endpoints for scrapers, agents, and offline i
 
 Use these endpoints when you ingest zstack docs without a browser. Prefer markdown over HTML.
 
+For **in-clone** coding-agent setup (`AGENTS.md`, skills, MCP, Effect vendor), see [Coding agents](/docs/guides/coding-agents). That page includes a copy-paste **agent setup prompt** you can hand to Cursor / Claude Code / OpenCode.
+
 ## Entry points
 
 | URL                                | What it is                                                         |
@@ -19,14 +21,16 @@ Content negotiation also works. Request a docs HTML URL with `Accept: text/markd
 
 1. Fetch `/llms.txt` for the map.
 2. Read [What is zstack](/docs/index.md), [Capabilities](/docs/concepts/capabilities.md), and [Ports and adapters](/docs/concepts/ports-and-adapters.md).
-3. Pull how-tos under `/docs/guides/` for the task at hand.
-4. Use `/llms-full.txt` only when you need a single offline blob.
+3. Read [Coding agents](/docs/guides/coding-agents.md) when scaffolding or configuring Cursor / Claude Code / OpenCode.
+4. Pull how-tos under `/docs/guides/` for the task at hand.
+5. Use `/llms-full.txt` only when you need a single offline blob.
 
 ## Truth rules for agents
 
 - Teach from **implemented** starter behavior. Capabilities marked future in docs are not shipped.
 - Swaps happen through Effect ports, Layers, `product.config.ts`, and empty-credential defaults. There is no plugin registry.
-- Consumer clones strip `docs/`, `create-zstack/`, `tech-stack-architecture-guide/`, `AUTHORING.md`, `agent-transcripts/`, and `.audit/`. Cite this site or the clone's `README.md` for humans in the product tree.
+- Consumer clones strip `docs/`, `create-zstack/`, `tech-stack-architecture-guide/`, `AUTHORING.md`, `.cursor/`, `agent-transcripts/`, and `.audit/`. Cite this site or the clone's `README.md` / `AGENTS.md` for humans and coding agents in the product tree.
+- Clones always include root + nested `AGENTS.md`, `.agent/playbooks/`, and `.agent/skills/` (Effect skill points at `node_modules/effect/AGENTS.md`). Optional Cursor/Claude/OpenCode packs and MCP configs are written by `create-zstack --agent-tools` / `--mcp` / `--skills` after download. Skills may be **copied** or **symlinked** into `.cursor/skills` / `.claude/skills`. Optional `pnpm agent:vendor-effect` vendors Effect source under `repos/effect/` (subtree by default).
 - Secrets never belong in `product.config.ts`.
 
 ## Human UI affordances

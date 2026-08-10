@@ -1,0 +1,12 @@
+---
+description: Effect v4 — read package AGENTS.md and prefer local Effect source over web guesses
+globs: apps/api/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+Before writing or changing Effect / Layer / Schema / `@effect/sql*` code:
+
+1. Read `node_modules/effect/AGENTS.md` (or the pnpm nested path under `.pnpm/effect@…`).
+2. Prefer `node_modules/effect/src` and `@effect/sql-pg` over web search.
+3. If `repos/effect/` exists, use it as read-only reference; never import from it.
+4. Follow `.agent/skills/effect-ts/SKILL.md` and root `AGENTS.md`.

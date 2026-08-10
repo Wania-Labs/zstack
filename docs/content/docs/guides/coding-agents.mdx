@@ -1,0 +1,189 @@
+---
+title: Coding agents
+description: AGENTS.md, skills, MCP servers, Effect source, and create-zstack pack flags for Cursor, Claude Code, OpenCode, and Codex.
+---
+
+zstack ships an in-clone playbook for coding agents. The docs site (this page, [For agents](/docs/for-agents), `/llms.txt`) is for ingest and human tutorials. The clone’s `AGENTS.md` is what agents should obey while editing product code.
+
+Product AI (`AiService`, AI Gateway) is unrelated. That is a runtime feature for end users.
+
+## What every clone gets
+
+| Path                                               | Role                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `AGENTS.md`                                        | Root constraints, commands, MCP map, Effect entry                              |
+| `apps/*/AGENTS.md`, `packages/contracts/AGENTS.md` | Package-local rules                                                            |
+| `.agent/playbooks/`                                | Multi-step procedures (capability, adapter, deploy, migrations, vendor Effect) |
+| `.agent/skills/`                                   | Canonical skills (Effect first). Source of truth for tool skill dirs           |
+
+Human architecture essays stay on this site. Do not expect `tech-stack-architecture-guide/` or `docs/` inside a consumer clone ([create-zstack](/docs/reference/create-zstack) strips them).
+
+## Scaffold with packs
+
+```bash
+pnpm create-zstack my-product --yes --agent-tools=cursor,claude --mcp=defaults --skills=copy
+pnpm create-zstack my-product --yes --agent-tools=all --mcp=all --skills=symlink
+```
+
+| Flag            | Values                                                    | Notes                                                         |
+| --------------- | --------------------------------------------------------- | ------------------------------------------------------------- |
+| `--agent-tools` | `none`, `all`, or `claude,cursor,opencode,codex`          | Omit to prompt on a TTY. Non-TTY / `--yes` → none             |
+| `--mcp`         | `none`, `defaults`/`docs`, `account`, `all`, or comma ids | Docs group is the default when tools are selected             |
+| `--skills`      | `copy` (default), `symlink`, `none`                       | How `.agent/skills` is exposed under Cursor/Claude skill dirs |
+| `--yes` / `-y`  | boolean                                                   | Skip the agent-tools prompt                                   |
+
+Packs are written **after** download from `create-zstack/packs/` so they are not blocked by `.cursor/**` in the ignore list. Full flag reference: [create-zstack](/docs/reference/create-zstack).
+
+## Skills: copy vs symlink
+
+Canonical skills live in `.agent/skills/` (always in the template).
+
+When `--agent-tools` includes `claude` and/or `cursor`, create-zstack also installs them where those tools look:
+
+| Mode             | Behavior                                                                               |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| `copy` (default) | Duplicate into `.claude/skills` and/or `.cursor/skills`                                |
+| `symlink`        | Relative directory symlink (Windows: junction) to `../.agent/skills`                   |
+| `none`           | Leave only `.agent/skills`; tools that require their own path must be pointed manually |
+
+Prefer **symlink** when you will edit skills in one place and want Cursor/Claude to see updates without re-scaffolding. Prefer **copy** when you want tool dirs to keep working if `.agent/skills` is later removed or when Windows symlink permissions are awkward.
+
+Codex and OpenCode read `AGENTS.md` / `opencode.json` instructions; they do not need a separate skills copy. OpenCode still gets MCP entries when selected.
+
+## MCP catalog
+
+### Docs group (`--mcp=defaults` or `docs`)
+
+| Id                | Purpose                                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| `cloudflare-docs` | Workers / platform docs                                                                                     |
+| `context7`        | Live library docs (Effect, Drizzle, Hono, TanStack, Better Auth, oRPC, Zod, AI SDK, Alchemy IaC package, …) |
+| `shadcn`          | Component registry for `apps/web` and `apps/admin`                                                          |
+
+### Account group (`--mcp=account` or include via `all`)
+
+OAuth / per-clone auth. Scaffolded off until you sign in.
+
+| Id                         | Purpose                                       |
+| -------------------------- | --------------------------------------------- |
+| `cloudflare-bindings`      | Workers bindings against a Cloudflare account |
+| `cloudflare-observability` | Workers logs/metrics                          |
+| `sentry`                   | Issues/traces when DSNs are bound             |
+| `planetscale`              | Deployed Postgres schema / Insights           |
+
+There is no Bento MCP (email stays console until `EMAIL_FROM` + `BENTO_*`). Do **not** add blockchain Alchemy MCP (`mcp.alchemy.com`). This starter’s Alchemy is the Cloudflare IaC package (`alchemy.run.ts`).
+
+## Effect v4
+
+Before writing Effect / Layer / Schema / `@effect/sql*` code:
+
+1. Read `node_modules/effect/AGENTS.md` completely (pnpm may nest it under `.pnpm/effect@…`).
+2. Follow `.agent/skills/effect-ts/SKILL.md`.
+3. Prefer `node_modules/effect/src` over web search.
+
+Optional deeper checkout (Effect’s recommended agent workflow):
+
+```bash
+pnpm agent:vendor-effect          # git subtree → repos/effect/
+pnpm agent:vendor-effect -- --submodule
+pnpm agent:vendor-effect -- --pull
+```
+
+Treat `repos/**` as read-only reference. Never import application code from `repos/`. Details: clone playbook `.agent/playbooks/vendor-effect.md`.
+
+## Agent setup prompt
+
+Paste one of these into Cursor, Claude Code, OpenCode, or Codex. The long form works from an empty target or an existing clone. The short form assumes the template files are already present.
+
+### Full setup
+
+```text
+Set up this zstack product for coding agents end to end. Follow AGENTS.md and docs/guides/coding-agents if present; otherwise use the conventions below.
+
+Goals
+1) Coding-agent packs for Cursor + Claude Code + OpenCode
+2) Docs MCP defaults plus account MCPs
+3) Skills installed via symlink (single source of truth under .agent/skills)
+4) Optional Effect source vendor for better Effect v4 code
+
+If this directory is not yet a zstack product clone
+- From the authoring repo run:
+  pnpm create-zstack <target-dir> --yes --agent-tools=all --mcp=all --skills=symlink
+- Then cd into <target-dir> and continue.
+
+If this is already a clone (has apps/, packages/, alchemy.run.ts)
+1) Ensure these exist and are current with zstack conventions:
+   - AGENTS.md (root)
+   - nested AGENTS.md under apps/api, apps/web, apps/admin, packages/contracts
+   - .agent/playbooks/* (add-capability, swap-adapter, deploy-alchemy, database-migrations, vendor-effect)
+   - .agent/skills/effect-ts/SKILL.md pointing agents at node_modules/effect/AGENTS.md
+2) Write tool adapters (do not invent a second playbook; point at AGENTS.md):
+   - CLAUDE.md with @AGENTS.md and @.agent/skills/effect-ts/SKILL.md
+   - .cursor/rules/zstack.mdc (alwaysApply), contracts.mdc, effect.mdc
+   - opencode.json with instructions: ["AGENTS.md", ".agent/playbooks/*.md"]
+3) Install skills with relative symlinks (Windows: junctions):
+   - .cursor/skills -> ../.agent/skills
+   - .claude/skills -> ../.agent/skills
+   Replace any previous copies of those dirs.
+4) Write / merge MCP configs (do NOT add blockchain mcp.alchemy.com):
+   Docs (always):
+   - cloudflare-docs: https://docs.mcp.cloudflare.com/mcp
+   - context7: https://mcp.context7.com/mcp
+   - shadcn: npx shadcn@latest mcp
+   Account (OAuth; leave for user to sign in):
+   - cloudflare-bindings: https://bindings.mcp.cloudflare.com/mcp
+   - cloudflare-observability: https://observability.mcp.cloudflare.com/mcp
+   - sentry: https://mcp.sentry.dev/mcp
+   - planetscale: https://mcp.pscale.dev/mcp/planetscale
+   Targets:
+   - .cursor/mcp.json (mcpServers)
+   - .mcp.json (mcpServers)
+   - opencode.json (mcp remote/local entries)
+5) Vendor Effect source for agents (preferred: git subtree):
+   - pnpm agent:vendor-effect
+   - If script missing, add scripts/vendor-effect.mjs + package.json script, then run it
+   - Treat repos/effect as read-only; never import app code from it
+   - Exclude repos/** from VS Code auto-import / search / watchers
+6) Update AGENTS.md so it documents:
+   - Effect: read node_modules/effect/AGENTS.md before Effect code
+   - MCP table above
+   - --skills symlink policy / .agent/skills as canonical
+   - pnpm agent:vendor-effect
+7) Do not put secrets in product.config.ts. Do not conflate product AiService with coding-agent setup.
+8) Verify:
+   - ls -la .cursor/skills .claude/skills (symlinks)
+   - MCP JSON files contain the servers above
+   - CLAUDE.md / .cursor/rules / opencode.json exist
+   - repos/effect exists after vendor (or explain why git blocked it)
+   - pnpm --filter create-zstack test if you changed create-zstack; otherwise just confirm files
+
+Report what you wrote, what needs interactive OAuth (Sentry / PlanetScale / Cloudflare), and any commands I still need to run.
+```
+
+### Short setup (packs + vendor only)
+
+```text
+In this zstack clone, install coding-agent packs for all tools with account MCPs and symlinked skills, then vendor Effect:
+
+1) If create-zstack is available from the authoring tree, prefer regenerating packs with:
+   --agent-tools=all --mcp=all --skills=symlink
+   Otherwise write CLAUDE.md, .cursor/rules/{zstack,contracts,effect}.mdc, opencode.json, .cursor/mcp.json, .mcp.json as in AGENTS.md / coding-agents docs.
+2) Symlink .cursor/skills and .claude/skills → ../.agent/skills
+3) pnpm agent:vendor-effect
+4) Confirm files and summarize OAuth steps left for me.
+```
+
+## Playbooks in the clone
+
+- `.agent/playbooks/add-capability.md`
+- `.agent/playbooks/swap-adapter.md`
+- `.agent/playbooks/deploy-alchemy.md`
+- `.agent/playbooks/database-migrations.md`
+- `.agent/playbooks/vendor-effect.md`
+
+## Related
+
+- [For agents](/docs/for-agents) — machine ingest (`/llms.txt`, `.md` twins)
+- [create-zstack](/docs/reference/create-zstack) — ignore list and CLI
+- [Ports and adapters](/docs/concepts/ports-and-adapters) — Effect Layer swaps
+- [Getting started](/docs/getting-started) — first scaffold

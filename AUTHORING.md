@@ -9,8 +9,7 @@ When `create-zstack` downloads this template with giget, skip at least:
 ```text
 tech-stack-architecture-guide/**
 AUTHORING.md
-.cursor/
-.cursor/plans/
+.cursor/**
 create-zstack/**
 docs/**
 agent-transcripts/**
@@ -21,11 +20,17 @@ Also exclude any future authoring-only paths (internal plans, draft CLIs, unpubl
 
 After download, `create-zstack/src/prepare-consumer.ts` (`stripAuthoringManifest`) rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and root script, remove `.github/workflows/docs.yml`, and scrub authoring-only README lines.
 
+Optional coding-agent packs are **not** taken from the authoring tree's `.cursor/` (that path is ignored). They live in `create-zstack/packs/` and are written by `applyAgentPacks` when the user passes `--agent-tools` (or answers the TTY prompt). Skills under `.agent/skills/` can be **copied** or **symlinked** into tool dirs (`--skills=copy|symlink|none`).
+
 ## What consumers get
 
-The product monorepo: `apps/`, `packages/`, root toolchain configs, and later `AGENTS.md` files that teach agents how to work in the tree.
+The product monorepo: `apps/`, `packages/`, root toolchain configs, root + nested `AGENTS.md`, `.agent/playbooks/`, and `.agent/skills/`.
 
-Human architecture docs live on the separate zstack website, not in cloned products.
+Optional at init (`--agent-tools` / `--mcp` / `--skills`): thin tool adapters (`CLAUDE.md`, `.cursor/rules`, `opencode.json`), MCP servers, and skill install mode. Docs group by default (`cloudflare-docs`, `context7`, `shadcn`); account group (`sentry`, `planetscale`, Cloudflare bindings/observability) via `--mcp=account` or `--mcp=all`. These are coding-environment files, not `product.config.ts` capabilities.
+
+Optional Effect source for agents: `pnpm agent:vendor-effect` (git subtree into `repos/effect/` by default; `--submodule` available). See `.agent/playbooks/vendor-effect.md`.
+
+Human architecture docs live on the separate zstack website, not in cloned products. Coding-agent walkthrough: `docs/content/docs/guides/coding-agents.mdx`.
 
 ## Packaging stack
 
@@ -36,10 +41,19 @@ Human architecture docs live on the separate zstack website, not in cloned produ
 Local smoke against this tree:
 
 ```bash
-ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force
+ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
+ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke-agents --force --yes --agent-tools=all
 ```
 
 Default remote template: `gh:Wania-Labs/zstack` (override with `--template` or `ZSTACK_TEMPLATE`).
+
+- Agent pack flags:
+  - `--agent-tools=none|all|claude,cursor,opencode,codex` — omit to prompt on a TTY; non-TTY / `--yes` defaults to none
+  - `--mcp=defaults|docs|account|all|none|<ids>` — public docs MCPs by default when tools selected
+  - `--skills=copy|symlink|none` — how to install `.agent/skills` into Cursor/Claude skill dirs (default `copy`)
+  - `--yes` / `-y` — skip the agent-tools prompt
+
+Docs walkthrough: `docs/content/docs/guides/coding-agents.mdx`.
 
 ## Notes from scaffolding
 

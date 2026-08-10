@@ -67,6 +67,10 @@ cd docs && pnpm install && pnpm dev   # authoring docs :4000
 alchemy.run.ts             # Alchemy v2 stack entry
 infra/                     # api / web / admin / database resources
 product.config.ts          # capability intent (no secrets)
+AGENTS.md                  # coding-agent playbook (ships to clones)
+.agent/playbooks/          # multi-step agent procedures
+.agent/skills/             # agent skills (Effect, …)
+scripts/vendor-effect.mjs  # optional git subtree/submodule of Effect-TS/effect
 apps/api/                  # Hono Worker (workflows/queues/cron live here)
 apps/web/                  # TanStack Start customer shell
 apps/admin/                # TanStack Start staff console
@@ -77,4 +81,4 @@ docs/                      # authoring-only docs site (own lockfile/CI; not in c
 compose.yaml               # local Postgres 18
 ```
 
-See [AUTHORING.md](AUTHORING.md).
+See [AUTHORING.md](AUTHORING.md). Agents: [AGENTS.md](AGENTS.md).

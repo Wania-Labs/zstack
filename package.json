@@ -23,7 +23,8 @@
     "test": "turbo run test",
     "test:evals": "pnpm --filter @zstack/api test:evals",
     "test:workers": "pnpm --filter @zstack/api test:workers",
-    "create-zstack": "pnpm --filter create-zstack start"
+    "create-zstack": "pnpm --filter create-zstack start",
+    "agent:vendor-effect": "node scripts/vendor-effect.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",

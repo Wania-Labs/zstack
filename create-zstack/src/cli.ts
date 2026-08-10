@@ -1,14 +1,19 @@
 import { defineCommand, runMain } from "citty";
 import { downloadTemplate } from "giget";
 import { installDependencies } from "nypm";
+import * as p from "@clack/prompts";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { applyAgentPacks, resolveAgentPackSelection, type AgentTool } from "./apply-agent-packs.js";
 import { stripAuthoringManifest } from "./prepare-consumer.js";
 
 /**
  * Paths that belong to zstack authoring — never ship into consumer clones.
  * Keep in sync with AUTHORING.md → Consumer ignore contract.
+ *
+ * Consumer Cursor packs are written by `applyAgentPacks` after download.
+ * Do not put consumer rules under the authoring tree's `.cursor/` — this ignore drops them.
  */
 export const CONSUMER_IGNORE = [
   "tech-stack-architecture-guide/**",
@@ -56,6 +61,30 @@ const main = defineCommand({
       description: "Install dependencies with nypm after download",
       default: true,
     },
+    "agent-tools": {
+      type: "string",
+      description:
+        "Coding-agent packs to write: none | all | comma list (claude,cursor,opencode,codex). Omit to prompt on a TTY; non-TTY / --yes defaults to none.",
+      required: false,
+    },
+    mcp: {
+      type: "string",
+      description:
+        "MCP servers when agent tools are selected: none | defaults|docs | account | all | comma ids (cloudflare-docs,context7,shadcn,cloudflare-bindings,cloudflare-observability,sentry,planetscale). Default: docs group.",
+      required: false,
+    },
+    skills: {
+      type: "string",
+      description:
+        "How to install .agent/skills for Cursor/Claude: copy (default) | symlink | none",
+      required: false,
+    },
+    yes: {
+      type: "boolean",
+      description: "Skip prompts; agent-tools default to none unless --agent-tools is set",
+      default: false,
+      alias: "y",
+    },
   },
   async run({ args }) {
     const dir = resolve(process.cwd(), args.dir);
@@ -78,6 +107,51 @@ const main = defineCommand({
 
     console.log(`Template ready at ${result.dir}`);
     await stripAuthoringManifest(result.dir);
+
+    let selection;
+    try {
+      selection = await resolveAgentPackSelection({
+        agentToolsArg: args["agent-tools"],
+        mcpArg: args.mcp,
+        skillsArg: args.skills,
+        yes: args.yes,
+        isTTY: Boolean(process.stdin.isTTY && process.stdout.isTTY),
+        promptTools: async () => {
+          p.intro("create-zstack");
+          const chosen = await p.multiselect({
+            message: "Which coding-agent packs should we write into the clone?",
+            options: [
+              { value: "claude", label: "Claude Code (CLAUDE.md + optional .mcp.json)" },
+              { value: "cursor", label: "Cursor (.cursor/rules + optional mcp.json)" },
+              { value: "opencode", label: "OpenCode (opencode.json)" },
+              { value: "codex", label: "Codex (uses shipped AGENTS.md; no extra files)" },
+            ],
+            required: false,
+          });
+          if (p.isCancel(chosen)) {
+            p.cancel("Scaffold cancelled.");
+            process.exit(1);
+          }
+          return chosen as AgentTool[];
+        },
+      });
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+
+    if (selection.tools.length > 0) {
+      await applyAgentPacks(result.dir, selection);
+      const toolLabel = selection.tools.join(", ");
+      const mcpLabel = selection.mcp === "none" ? "" : ` + MCP (${selection.mcp.join(", ")})`;
+      const skillsLabel = selection.skills === "none" ? "" : ` + skills:${selection.skills}`;
+      console.log(`Agent packs written: ${toolLabel}${mcpLabel}${skillsLabel}`);
+      if (selection.tools.includes("codex") && selection.tools.every((t) => t === "codex")) {
+        console.log(
+          "Note: Codex uses the shipped AGENTS.md. Configure Codex MCP in ~/.codex/config.toml if needed.",
+        );
+      }
+    }
 
     if (args.install) {
       console.log("Installing dependencies…");

@@ -9,17 +9,19 @@ You will scaffold a consumer product, start Compose Postgres, migrate, and open 
 
 ```bash
 pnpm create-zstack my-product
+# non-interactive + coding-agent packs (symlink skills into Cursor/Claude dirs):
+pnpm create-zstack my-product --yes --agent-tools=cursor,claude --skills=symlink
 ```
 
 From a clone of this authoring repo you can point at the local tree:
 
 ```bash
-pnpm create-zstack my-product --template file:./
+pnpm create-zstack my-product --template file:./ --yes
 # or:
-ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force
+ZSTACK_TEMPLATE=file:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
 ```
 
-`create-zstack` downloads the template with giget, strips authoring-only paths, and installs with nypm. Default remote: `gh:Wania-Labs/zstack`.
+`create-zstack` downloads the template with giget, strips authoring-only paths, optionally writes coding-agent packs (`--agent-tools` / `--mcp` / `--skills`), and installs with nypm. Default remote: `gh:Wania-Labs/zstack`. The clone always includes `AGENTS.md`, `.agent/playbooks/`, and `.agent/skills/`. See [Coding agents](/docs/guides/coding-agents) (includes a paste-ready agent setup prompt).
 
 ## First run in the clone
 
