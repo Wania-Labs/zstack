@@ -34,7 +34,12 @@ export const CONSUMER_IGNORE = [
 /** Override with ZSTACK_TEMPLATE (e.g. `git:$(pwd)` or `gh:org/zstack`). */
 const DEFAULT_TEMPLATE = process.env.ZSTACK_TEMPLATE?.trim() || "gh:Wania-Labs/zstack";
 
-const PACKAGE_MANAGERS = ["pnpm", "npm", "yarn", "bun"] as const satisfies readonly ScaffoldPackageManager[];
+const PACKAGE_MANAGERS = [
+  "pnpm",
+  "npm",
+  "yarn",
+  "bun",
+] as const satisfies readonly ScaffoldPackageManager[];
 
 async function resolvePackageManager(options: {
   packageManagerArg: string | undefined;
