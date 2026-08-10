@@ -14,6 +14,16 @@ import {
   MCP_CATALOG,
   type McpSelection,
 } from "./apply-agent-packs.js";
+import { buildProjectIdentity, parseNpmScope, slugifyProjectName } from "./project-identity.js";
+
+function testIdentity() {
+  const slug = slugifyProjectName("Acme Cloud");
+  return buildProjectIdentity({
+    displayName: "Acme Cloud",
+    slug,
+    scope: parseNpmScope("@acme", slug),
+  });
+}
 
 function requireMcpList(raw: string): Exclude<McpSelection, "none"> {
   const parsed = parseMcpArg(raw);
@@ -89,6 +99,7 @@ void test("applyAgentPacks writes packs, skills copy, and expanded MCP defaults"
         mcp: requireMcpList("defaults"),
         skills: "copy",
       },
+      testIdentity(),
       PACKS_DIR,
     );
 
@@ -104,6 +115,11 @@ void test("applyAgentPacks writes packs, skills copy, and expanded MCP defaults"
 
     const effectRule = await readFile(join(root, ".cursor/rules/effect.mdc"), "utf8");
     assert.match(effectRule, /node_modules\/effect\/AGENTS\.md/);
+
+    const projectRule = await readFile(join(root, ".cursor/rules/acme-cloud.mdc"), "utf8");
+    assert.match(projectRule, /@acme\/contracts/);
+    assert.equal(projectRule.includes("@zstack/"), false);
+    await assert.rejects(readFile(join(root, ".cursor/rules/zstack.mdc")));
 
     const cursorMcp = JSON.parse(await readFile(join(root, ".cursor/mcp.json"), "utf8")) as {
       mcpServers: Record<string, unknown>;
@@ -134,6 +150,7 @@ void test("applyAgentPacks can symlink skills into tool dirs", async () => {
     await applyAgentPacks(
       root,
       { tools: ["claude", "cursor"], mcp: "none", skills: "symlink" },
+      testIdentity(),
       PACKS_DIR,
     );
 
@@ -157,7 +174,12 @@ void test("applyAgentPacks with skills none skips skill dirs", async () => {
   try {
     await mkdir(join(root, ".agent/skills/effect-ts"), { recursive: true });
     await writeFile(join(root, ".agent/skills/effect-ts/SKILL.md"), "# x\n");
-    await applyAgentPacks(root, { tools: ["claude"], mcp: "none", skills: "none" }, PACKS_DIR);
+    await applyAgentPacks(
+      root,
+      { tools: ["claude"], mcp: "none", skills: "none" },
+      testIdentity(),
+      PACKS_DIR,
+    );
     await readFile(join(root, "CLAUDE.md"), "utf8");
     await assert.rejects(readFile(join(root, ".claude/skills/effect-ts/SKILL.md")));
   } finally {
@@ -171,6 +193,7 @@ void test("applyAgentPacks with mcp all includes account servers", async () => {
     await applyAgentPacks(
       root,
       { tools: ["claude"], mcp: requireMcpList("all"), skills: "none" },
+      testIdentity(),
       PACKS_DIR,
     );
     const mcp = JSON.parse(await readFile(join(root, ".mcp.json"), "utf8")) as {
@@ -187,7 +210,12 @@ void test("applyAgentPacks with mcp all includes account servers", async () => {
 void test("applyAgentPacks with mcp none skips MCP files", async () => {
   const root = await mkdtemp(join(tmpdir(), "zstack-packs-nomcp-"));
   try {
-    await applyAgentPacks(root, { tools: ["claude"], mcp: "none", skills: "none" }, PACKS_DIR);
+    await applyAgentPacks(
+      root,
+      { tools: ["claude"], mcp: "none", skills: "none" },
+      testIdentity(),
+      PACKS_DIR,
+    );
     await assert.rejects(readFile(join(root, ".mcp.json")));
     await readFile(join(root, "CLAUDE.md"), "utf8");
   } finally {
@@ -202,6 +230,7 @@ void test("applyAgentPacks is a no-op when tools empty", async () => {
     await applyAgentPacks(
       root,
       { tools: [], mcp: requireMcpList("defaults"), skills: "copy" },
+      testIdentity(),
       PACKS_DIR,
     );
     await assert.rejects(readFile(join(root, "CLAUDE.md")));
@@ -221,6 +250,7 @@ void test("applyAgentPacks merges into existing cursor mcp.json", async () => {
     await applyAgentPacks(
       root,
       { tools: ["cursor"], mcp: requireMcpList("defaults"), skills: "none" },
+      testIdentity(),
       PACKS_DIR,
     );
     const mcp = JSON.parse(await readFile(join(root, ".cursor/mcp.json"), "utf8")) as {

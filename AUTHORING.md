@@ -14,11 +14,15 @@ create-zstack/**
 docs/**
 agent-transcripts/**
 .audit/**
+.github/workflows/publish-create-zstack.yml
+apps/*/.cta.json
 ```
 
 Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template). The ignore list is encoded in `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`) — keep both in sync.
 
 After download, `create-zstack/src/prepare-consumer.ts` (`stripAuthoringManifest`) rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and root script, remove the `create-zstack` importer from `pnpm-lock.yaml`, remove `.github/workflows/docs.yml`, and scrub authoring-only README lines.
+
+Then, unless `--keep-identity` is set, `personalizeClone` rewrites product identity from `--name` / `--scope` (or the target directory basename): root package name, `@scope/*` workspace packages, Compose/Postgres/Hyperdrive locals, Alchemy stack, Worker names, brand strings, and related filters/imports.
 
 Optional coding-agent packs are **not** taken from the authoring tree's `.cursor/` (that path is ignored). They live in `create-zstack/packs/` and are written by `applyAgentPacks` when the user passes `--agent-tools` (or answers the TTY prompt). Skills under `.agent/skills/` can be **copied** or **symlinked** into tool dirs (`--skills=copy|symlink|none`).
 

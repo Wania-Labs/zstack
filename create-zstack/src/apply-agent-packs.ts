@@ -2,6 +2,8 @@ import { access, copyFile, cp, mkdir, readFile, rm, symlink, writeFile } from "n
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { ProjectIdentity } from "./project-identity.js";
+
 export const AGENT_TOOLS = ["claude", "cursor", "opencode", "codex"] as const;
 export type AgentTool = (typeof AGENT_TOOLS)[number];
 
@@ -266,6 +268,7 @@ async function installSkills(root: string, destRelative: string, mode: SkillsMod
 export async function applyAgentPacks(
   root: string,
   selection: AgentPackSelection,
+  identity: ProjectIdentity,
   packsDir: string = PACKS_DIR,
 ): Promise<void> {
   const { tools, mcp, skills } = selection;
@@ -281,7 +284,7 @@ export async function applyAgentPacks(
   }
 
   if (tools.includes("cursor")) {
-    for (const name of ["zstack.mdc", "contracts.mdc", "effect.mdc"] as const) {
+    for (const name of ["contracts.mdc", "effect.mdc"] as const) {
       const src = join(packsDir, "cursor/rules", name);
       const dest = join(root, ".cursor/rules", name);
       await ensureDirFor(dest);
@@ -293,6 +296,9 @@ export async function applyAgentPacks(
         }
       }
     }
+    const projectRulePath = join(root, ".cursor/rules", `${identity.slug}.mdc`);
+    await ensureDirFor(projectRulePath);
+    await writeFile(projectRulePath, renderProjectRule(identity));
     await installSkills(root, ".cursor/skills", skills);
   }
 
@@ -301,8 +307,6 @@ export async function applyAgentPacks(
     await ensureDirFor(dest);
     await copyFile(join(packsDir, "opencode/opencode.json"), dest);
   }
-
-  // Codex: AGENTS.md + .agent/skills already in the template.
 
   if (mcp === "none") {
     return;
@@ -331,4 +335,16 @@ export async function applyAgentPacks(
     existing.mcp = { ...prevMcp, ...opencodeServers(mcp) };
     await writeJson(dest, existing);
   }
+}
+
+export function renderProjectRule(identity: ProjectIdentity): string {
+  return `---
+description: ${identity.displayName} product monorepo invariants — Alchemy deploy, ports/adapters, contracts-only frontends
+alwaysApply: true
+---
+
+Read and follow \`AGENTS.md\` at the repo root (and nested \`AGENTS.md\` / \`.agent/playbooks/\` when editing those trees).
+
+Hard constraints: Alchemy is the only deploy path; modules call platform ports; frontends import \`${identity.npm.scope}/contracts\` only; keep \`patches/\`; no secrets in \`product.config.ts\`.
+`;
 }
