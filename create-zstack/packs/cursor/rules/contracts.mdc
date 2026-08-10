@@ -1,0 +1,7 @@
+---
+description: Contract-first oRPC changes — edit packages/contracts before api modules and UI
+globs: packages/contracts/**
+alwaysApply: false
+---
+
+Contract changes land first in `packages/contracts`, then `apps/api` implementation, then web/admin callers. See `.agent/playbooks/add-capability.md` and `packages/contracts/AGENTS.md`.

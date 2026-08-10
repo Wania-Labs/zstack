@@ -42,6 +42,10 @@ export async function stripAuthoringManifest(root: string): Promise<void> {
         /\ndocs\/ {22}# authoring-only docs site \(own lockfile\/CI; not in clones\)\n/g,
         "\n",
       )
+      .replace(
+        /\nSee \[AUTHORING\.md\]\(AUTHORING\.md\)\. Agents: \[AGENTS\.md\]\(AGENTS\.md\)\.\n/g,
+        "\nSee [AGENTS.md](AGENTS.md).\n",
+      )
       .replace(/\nSee \[AUTHORING\.md\]\(AUTHORING\.md\)\.\n/g, "\n");
     await writeFile(readmePath, readme);
   } catch {

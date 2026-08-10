@@ -48,7 +48,7 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, and d
         "docs/                      # authoring-only docs site (own lockfile/CI; not in clones)",
         "```",
         "",
-        "See [AUTHORING.md](AUTHORING.md).",
+        "See [AUTHORING.md](AUTHORING.md). Agents: [AGENTS.md](AGENTS.md).",
         "",
       ].join("\n"),
     );
@@ -69,6 +69,7 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, and d
     const readme = await readFile(join(root, "README.md"), "utf8");
     assert.equal(readme.includes("pnpm create-zstack"), false);
     assert.equal(readme.includes("AUTHORING.md"), false);
+    assert.match(readme, /See \[AGENTS\.md\]\(AGENTS\.md\)\./);
     assert.match(readme, /Product PRs run `\.github\/workflows\/ci\.yml`\./);
   } finally {
     await rm(root, { recursive: true, force: true });

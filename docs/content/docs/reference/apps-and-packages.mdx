@@ -29,8 +29,13 @@ description: Paths, package names, and ownership for the product monorepo.
 | `alchemy.run.ts`      | Alchemy stack entry                                        |
 | `infra/`              | api / web / admin / database resources                     |
 | `product.config.ts`   | Capability intent                                          |
+| `AGENTS.md`           | Coding-agent playbook (ships to clones)                    |
+| `.agent/playbooks/`   | Multi-step agent procedures                                |
+| `.agent/skills/`      | Agent skills (Effect, …)                                   |
 | `compose.yaml`        | Local Postgres 18                                          |
 
 ## Authoring-only (stripped from clones)
 
-`docs/`, `create-zstack/`, `tech-stack-architecture-guide/`, `AUTHORING.md`, `.cursor/`.
+`docs/`, `create-zstack/`, `tech-stack-architecture-guide/`, `AUTHORING.md`, `.cursor/`, `agent-transcripts/`, `.audit/`.
+
+Optional Cursor/Claude/OpenCode packs are written by `create-zstack --agent-tools` after download (they are not copied from the authoring `.cursor/` tree). Use `--skills=copy|symlink|none` to install `.agent/skills` into tool skill dirs. See [Coding agents](/docs/guides/coding-agents).

@@ -17,15 +17,16 @@ const PREFACE = `# zstack docs
 
 1. [/docs](/docs) — what zstack is
 2. [/docs/getting-started](/docs/getting-started) — scaffold and run
-3. [/docs/concepts/capabilities](/docs/concepts/capabilities) — absent vs configured
-4. [/docs/concepts/ports-and-adapters](/docs/concepts/ports-and-adapters) — how swaps work
-5. Guides under [/docs/guides](/docs/guides) — turn-on and swap how-tos
+3. [/docs/guides/coding-agents](/docs/guides/coding-agents) — AGENTS.md, skills, MCP, Effect
+4. [/docs/concepts/capabilities](/docs/concepts/capabilities) — absent vs configured
+5. [/docs/concepts/ports-and-adapters](/docs/concepts/ports-and-adapters) — how swaps work
+6. Guides under [/docs/guides](/docs/guides) — turn-on and swap how-tos
 
 ## Truth rules
 
 - Document implemented starter behavior only. Future architecture-guide chapters are not shipped features.
 - Swaps use Effect ports, Layers, product.config.ts, and empty-credential defaults. No plugin registry.
-- Consumer clones strip docs/, create-zstack/, tech-stack-architecture-guide/, AUTHORING.md, agent-transcripts/, and .audit/.
+- Consumer clones strip docs/, create-zstack/, tech-stack-architecture-guide/, AUTHORING.md, .cursor/, agent-transcripts/, and .audit/. Clones keep AGENTS.md, .agent/playbooks/, and .agent/skills/; optional tool packs come from create-zstack --agent-tools / --mcp / --skills (copy or symlink). See [/docs/guides/coding-agents](/docs/guides/coding-agents).
 
 `;
 
