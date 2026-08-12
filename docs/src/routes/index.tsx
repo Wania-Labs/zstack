@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
 import { baseOptions } from "@/lib/layout.shared";
+import { ArrowRight, Rocket, TrendingUp, Boxes } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -183,6 +184,49 @@ function Home() {
                 Portable Postgres and swappable ports keep the door open; you don't have to design
                 for day-1000 on day one.
               </p>
+            </div>
+
+            {/* Progression diagram */}
+            <div className="mt-12 flex flex-col items-center gap-8 sm:flex-row sm:justify-center">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-fd-border bg-fd-card">
+                  <Rocket className="h-8 w-8 text-fd-primary" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-fd-foreground">Launch lean</p>
+                  <p className="text-xs text-fd-muted-foreground">Compose, low-ops, ship</p>
+                </div>
+              </div>
+
+              <ArrowRight className="hidden h-6 w-6 text-fd-muted-foreground sm:block" />
+              <div className="block h-6 w-6 rotate-90 text-fd-muted-foreground sm:hidden">
+                <ArrowRight className="h-6 w-6" />
+              </div>
+
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-fd-border bg-fd-card">
+                  <TrendingUp className="h-8 w-8 text-fd-primary" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-fd-foreground">Grow</p>
+                  <p className="text-xs text-fd-muted-foreground">Adapt, optimize, swap ports</p>
+                </div>
+              </div>
+
+              <ArrowRight className="hidden h-6 w-6 text-fd-muted-foreground sm:block" />
+              <div className="block h-6 w-6 rotate-90 text-fd-muted-foreground sm:hidden">
+                <ArrowRight className="h-6 w-6" />
+              </div>
+
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-fd-border bg-fd-card">
+                  <Boxes className="h-8 w-8 text-fd-primary" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-fd-foreground">Move when ready</p>
+                  <p className="text-xs text-fd-muted-foreground">AWS or any layer, no rewrite</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
