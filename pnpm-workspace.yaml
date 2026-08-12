@@ -14,8 +14,8 @@ minimumReleaseAgeExclude:
   - pg-protocol@1.16.0
   - pg@8.23.0
   - evlog@2.25.0
-  - '@effect/platform-node-shared@4.0.0-rc.108'
-  - '@effect/platform-node@4.0.0-rc.108'
-  - '@effect/sql-pg@4.0.0-rc.108'
-  - '@effect/vitest@4.0.0-rc.108'
+  - "@effect/platform-node-shared@4.0.0-rc.108"
+  - "@effect/platform-node@4.0.0-rc.108"
+  - "@effect/sql-pg@4.0.0-rc.108"
+  - "@effect/vitest@4.0.0-rc.108"
   - effect@4.0.0-rc.108
