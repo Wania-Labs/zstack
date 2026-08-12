@@ -18,13 +18,12 @@ function Home() {
               zstack
             </p>
             <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-              Cloudflare-first TypeScript product starter with portable Postgres and agent-ready
-              boundaries
+              Built to launch lean and graduate without compromise.
             </h1>
             <p className="max-w-xl text-lg text-fd-muted-foreground text-pretty">
-              Opinionated monorepo you clone as the product: customer web app, staff admin console,
-              and one Effect-backed Hono Worker. Vendors stay quiet until secrets bind. Local path
-              is Compose plus alchemy:dev.
+              The serious product pieces are already in place — and still replaceable. Launch on a
+              low-cost path, then adapt and optimize each layer without painting yourself into a
+              corner.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <Link

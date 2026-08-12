@@ -10,7 +10,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Cloudflare-first TypeScript product starter with portable Postgres and agent-ready boundaries. Clone the monorepo, run on Compose, deploy to Workers.",
+          "TypeScript product starter built to launch lean and graduate without compromise. Serious pieces in place, still replaceable.",
       },
       { title: "zstack docs" },
     ],
