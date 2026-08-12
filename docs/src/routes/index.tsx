@@ -168,6 +168,25 @@ function Home() {
           </div>
         </section>
 
+        {/* Don't overcomplicate the launch */}
+        <section className="border-b border-fd-border">
+          <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              Don't overcomplicate the launch
+            </h2>
+            <div className="mt-6 flex flex-col gap-4 text-fd-muted-foreground">
+              <p>
+                Start on a simple, low-ops path and ship. When you need AWS — or any other home for
+                a piece of the stack — move that layer without rewriting the product.
+              </p>
+              <p>
+                Portable Postgres and swappable ports keep the door open; you don't have to design
+                for day-1000 on day one.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* What's in the box */}
         <section className="border-b border-fd-border">
           <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
