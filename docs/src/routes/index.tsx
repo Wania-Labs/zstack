@@ -1,7 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
 import { baseOptions } from "@/lib/layout.shared";
-import { ArrowRight, Rocket, TrendingUp, Boxes } from "lucide-react";
+import { Rocket, TrendingUp, Boxes } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -50,8 +50,8 @@ function Home() {
                 GitHub
               </a>
             </div>
-            <div className="pt-2">
-              <code className="inline-block rounded bg-fd-muted px-3 py-1.5 text-sm font-mono text-fd-foreground">
+            <div className="pt-3">
+              <code className="inline-block rounded-md border border-fd-border bg-fd-muted px-4 py-2 text-sm font-mono text-fd-foreground shadow-sm">
                 pnpm create @wanialabs/zstack
               </code>
             </div>
@@ -62,15 +62,17 @@ function Home() {
         <section className="border-b border-fd-border bg-fd-card">
           <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Who it's for</h2>
-            <div className="mt-6 flex flex-col gap-4 text-fd-muted-foreground">
+            <div className="mt-6 max-w-2xl space-y-4 text-fd-muted-foreground">
               <p>
                 Solo founders and small teams shipping an AI-capable SaaS who want Cloudflare
                 Workers without maintaining a second Nest or Next.js API silo.
               </p>
               <p>
                 You want coding agents productive on day one. zstack ships with{" "}
-                <code className="text-sm">AGENTS.md</code>, playbooks, skills, and MCP defaults out
-                of the box.
+                <code className="rounded border border-fd-border bg-fd-background px-1.5 py-0.5 text-sm font-mono">
+                  AGENTS.md
+                </code>
+                , playbooks, skills, and MCP defaults out of the box.
               </p>
               <p className="text-sm">
                 <strong className="font-medium text-fd-foreground">Not for:</strong> dropping this
@@ -86,7 +88,7 @@ function Home() {
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               Familiar job, different axis
             </h2>
-            <div className="mt-6 flex flex-col gap-4 text-fd-muted-foreground">
+            <div className="mt-6 max-w-2xl space-y-4 text-fd-muted-foreground">
               <p>
                 Same job as T3, create-t3-turbo, Makerkit, or ShipFast: opinionated product starter
                 so you don't re-decide auth, billing shell, admin console, and email every time.
@@ -113,10 +115,10 @@ function Home() {
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               Why the idea is good
             </h2>
-            <p className="mt-4 text-fd-muted-foreground">
+            <p className="mt-4 max-w-2xl text-fd-muted-foreground">
               Boundaries, not a logo board. The architectural bets that make it coherent:
             </p>
-            <ul className="mt-6 grid gap-4 sm:grid-cols-2">
+            <ul className="mt-8 grid gap-4 sm:grid-cols-2">
               <li className="flex flex-col gap-1.5">
                 <strong className="text-sm font-medium text-fd-foreground">
                   Zod at the edge, Effect inside
@@ -175,7 +177,7 @@ function Home() {
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               Don't overcomplicate the launch
             </h2>
-            <div className="mt-6 flex flex-col gap-4 text-fd-muted-foreground">
+            <div className="mt-6 max-w-2xl space-y-4 text-fd-muted-foreground">
               <p>
                 Start on a simple, low-ops path and ship. When you need AWS — or any other home for
                 a piece of the stack — move that layer without rewriting the product.
@@ -187,44 +189,107 @@ function Home() {
             </div>
 
             {/* Progression diagram */}
-            <div className="mt-12 flex flex-col items-center gap-8 sm:flex-row sm:justify-center">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-fd-border bg-fd-card">
-                  <Rocket className="h-8 w-8 text-fd-primary" />
+            <div className="relative mt-16 flex flex-col items-center gap-12 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              {/* Step 1 */}
+              <div className="flex w-full max-w-xs flex-col items-center gap-4 text-center sm:w-auto">
+                <div className="relative flex h-20 w-20 items-center justify-center rounded-xl border-2 border-fd-border bg-gradient-to-br from-fd-card to-fd-muted shadow-sm">
+                  <Rocket className="h-9 w-9 text-fd-primary" strokeWidth={2} />
                 </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium text-fd-foreground">Launch lean</p>
-                  <p className="text-xs text-fd-muted-foreground">Compose, low-ops, ship</p>
-                </div>
-              </div>
-
-              <ArrowRight className="hidden h-6 w-6 text-fd-muted-foreground sm:block" />
-              <div className="block h-6 w-6 rotate-90 text-fd-muted-foreground sm:hidden">
-                <ArrowRight className="h-6 w-6" />
-              </div>
-
-              <div className="flex flex-col items-center gap-3 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-fd-border bg-fd-card">
-                  <TrendingUp className="h-8 w-8 text-fd-primary" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium text-fd-foreground">Grow</p>
-                  <p className="text-xs text-fd-muted-foreground">Adapt, optimize, swap ports</p>
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-fd-foreground">Launch lean</p>
+                  <p className="text-sm leading-snug text-fd-muted-foreground">
+                    Compose, low-ops, ship
+                  </p>
                 </div>
               </div>
 
-              <ArrowRight className="hidden h-6 w-6 text-fd-muted-foreground sm:block" />
-              <div className="block h-6 w-6 rotate-90 text-fd-muted-foreground sm:hidden">
-                <ArrowRight className="h-6 w-6" />
+              {/* Arrow 1 */}
+              <div className="flex shrink-0 items-center justify-center sm:mt-8">
+                <svg
+                  className="hidden h-6 w-12 text-fd-border sm:block"
+                  fill="none"
+                  viewBox="0 0 48 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M0 12h44m0 0l-6-6m6 6l-6 6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <svg
+                  className="block h-12 w-6 text-fd-border sm:hidden"
+                  fill="none"
+                  viewBox="0 0 24 48"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 0v44m0 0l-6-6m6 6l6-6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </div>
 
-              <div className="flex flex-col items-center gap-3 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-fd-border bg-fd-card">
-                  <Boxes className="h-8 w-8 text-fd-primary" />
+              {/* Step 2 */}
+              <div className="flex w-full max-w-xs flex-col items-center gap-4 text-center sm:w-auto">
+                <div className="relative flex h-20 w-20 items-center justify-center rounded-xl border-2 border-fd-border bg-gradient-to-br from-fd-card to-fd-muted shadow-sm">
+                  <TrendingUp className="h-9 w-9 text-fd-primary" strokeWidth={2} />
                 </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium text-fd-foreground">Move when ready</p>
-                  <p className="text-xs text-fd-muted-foreground">AWS or any layer, no rewrite</p>
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-fd-foreground">Grow</p>
+                  <p className="text-sm leading-snug text-fd-muted-foreground">
+                    Adapt, optimize, swap ports
+                  </p>
+                </div>
+              </div>
+
+              {/* Arrow 2 */}
+              <div className="flex shrink-0 items-center justify-center sm:mt-8">
+                <svg
+                  className="hidden h-6 w-12 text-fd-border sm:block"
+                  fill="none"
+                  viewBox="0 0 48 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M0 12h44m0 0l-6-6m6 6l-6 6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <svg
+                  className="block h-12 w-6 text-fd-border sm:hidden"
+                  fill="none"
+                  viewBox="0 0 24 48"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 0v44m0 0l-6-6m6 6l6-6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex w-full max-w-xs flex-col items-center gap-4 text-center sm:w-auto">
+                <div className="relative flex h-20 w-20 items-center justify-center rounded-xl border-2 border-fd-border bg-gradient-to-br from-fd-card to-fd-muted shadow-sm">
+                  <Boxes className="h-9 w-9 text-fd-primary" strokeWidth={2} />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-fd-foreground">Move when ready</p>
+                  <p className="text-sm leading-snug text-fd-muted-foreground">
+                    AWS or any layer, no rewrite
+                  </p>
                 </div>
               </div>
             </div>
@@ -308,7 +373,7 @@ function Home() {
         <section className="border-b border-fd-border bg-fd-card">
           <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Honest risks</h2>
-            <div className="mt-6 flex flex-col gap-4 text-fd-muted-foreground">
+            <div className="mt-6 max-w-2xl space-y-4 text-fd-muted-foreground">
               <p>
                 zstack bets on a young surface: Effect v4 (beta), Drizzle 1 (RC), Alchemy (beta),
                 and TanStack Start. Hono, oRPC, and Better Auth are stable.
@@ -336,8 +401,8 @@ function Home() {
               Clone the monorepo, run locally on Compose, and deploy to Cloudflare when you're
               ready.
             </p>
-            <div className="mt-8 flex flex-col items-center gap-4">
-              <code className="inline-block rounded bg-fd-muted px-4 py-2 text-sm font-mono text-fd-foreground">
+            <div className="mt-8 flex flex-col items-center gap-6">
+              <code className="inline-block rounded-md border border-fd-border bg-fd-muted px-4 py-2 text-sm font-mono text-fd-foreground shadow-sm">
                 pnpm create @wanialabs/zstack
               </code>
               <div className="flex flex-wrap justify-center gap-3">
