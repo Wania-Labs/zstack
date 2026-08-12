@@ -1,23 +1,27 @@
 ---
 title: What is zstack
-description: A cloneable TypeScript product shape, not a framework you install into an existing app.
+description: Cloudflare-first TypeScript product starter with portable Postgres and agent-ready boundaries.
 ---
 
-**zstack** is a cloneable TypeScript product starter for solo founders and small teams who want a Cloudflare-first SaaS monorepo without locking domain code to vendor APIs.
+**zstack** is a Cloudflare-first TypeScript product starter for solo founders and small teams shipping AI-capable SaaS without locking domain code to vendor APIs.
 
-You clone one repository. That repo is one business product: a customer UI, a staff console, and a single Hono Worker backend. Optional vendors stay quiet until you bind credentials. Day-to-day work runs on Compose Postgres and `alchemy:dev`, not a paid cloud account.
+You clone one repository. That repo **is** the product: customer web app, staff admin console, and one Effect-backed Hono Worker. Optional vendors stay quiet until you bind credentials. Day-to-day work runs on Compose Postgres and `alchemy:dev`, not a paid cloud account.
+
+Unlike Next.js starters or thin Cloudflare demos, zstack gives you Workers with real product boundaries and agents that land productive day one.
 
 ## What you get
 
-- `apps/web` — customer TanStack Start app
-- `apps/admin` — staff TanStack Start console
-- `apps/api` — Hono Worker with Effect, Better Auth, oRPC, and Drizzle
-- `packages/contracts` — Zod + oRPC contracts shared with the frontends
-- Alchemy as the sole deploy and provision owner for Cloudflare and PlanetScale
+- `apps/web` — customer TanStack Start app with Better Auth
+- `apps/admin` — staff console TanStack Start app with role access
+- `apps/api` — Hono Worker with Effect, oRPC, Drizzle, workflows, queues
+- `packages/contracts` — Zod + oRPC contracts safe to import from frontends
+- `packages/email` — React Email templates with console/Bento transport
+- Alchemy IaC for Cloudflare Workers, PlanetScale Postgres, Hyperdrive, secrets
+- AI capability registry with AiService and gateway for fake/live model swap
 
 ## How swap works
 
-zstack is not a plugin marketplace. Domain code depends on Effect **ports** such as `EmailService` and `AiService`. The edge picks a concrete **Layer** from env and secrets. `product.config.ts` records structural intent (`absent` or `configured`). Empty credentials keep the console, fake, or off path.
+zstack is not a plugin marketplace. Domain code depends on Effect **ports** such as `EmailService` and `AiService`. The Worker edge picks a concrete **Layer** from env and secrets. `product.config.ts` records structural intent (`absent` or `configured`). Empty credentials keep the console, fake, or off path active.
 
 ## Authoring vs consumer clones
 
