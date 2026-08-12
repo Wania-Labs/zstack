@@ -10,7 +10,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Documentation for zstack — an opinionated TypeScript product starter on Cloudflare, Alchemy, Effect, and TanStack.",
+          "TypeScript product starter built to launch lean and graduate without compromise. Serious pieces in place, still replaceable.",
       },
       { title: "zstack docs" },
     ],
