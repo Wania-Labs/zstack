@@ -69,8 +69,8 @@ function Home() {
               </p>
               <p>
                 You want coding agents productive on day one. zstack ships with{" "}
-                <code className="text-sm">AGENTS.md</code>, playbooks, skills, and MCP defaults
-                out of the box.
+                <code className="text-sm">AGENTS.md</code>, playbooks, skills, and MCP defaults out
+                of the box.
               </p>
               <p className="text-sm">
                 <strong className="font-medium text-fd-foreground">Not for:</strong> dropping this
@@ -172,9 +172,7 @@ function Home() {
         {/* What's in the box */}
         <section className="border-b border-fd-border">
           <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              What's in the box
-            </h2>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">What's in the box</h2>
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg border border-fd-border bg-fd-card p-4">
                 <h3 className="font-medium text-fd-foreground">apps/web</h3>
