@@ -15,12 +15,14 @@ docs/**
 agent-transcripts/**
 .audit/**
 .github/workflows/publish-create-zstack.yml
+.github/workflows/generate-clone.yml
+scripts/smoke-create-zstack
 apps/*/.cta.json
 ```
 
 Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template). The ignore list is encoded in `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`) — keep both in sync.
 
-After download, `create-zstack/src/prepare-consumer.ts` (`stripAuthoringManifest`) rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and root script, remove the `create-zstack` importer from `pnpm-lock.yaml`, remove `.github/workflows/docs.yml`, and scrub authoring-only README lines.
+After download, `create-zstack/src/prepare-consumer.ts` (`stripAuthoringManifest`) rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and the `create-zstack` / `smoke:create` root scripts, remove the `create-zstack` importer from `pnpm-lock.yaml`, remove `.github/workflows/docs.yml` and `.github/workflows/generate-clone.yml`, remove `scripts/smoke-create-zstack`, and scrub authoring-only README lines.
 
 Then, unless `--keep-identity` is set, `personalizeClone` rewrites product identity from `--name` / `--scope` (or the target directory basename): root package name, `@scope/*` workspace packages, Compose/Postgres/Hyperdrive locals, Alchemy stack, Worker names, brand strings, and related filters/imports.
 
@@ -54,7 +56,7 @@ bunx @wanialabs/create-zstack my-app
 Local smoke against this tree (giget local provider is `git:`, not `file:`):
 
 ```bash
-ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
+pnpm smoke:create
 ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke-agents --force --yes --agent-tools=all
 ```
 
@@ -89,10 +91,14 @@ This repo is a **starter template**, not a product under the author's SaaS accou
 | -------------------------------- | ----------- | ------------------------------------------------------------------------ |
 | Postgres                         | core        | Compose locally; PlanetScale only on `alchemy:deploy` (consumer chooses) |
 | Auth / orgs / staff              | core        | Better Auth + Compose                                                    |
+| i18n                             | core        | Always-on Paraglide in `packages/i18n`. No vendor secret                 |
 | Email                            | configured  | Console until `EMAIL_FROM` + `BENTO_*`                                   |
 | Observability                    | configured  | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`                              |
+| Object storage (R2)              | configured  | In-memory fake until Worker binding `OBJECTS` is present. Alchemy local R2 under `alchemy:dev`; cloud bucket only on deploy |
+| Feature flags                    | configured  | In-memory map. Missing keys return the call-site default. No PostHog     |
+| Billing                          | configured  | Fake until `POLAR_ACCESS_TOKEN`. Checkout and portal return unconfigured. Entitlements deny. Polar HTTP is not connected yet |
 | Workflows / queues               | absent      | Not scaffolded as live infra yet                                         |
-| Billing / analytics / R2 / flags | not started | Must follow this policy when added                                       |
+| Analytics                        | not started | Must follow this policy when added                                       |
 | AI                               | configured  | Fake models until `AI_GATEWAY_API_KEY`                                   |
 
 ## Deploy authority
@@ -176,6 +182,31 @@ Capability registry + Effect `AiService` in `apps/api/src/platform/ai/`. Product
 - Default transport: console (`[email:console]`).
 - Bento: set `EMAIL_FROM`, `BENTO_SITE_UUID`, `BENTO_PUBLISHABLE_KEY`, and `BENTO_SECRET_KEY` (wrangler `.dev.vars` or Alchemy stage env). Sends use `POST /api/v1/batch/emails` with `transactional: true`.
 - Preview templates with `pnpm email:dev`.
+
+## Object storage
+
+`ObjectStore` in `apps/api/src/platform/object-store/` is the Effect boundary. Keys are opaque strings, not filenames.
+
+- Default: in-memory fake when the Worker `OBJECTS` R2 binding is missing (wrangler without r2).
+- Alchemy: `infra/storage.ts` declares `Cloudflare.R2.Bucket("Objects")` and binds it on the API Worker. `alchemy:dev` uses Alchemy local R2 (no cloud bucket on the author's account). `alchemy:deploy` provisions a real bucket named from the stack.
+- Clones do not inherit an author account bucket. Physical names come from the personalized Alchemy stack.
+
+## Feature flags
+
+`FeatureFlags` in `apps/api/src/platform/flags/` is the Effect boundary. Callers pass the safe default at the call site.
+
+- Default: in-memory map (`FakeFeatureFlagsLive`). Missing keys and empty config return the caller default with reason `default`. They do not throw.
+- `featureFlagsLiveFromEnv` currently always selects the fake. A later snapshot Layer can swap in without changing modules.
+- No PostHog, OpenFeature npm package, KV snapshot, or admin authoring.
+
+## Billing
+
+`BillingService` in `apps/api/src/platform/billing/` is the Effect boundary. The billable customer is the Better Auth organization id. Callers ask `canUse(capability)` and `limit(name)`, not Polar subscription status. The client may pass a product slug, never a Polar product id.
+
+- Default: `FakeBillingLive` when `POLAR_ACCESS_TOKEN` is empty. Checkout and portal return `{ kind: "unconfigured" }`. Entitlements deny (`canUse` false, `limit` 0). Empty Polar env does not throw.
+- Live: `PolarBillingLive` when `POLAR_ACCESS_TOKEN` is non-empty. Checkout and portal fail closed with `BillingError` until Polar HTTP and a server-owned catalog are connected. Entitlements still deny.
+- Do not register the Better Auth Polar plugin while credentials can be empty. Empty-token customer creation breaks sign-up.
+- Clones bind their own Polar token. No Polar org or product ids in source.
 
 ## Drizzle 1.0 RC
 

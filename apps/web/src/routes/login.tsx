@@ -1,4 +1,5 @@
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import * as m from "@zstack/i18n/messages";
 import { useState } from "react";
 
 import AuthPageShell from "@/components/AuthPageShell";
@@ -70,11 +71,11 @@ function LoginPage() {
   }
 
   return (
-    <AuthPageShell title="Sign in" description="Welcome back.">
+    <AuthPageShell title={m["auth.signIn.title"]()} description={m["auth.signIn.description"]()}>
       <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)}>
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <FieldLabel htmlFor="email">{m["auth.signIn.email"]()}</FieldLabel>
             <Input
               id="email"
               type="email"
@@ -85,7 +86,7 @@ function LoginPage() {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <FieldLabel htmlFor="password">{m["auth.signIn.password"]()}</FieldLabel>
             <Input
               id="password"
               type="password"
@@ -105,7 +106,7 @@ function LoginPage() {
         </FieldGroup>
         <Button type="submit" disabled={pending} className="w-full">
           {pending ? <Spinner data-icon="inline-start" /> : null}
-          {pending ? "Signing in…" : "Sign in"}
+          {pending ? m["auth.signIn.submitPending"]() : m["auth.signIn.submit"]()}
         </Button>
       </form>
       <div className="flex flex-col gap-2 text-sm text-muted-foreground">

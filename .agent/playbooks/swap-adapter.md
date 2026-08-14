@@ -1,6 +1,6 @@
 # Playbook: add or swap a platform adapter
 
-Use when changing how email, AI, DB, or observability is provided at runtime.
+Use when changing how email, AI, DB, object storage, feature flags, billing, or observability is provided at runtime.
 
 ## Steps
 
@@ -13,6 +13,6 @@ Use when changing how email, AI, DB, or observability is provided at runtime.
 
 ## Common mistakes
 
-- Importing Bento / AI Gateway / Sentry directly from a module
+- Importing Bento / AI Gateway / Sentry / Polar directly from a module
 - Shipping a “configured” vendor path that fails hard when secrets are empty
 - Binding the template author’s real SaaS accounts into the starter

@@ -1,0 +1,26 @@
+{
+  "name": "@zstack/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./messages": {
+      "types": "./src/paraglide/messages.d.ts",
+      "default": "./src/paraglide/messages.js"
+    },
+    "./runtime": {
+      "types": "./src/paraglide/runtime.d.ts",
+      "default": "./src/paraglide/runtime.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations --strategy cookie preferredLanguage baseLocale && tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@inlang/paraglide-js": "2.23.2"
+  },
+  "devDependencies": {
+    "@zstack/typescript-config": "workspace:*",
+    "typescript": "7.0.2"
+  }
+}

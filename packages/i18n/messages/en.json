@@ -1,0 +1,15 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "auth": {
+    "signIn": {
+      "title": "Sign in",
+      "description": "Welcome back.",
+      "submit": "Sign in",
+      "submitPending": "Signing in…",
+      "email": "Email",
+      "password": "Password",
+      "staffTitle": "Staff sign-in",
+      "staffDescription": "No self-serve sign-up. Create an account on the customer app, then promote via seed or Users."
+    }
+  }
+}

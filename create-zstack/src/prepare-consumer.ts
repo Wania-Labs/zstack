@@ -21,14 +21,24 @@ export async function stripAuthoringManifest(root: string): Promise<void> {
     scripts?: Record<string, string>;
     packageManager?: string;
   };
-  if (packageJson.scripts && "create-zstack" in packageJson.scripts) {
-    delete packageJson.scripts["create-zstack"];
-    await writeFile(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+  if (packageJson.scripts) {
+    let scriptsChanged = false;
+    for (const name of ["create-zstack", "smoke:create"] as const) {
+      if (name in packageJson.scripts) {
+        delete packageJson.scripts[name];
+        scriptsChanged = true;
+      }
+    }
+    if (scriptsChanged) {
+      await writeFile(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+    }
   }
 
   await stripCreateZstackLockfileImporter(root);
 
   await rm(join(root, ".github/workflows/docs.yml"), { force: true });
+  await rm(join(root, ".github/workflows/generate-clone.yml"), { force: true });
+  await rm(join(root, "scripts/smoke-create-zstack"), { force: true });
 
   const readmePath = join(root, "README.md");
   try {

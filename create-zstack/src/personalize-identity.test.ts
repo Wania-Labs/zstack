@@ -123,6 +123,9 @@ async function writeMinimalFixture(root: string): Promise<void> {
     ].join("\n"),
   );
   await writeFile(join(root, ".github/workflows/publish-create-zstack.yml"), "name: publish\n");
+  await writeFile(join(root, ".github/workflows/generate-clone.yml"), "name: generate\n");
+  await mkdir(join(root, "scripts"), { recursive: true });
+  await writeFile(join(root, "scripts/smoke-create-zstack"), "#!/usr/bin/env bash\n");
 }
 
 function acmeIdentity() {
@@ -151,6 +154,8 @@ void test("personalizeClone rewrites minimal fixture and deletes publish workflo
 
     assert.ok(report.rewrittenPaths.includes("package.json"));
     assert.ok(report.deletedPaths.includes(".github/workflows/publish-create-zstack.yml"));
+    assert.ok(report.deletedPaths.includes(".github/workflows/generate-clone.yml"));
+    assert.ok(report.deletedPaths.includes("scripts/smoke-create-zstack"));
 
     const rootPkg = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as {
       name: string;

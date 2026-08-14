@@ -11,4 +11,4 @@ Staff TanStack Start console. Same UI stack as web.
 
 ## Do / do not
 
-Same as web: contracts-only imports, no `@cloudflare/vite-plugin`, shadcn via `pnpm --filter @zstack/admin exec shadcn add …`.
+Same as web: contracts and `@zstack/i18n` only, no `@cloudflare/vite-plugin`, shadcn via `pnpm --filter @zstack/admin exec shadcn add …`.

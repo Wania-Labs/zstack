@@ -15,7 +15,7 @@ Authoring smoke against this tree:
 
 ```bash
 pnpm --filter @wanialabs/create-zstack start my-app
-ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
+pnpm smoke:create
 ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-agents --force --yes --agent-tools=cursor,claude
 ```
 

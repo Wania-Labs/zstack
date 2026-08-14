@@ -15,3 +15,10 @@ BETTER_AUTH_SECRET=replace-me-run-openssl-rand-or-auth-secret
 
 # Optional Vercel AI Gateway (omit → deterministic fake models, no spend)
 # AI_GATEWAY_API_KEY=
+
+# Object storage is a Worker R2 binding (OBJECTS), not a secret.
+# alchemy:dev binds Alchemy local R2. wrangler without the binding uses the in-memory fake.
+
+# Optional Polar billing (omit → FakeBillingLive, checkout/portal unconfigured)
+# POLAR_ACCESS_TOKEN=
+# POLAR_SERVER=sandbox

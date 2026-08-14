@@ -21,7 +21,7 @@ Unlike Next.js starters or thin Cloudflare demos, zstack gives you Workers with 
 
 ## How swap works
 
-zstack is not a plugin marketplace. Domain code depends on Effect **ports** such as `EmailService` and `AiService`. The Worker edge picks a concrete **Layer** from env and secrets. `product.config.ts` records structural intent (`absent` or `configured`). Empty credentials keep the console, fake, or off path active.
+zstack is not a plugin marketplace. Domain code depends on Effect **ports** such as `EmailService`, `AiService`, and `BillingService`. The Worker edge picks a concrete **Layer** from env and secrets. `product.config.ts` records structural intent (`absent` or `configured`). Empty credentials keep the console, fake, or off path active.
 
 ## Authoring vs consumer clones
 

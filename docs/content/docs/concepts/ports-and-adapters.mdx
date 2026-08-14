@@ -11,9 +11,12 @@ A port is an Effect `Context.Service`. Examples in `apps/api/src/platform/`:
 
 - `EmailService` — send verification, password reset, invitation mail
 - `AiService` — complete against a product capability ID
+- `ObjectStore` — put, get, delete, and signed upload/download intent
+- `FeatureFlags` — typed boolean, string, and number evaluation with a call-site default
+- `BillingService` — checkout, customer portal, and product entitlements for an organization
 - `Database` — Drizzle access through the request runtime
 
-Feature modules call the port. They do not import Bento, the AI Gateway SDK, or console logging directly.
+Feature modules call the port. They do not import Bento, the AI Gateway SDK, Polar, or console logging directly.
 
 ## Adapters (Effect Layers)
 
@@ -21,9 +24,12 @@ A Layer provides a concrete implementation of a port at the edge.
 
 | Port           | Default adapter                         | Live adapter          | Flip                              |
 | -------------- | --------------------------------------- | --------------------- | --------------------------------- |
-| `EmailService` | `ConsoleEmailLive`                      | `BentoEmailLive`      | `EMAIL_FROM` + `BENTO_*`          |
-| `AiService`    | Fake models                             | Vercel AI Gateway     | `AI_GATEWAY_API_KEY`              |
-| `Database`     | Compose via Hyperdrive in `ALCHEMY_DEV` | PlanetScale on deploy | `alchemy:dev` vs `alchemy:deploy` |
+| `EmailService`   | `ConsoleEmailLive`                      | `BentoEmailLive`      | `EMAIL_FROM` + `BENTO_*`          |
+| `AiService`      | Fake models                             | Vercel AI Gateway     | `AI_GATEWAY_API_KEY`              |
+| `ObjectStore`    | `FakeObjectStoreLive`                   | R2 Worker binding     | `OBJECTS` present on the Worker   |
+| `FeatureFlags`   | `FakeFeatureFlagsLive`                  | In-memory map         | Always the fake today             |
+| `BillingService` | `FakeBillingLive`                       | `PolarBillingLive`    | `POLAR_ACCESS_TOKEN`              |
+| `Database`       | Compose via Hyperdrive in `ALCHEMY_DEV` | PlanetScale on deploy | `alchemy:dev` vs `alchemy:deploy` |
 
 Wiring lives under `apps/api/src/platform/` and the Effect runtime at `apps/api/src/platform/effect/runtime.ts`.
 

@@ -5,7 +5,7 @@ import * as Config from "effect/Config";
  * Hono API Worker — async entry at `apps/api/src/index.ts`.
  * Workflows, queues, steps, and cron live in that same Worker when selected.
  */
-export const Api = (hyperdrive: Cloudflare.Hyperdrive.Connection) =>
+export const Api = (hyperdrive: Cloudflare.Hyperdrive.Connection, objects: Cloudflare.R2.Bucket) =>
   Cloudflare.Worker("Api", {
     main: "./apps/api/src/index.ts",
     compatibility: {
@@ -14,6 +14,7 @@ export const Api = (hyperdrive: Cloudflare.Hyperdrive.Connection) =>
     },
     env: {
       HYPERDRIVE: hyperdrive,
+      OBJECTS: objects,
       BETTER_AUTH_URL: Config.string("BETTER_AUTH_URL").pipe(
         Config.withDefault("http://localhost:3000"),
       ),
@@ -34,6 +35,9 @@ export const Api = (hyperdrive: Cloudflare.Hyperdrive.Connection) =>
       ),
       // Empty → fake AI registry (no Vercel AI Gateway spend).
       AI_GATEWAY_API_KEY: Config.redacted("AI_GATEWAY_API_KEY").pipe(Config.withDefault("")),
+      // Empty → FakeBillingLive until POLAR_ACCESS_TOKEN is set.
+      POLAR_ACCESS_TOKEN: Config.redacted("POLAR_ACCESS_TOKEN").pipe(Config.withDefault("")),
+      POLAR_SERVER: Config.string("POLAR_SERVER").pipe(Config.withDefault("")),
     },
     dev: {
       port: 8787,

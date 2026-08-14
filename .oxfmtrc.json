@@ -9,6 +9,8 @@
     "**/.wrangler/**",
     "**/routeTree.gen.ts",
     "**/drizzle/**/snapshot.json",
-    "pnpm-lock.yaml"
+    "pnpm-lock.yaml",
+    "packages/i18n/src/paraglide/**",
+    "packages/i18n/project.inlang/cache/**"
   ]
 }
