@@ -6,38 +6,29 @@ import type {
   PortalIntent,
 } from "@zstack/contracts";
 
-import { BillingService } from "../../platform/billing/billing-service";
+import { BillingError, BillingService } from "../../platform/billing/billing-service";
 
 export function createCheckout(
   input: CreateCheckoutInput,
-): Effect.Effect<CheckoutIntent, never, BillingService> {
+  organizationId: string,
+): Effect.Effect<CheckoutIntent, BillingError, BillingService> {
   return Effect.gen(function* () {
     const billing = yield* BillingService;
-    const result = yield* billing.createCheckout({
-      customerId: input.customerId,
+    return yield* billing.createCheckout({
+      customerId: organizationId,
       productSlug: input.productSlug,
-      ...(input.successUrl ? { successUrl: input.successUrl } : {}),
     });
-    return result;
-  }).pipe(
-    Effect.orElseSucceed(() => ({
-      kind: "unconfigured" as const,
-    })),
-  );
+  });
 }
 
 export function customerPortal(
-  input: CustomerPortalInput,
-): Effect.Effect<PortalIntent, never, BillingService> {
+  _input: CustomerPortalInput,
+  organizationId: string,
+): Effect.Effect<PortalIntent, BillingError, BillingService> {
   return Effect.gen(function* () {
     const billing = yield* BillingService;
-    const result = yield* billing.customerPortal({
-      customerId: input.customerId,
+    return yield* billing.customerPortal({
+      customerId: organizationId,
     });
-    return result;
-  }).pipe(
-    Effect.orElseSucceed(() => ({
-      kind: "unconfigured" as const,
-    })),
-  );
+  });
 }

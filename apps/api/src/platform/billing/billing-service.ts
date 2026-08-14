@@ -118,6 +118,7 @@ export const FakeBillingLive = Layer.succeed(BillingService, makeBillingService(
 function makePolarBackend(
   credentials: PolarCredentials,
   catalog: ProductCatalog,
+  successUrl?: string,
 ): BillingService["Service"] {
   const polar = createPolar({
     accessToken: credentials.accessToken,
@@ -141,7 +142,7 @@ function makePolarBackend(
             polar.checkouts.create({
               products: [productId],
               external_customer_id: input.customerId,
-              success_url: input.successUrl ?? null,
+              success_url: successUrl ?? null,
             }),
           catch: (error) =>
             new BillingError({
@@ -196,8 +197,12 @@ function makePolarBackend(
 export function PolarBillingLive(
   credentials: PolarCredentials,
   catalog: ProductCatalog,
+  successUrl?: string,
 ): Layer.Layer<BillingService> {
-  return Layer.succeed(BillingService, makeBillingService(makePolarBackend(credentials, catalog)));
+  return Layer.succeed(
+    BillingService,
+    makeBillingService(makePolarBackend(credentials, catalog, successUrl)),
+  );
 }
 
 export function readPolarCredentials(env: {
@@ -237,6 +242,7 @@ export function readProductCatalog(env: Record<string, string | undefined>): Pro
 export function billingLiveFromEnv(env: {
   POLAR_ACCESS_TOKEN?: string;
   POLAR_SERVER?: string;
+  POLAR_CHECKOUT_SUCCESS_URL?: string;
   [key: string]: string | undefined;
 }): Layer.Layer<BillingService> {
   const credentials = readPolarCredentials(env);
@@ -245,7 +251,8 @@ export function billingLiveFromEnv(env: {
   }
 
   const catalog = readProductCatalog(env);
-  return PolarBillingLive(credentials, catalog);
+  const successUrl = env.POLAR_CHECKOUT_SUCCESS_URL?.trim();
+  return PolarBillingLive(credentials, catalog, successUrl);
 }
 
 /**
@@ -255,6 +262,7 @@ export function billingLiveFromEnv(env: {
 export function BillingLive(env: {
   POLAR_ACCESS_TOKEN?: string;
   POLAR_SERVER?: string;
+  POLAR_CHECKOUT_SUCCESS_URL?: string;
   [key: string]: unknown;
 }): Layer.Layer<BillingService> {
   return billingLiveFromEnv(env as Record<string, string | undefined>);

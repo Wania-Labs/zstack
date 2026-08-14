@@ -60,7 +60,21 @@ const billingCreateCheckout = os.billing.createCheckout.handler(async ({ input, 
     });
   }
 
-  return runBillingEffect(createCheckout(input), BillingLive(context.env));
+  if (!context.requestContext.organizationId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Select a Team to continue.",
+    });
+  }
+
+  try {
+    return await runBillingEffect(
+      createCheckout(input, context.requestContext.organizationId),
+      BillingLive(context.env),
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "billing checkout failed";
+    throw new ORPCError("INTERNAL_SERVER_ERROR", { message });
+  }
 });
 
 const billingCustomerPortal = os.billing.customerPortal.handler(async ({ input, context }) => {
@@ -70,7 +84,21 @@ const billingCustomerPortal = os.billing.customerPortal.handler(async ({ input, 
     });
   }
 
-  return runBillingEffect(customerPortal(input), BillingLive(context.env));
+  if (!context.requestContext.organizationId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Select a Team to continue.",
+    });
+  }
+
+  try {
+    return await runBillingEffect(
+      customerPortal(input, context.requestContext.organizationId),
+      BillingLive(context.env),
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "billing portal failed";
+    throw new ORPCError("INTERNAL_SERVER_ERROR", { message });
+  }
 });
 
 export const router = os.router({

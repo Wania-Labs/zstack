@@ -174,27 +174,26 @@ describe("billingLiveFromEnv", () => {
 });
 
 describe("PolarBillingLive", () => {
-  it("fails when product slug not in catalog", async () => {
+  it("fails with BillingError when product slug not in catalog", async () => {
     const catalog = new Map([["pro", "prod_abc123"]]);
     const live = PolarBillingLive({ accessToken: "pol_test", server: "sandbox" }, catalog);
 
-    const result = await runBillingEffect(
-      Effect.gen(function* () {
-        const billing = yield* BillingService;
-        return yield* billing
-          .createCheckout({
+    try {
+      await runBillingEffect(
+        Effect.gen(function* () {
+          const billing = yield* BillingService;
+          return yield* billing.createCheckout({
             customerId: orgId,
             productSlug: "enterprise",
-          })
-          .pipe(Effect.result);
-      }),
-      live,
-    );
-
-    expect(result._tag).toBe("Failure");
-    if (result._tag === "Failure") {
-      expect(result.failure).toBeInstanceOf(BillingError);
-      expect(result.failure.message).toContain("not found in catalog");
+          });
+        }),
+        live,
+      );
+      // Should not reach here
+      expect.fail("Expected BillingError to be thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BillingError);
+      expect((error as BillingError).message).toContain("not found in catalog");
     }
   });
 
