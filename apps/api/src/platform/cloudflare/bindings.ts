@@ -1,5 +1,7 @@
 export type ApiBindings = {
   HYPERDRIVE: Hyperdrive;
+  /** Worker R2 binding. Absent (wrangler without r2) → FakeObjectStoreLive. */
+  OBJECTS?: R2Bucket;
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
   /** Verified sender used by Bento (`from`). Absent → console transport. */
@@ -15,4 +17,8 @@ export type ApiBindings = {
   SENTRY_TRACES_SAMPLE_RATE?: string;
   /** Optional. Empty → deterministic fake AI models (no spend). */
   AI_GATEWAY_API_KEY?: string;
+  /** Optional. Empty → FakeBillingLive (checkout/portal unconfigured). */
+  POLAR_ACCESS_TOKEN?: string;
+  /** Optional. `sandbox` (default) or `production` when the token is set. */
+  POLAR_SERVER?: string;
 };

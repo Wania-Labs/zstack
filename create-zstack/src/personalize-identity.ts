@@ -211,6 +211,24 @@ export async function assertConsumerIdentity(
     }
   }
 
+  try {
+    await stat(join(root, ".github/workflows/generate-clone.yml"));
+    throw new Error("generate-clone.yml should be deleted from consumer clones");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  try {
+    await stat(join(root, "scripts/smoke-create-zstack"));
+    throw new Error("scripts/smoke-create-zstack should be deleted from consumer clones");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+  }
+
   await assertNoUnapprovedSourceIdentity(root);
 }
 
@@ -516,6 +534,14 @@ async function buildRewritePlan(root: string, identity: ProjectIdentity): Promis
   }
 
   plan.set(asPath(".github/workflows/publish-create-zstack.yml"), {
+    kind: "delete",
+    reason: "authoring-only",
+  });
+  plan.set(asPath(".github/workflows/generate-clone.yml"), {
+    kind: "delete",
+    reason: "authoring-only",
+  });
+  plan.set(asPath("scripts/smoke-create-zstack"), {
     kind: "delete",
     reason: "authoring-only",
   });

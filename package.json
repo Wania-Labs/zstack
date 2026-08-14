@@ -24,6 +24,7 @@
     "test:evals": "pnpm --filter @zstack/api test:evals",
     "test:workers": "pnpm --filter @zstack/api test:workers",
     "create-zstack": "pnpm --filter @wanialabs/create-zstack start",
+    "smoke:create": "bash scripts/smoke-create-zstack",
     "agent:vendor-effect": "node scripts/vendor-effect.mjs"
   },
   "devDependencies": {

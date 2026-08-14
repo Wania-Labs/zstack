@@ -14,6 +14,7 @@ Optional vendors (Sentry, Bento, …) are scaffolded and **off until a clone bin
 - Alchemy v2 (`alchemy@2.0.0-beta.70`) owns deploy / PlanetScale / Hyperdrive / secrets
 - Sentry + evlog scaffolded (DSN-gated; quiet until consumers bind projects)
 - AI capability registry + Effect AiService (fake until `AI_GATEWAY_API_KEY`)
+- Effect BillingService (fake until `POLAR_ACCESS_TOKEN`; Polar HTTP not wired yet)
 - Vitest + vitest-evals (deterministic) in CI; workerd pool optional
 - `create-zstack` / `@wanialabs/create-zstack` scaffold CLI (excluded from clones)
 
@@ -77,6 +78,7 @@ apps/web/                  # TanStack Start customer shell
 apps/admin/                # TanStack Start staff console
 packages/contracts/        # Zod + oRPC contracts
 packages/email/            # React Email templates
+packages/i18n/             # Paraglide catalogs (always-on)
 create-zstack/             # authoring-only scaffold CLI (not in clones)
 docs/                      # authoring-only docs site (own lockfile/CI; not in clones)
 compose.yaml               # local Postgres 18

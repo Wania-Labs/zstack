@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ -n "${ZSTACK_SMOKE_DIR:-}" ]]; then
+  DEST="$ZSTACK_SMOKE_DIR"
+  if [[ "$DEST" != /* ]]; then
+    DEST="$(pwd)/$DEST"
+  fi
+else
+  DEST="$(mktemp -d /tmp/zstack-smoke.XXXXXX)"
+fi
+
+if [[ -n "$(git -C "$ROOT" status --porcelain)" ]]; then
+  echo "warning: uncommitted changes in $ROOT; giget git: only sees committed HEAD" >&2
+fi
+
+echo "DEST=$DEST"
+
+cd "$ROOT"
+ZSTACK_TEMPLATE="git:$(pwd)" pnpm create-zstack "$DEST" --name "Acme Cloud" --scope @acme --force --yes --no-install
+
+if [[ -e "$DEST/create-zstack" ]]; then
+  echo "clone still contains create-zstack/" >&2
+  exit 1
+fi
+
+if grep -qE '^[[:space:]]*-[[:space:]]*"create-zstack"' "$DEST/pnpm-workspace.yaml"; then
+  echo "pnpm-workspace.yaml still lists create-zstack" >&2
+  exit 1
+fi
+
+while IFS= read -r pkg; do
+  if grep -qE '"name"[[:space:]]*:[[:space:]]*"zstack"' "$pkg"; then
+    echo "clone package.json still named zstack: $pkg" >&2
+    exit 1
+  fi
+  if grep -qE '"name"[[:space:]]*:[[:space:]]*"@zstack/' "$pkg"; then
+    echo "clone workspace packages still use @zstack: $pkg" >&2
+    exit 1
+  fi
+done < <(find "$DEST" -name package.json)
+
+cd "$DEST"
+pnpm install --frozen-lockfile
+pnpm typecheck

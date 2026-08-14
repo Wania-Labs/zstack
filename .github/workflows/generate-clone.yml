@@ -1,0 +1,40 @@
+name: Generate clone
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+
+concurrency:
+  group: generate-clone-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    name: Generate clone
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22.16"
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Smoke create
+        run: pnpm smoke:create

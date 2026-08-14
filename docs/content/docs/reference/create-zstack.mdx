@@ -53,6 +53,8 @@ docs/**
 agent-transcripts/**
 .audit/**
 .github/workflows/publish-create-zstack.yml
+.github/workflows/generate-clone.yml
+scripts/smoke-create-zstack
 apps/*/.cta.json
 ```
 
@@ -71,9 +73,10 @@ Identity is validated before download. Personalization covers packages, Compose/
 After download, `stripAuthoringManifest` also:
 
 - drops the `create-zstack` workspace member from `pnpm-workspace.yaml`
-- removes the root `create-zstack` script from `package.json`
+- removes the root `create-zstack` and `smoke:create` scripts from `package.json`
 - removes the `create-zstack` importer from `pnpm-lock.yaml`
-- deletes `.github/workflows/docs.yml` (docs live only in the authoring tree)
+- deletes `.github/workflows/docs.yml` and `.github/workflows/generate-clone.yml`
+- deletes `scripts/smoke-create-zstack`
 - rewrites consumer README so it no longer points at authoring-only paths
 
 Then `applyPackageManagerChoice` may rewrite `packageManager` (and drop `pnpm-lock.yaml` for non-pnpm). `applyAgentPacks` may write selected tool adapters, MCP configs, and skills (copy or symlink).
@@ -83,6 +86,6 @@ Keep `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`), `create-zstack/src/prepare-
 ## Local smoke
 
 ```bash
-ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/acme-smoke --name "Acme Cloud" --scope @acme --force --yes
+pnpm smoke:create
 ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke-agents --force --yes --agent-tools=all --skills=symlink
 ```

@@ -14,6 +14,7 @@ Deep tutorials live on the zstack docs site when published. This file must stay 
 | `packages/contracts`        | Zod + oRPC contracts (client-safe)                                                           |
 | `packages/email`            | React Email templates only (no transport)                                                    |
 | `packages/auth-access`      | Better Auth admin role access control                                                        |
+| `packages/i18n`             | Paraglide catalogs; compiled messages and runtime                                            |
 | `infra/` + `alchemy.run.ts` | Cloudflare + PlanetScale resources (Alchemy **v2 IaC**, not blockchain Alchemy)              |
 | `product.config.ts`         | Capability **intent** only. Not imported by runtime today. No secrets.                       |
 | `.agent/playbooks/`         | Multi-step procedures                                                                        |
@@ -24,8 +25,8 @@ Nested `AGENTS.md` files add package-local rules. Read the nearest one when edit
 ## Hard rules
 
 1. **Alchemy owns deploy.** Entry is `alchemy.run.ts` + `infra/*`. `wrangler` in `apps/api` is local/dry-run only. Do not add a parallel Wrangler deploy path.
-2. **Modules call ports.** Feature code under `apps/api/src/modules/` uses Effect services from `apps/api/src/platform/`. Do not import Bento, AI Gateway, Sentry, or console email adapters directly from modules.
-3. **Frontends import contracts only.** `apps/web` and `apps/admin` may import `@zstack/contracts`. They must not import `apps/api` source.
+2. **Modules call ports.** Feature code under `apps/api/src/modules/` uses Effect services from `apps/api/src/platform/`. Do not import Bento, AI Gateway, Sentry, R2 SDK, Polar SDK, or console email adapters directly from modules.
+3. **Frontends import contracts and i18n only.** `apps/web` and `apps/admin` may import `@zstack/contracts` and `@zstack/i18n`. They must not import `apps/api` source.
 4. **Keep `patches/`.** The three pnpm patches under `patches/` are required for Effect / Drizzle / Alchemy beta interop. Removing them breaks the Alchemy CLI or the Worker at startup.
 5. **No `@cloudflare/vite-plugin` on web/admin.** Alchemy injects its own under `alchemy dev` / deploy.
 6. **Secrets stay out of `product.config.ts`.** Flip optional vendors with empty vs set env (see `.dev.vars.example`).

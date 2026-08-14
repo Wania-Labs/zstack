@@ -6,7 +6,7 @@ Hono Worker on Cloudflare. Prefer `pnpm alchemy:dev` over bare wrangler for full
 
 - `src/http/` — edge wiring (auth mount, oRPC mount, middleware)
 - `src/modules/` — use cases; call platform ports only
-- `src/platform/` — Effect `Context.Service` + Layers (db, email, ai, observability, cloudflare)
+- `src/platform/` — Effect `Context.Service` + Layers (db, email, ai, observability, object store, flags, billing, cloudflare)
 - `drizzle/` — migrations; run via root `pnpm db:*`
 
 ## Do

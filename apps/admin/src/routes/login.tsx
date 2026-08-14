@@ -1,4 +1,5 @@
 import { Link, createFileRoute, isRedirect, redirect, useRouter } from "@tanstack/react-router";
+import * as m from "@zstack/i18n/messages";
 import { useState } from "react";
 
 import ThemeToggle from "@/components/ThemeToggle";
@@ -84,11 +85,8 @@ function LoginPage() {
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>Staff sign-in</CardTitle>
-              <CardDescription>
-                No self-serve sign-up. Create an account on the customer app, then promote via seed
-                or Users.
-              </CardDescription>
+              <CardTitle>{m["auth.signIn.staffTitle"]()}</CardTitle>
+              <CardDescription>{m["auth.signIn.staffDescription"]()}</CardDescription>
             </CardHeader>
             <CardContent>
               {session.isPending ? (
@@ -100,7 +98,7 @@ function LoginPage() {
                 <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)}>
                   <FieldGroup>
                     <Field>
-                      <FieldLabel htmlFor="email">Email</FieldLabel>
+                      <FieldLabel htmlFor="email">{m["auth.signIn.email"]()}</FieldLabel>
                       <Input
                         id="email"
                         type="email"
@@ -112,7 +110,7 @@ function LoginPage() {
                     </Field>
 
                     <Field>
-                      <FieldLabel htmlFor="password">Password</FieldLabel>
+                      <FieldLabel htmlFor="password">{m["auth.signIn.password"]()}</FieldLabel>
                       <Input
                         id="password"
                         type="password"
@@ -134,7 +132,7 @@ function LoginPage() {
 
                   <Button type="submit" disabled={pending} className="w-full">
                     {pending ? <Spinner data-icon="inline-start" /> : null}
-                    {pending ? "Signing in…" : "Sign in"}
+                    {pending ? m["auth.signIn.submitPending"]() : m["auth.signIn.submit"]()}
                   </Button>
                 </form>
               )}

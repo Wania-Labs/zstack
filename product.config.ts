@@ -21,6 +21,17 @@
  *
  * Database is PlanetScale Postgres on deploy (Alchemy). Local `alchemy:dev`
  * and wrangler / drizzle-kit use Compose only — no cloud DB create.
+ *
+ * Object storage is configured: ObjectStore always exists. Missing R2 binding
+ * uses an in-memory fake. Alchemy binds a bucket on the API Worker; alchemy:dev
+ * uses Alchemy local R2, not a cloud bucket on the author's account.
+ *
+ * Feature flags are configured: FeatureFlags always exists. The in-memory
+ * provider returns the caller-supplied default when a key is missing. No flag SaaS.
+ *
+ * Billing is configured: BillingService always exists. Empty POLAR_ACCESS_TOKEN
+ * keeps checkout/portal unconfigured and entitlements denied. No Polar org or
+ * product IDs in source. Clones bind their own Polar token.
  */
 export const product = {
   name: "zstack",
@@ -31,5 +42,8 @@ export const product = {
     observability: "configured",
     ai: "configured",
     database: "planetscale",
+    objectStorage: "configured",
+    flags: "configured",
+    billing: "configured",
   },
 } as const;

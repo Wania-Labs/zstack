@@ -27,6 +27,7 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, lockf
           scripts: {
             build: "turbo run build",
             "create-zstack": "pnpm --filter @wanialabs/create-zstack start",
+            "smoke:create": "bash scripts/smoke-create-zstack",
           },
         },
         null,
@@ -66,6 +67,9 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, lockf
     );
     await mkdir(join(root, ".github/workflows"), { recursive: true });
     await writeFile(join(root, ".github/workflows/docs.yml"), "name: docs\n");
+    await writeFile(join(root, ".github/workflows/generate-clone.yml"), "name: generate\n");
+    await mkdir(join(root, "scripts"), { recursive: true });
+    await writeFile(join(root, "scripts/smoke-create-zstack"), "#!/usr/bin/env bash\n");
     await writeFile(
       join(root, "README.md"),
       [
@@ -100,6 +104,7 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, lockf
       scripts?: Record<string, string>;
     };
     assert.equal(packageJson.scripts?.["create-zstack"], undefined);
+    assert.equal(packageJson.scripts?.["smoke:create"], undefined);
     assert.equal(packageJson.scripts?.build, "turbo run build");
 
     const lock = await readFile(join(root, "pnpm-lock.yaml"), "utf8");
@@ -107,6 +112,8 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, lockf
     assert.match(lock, /packages\/contracts:/);
 
     await assert.rejects(readFile(join(root, ".github/workflows/docs.yml")));
+    await assert.rejects(readFile(join(root, ".github/workflows/generate-clone.yml")));
+    await assert.rejects(readFile(join(root, "scripts/smoke-create-zstack")));
 
     const readme = await readFile(join(root, "README.md"), "utf8");
     assert.equal(readme.includes("create-zstack"), false);

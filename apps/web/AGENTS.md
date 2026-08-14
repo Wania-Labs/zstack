@@ -5,6 +5,7 @@ Customer TanStack Start shell (shadcn base-nova).
 ## Do
 
 - Talk to the API through `@zstack/contracts` / oRPC client helpers
+- Copy through `@zstack/i18n` message functions; catalogs live in `packages/i18n`
 - Add UI with `pnpm --filter @zstack/web exec shadcn add <component>`
 - Rely on Vite `/api` proxy locally; SSR may need `ORPC_URL` → `http://127.0.0.1:8787/api/rpc`
 

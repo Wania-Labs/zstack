@@ -7,6 +7,7 @@ import * as Layer from "effect/Layer";
 import { Admin } from "./infra/admin.ts";
 import { Api } from "./infra/api.ts";
 import { Database } from "./infra/database.ts";
+import { Objects } from "./infra/storage.ts";
 import { Web } from "./infra/web.ts";
 
 /**
@@ -25,7 +26,8 @@ export default Alchemy.Stack(
   },
   Effect.gen(function* () {
     const db = yield* Database;
-    const api = yield* Api(db.hyperdrive);
+    const objects = yield* Objects;
+    const api = yield* Api(db.hyperdrive, objects);
     const web = yield* Web(api);
     const admin = yield* Admin(api);
 
