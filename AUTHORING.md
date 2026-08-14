@@ -204,7 +204,7 @@ Capability registry + Effect `AiService` in `apps/api/src/platform/ai/`. Product
 `BillingService` in `apps/api/src/platform/billing/` is the Effect boundary. The billable customer is the Better Auth organization id. Callers ask `canUse(capability)` and `limit(name)`, not Polar subscription status. The client may pass a product slug, never a Polar product id.
 
 - Default: `FakeBillingLive` when `POLAR_ACCESS_TOKEN` is empty. Checkout and portal return `{ kind: "unconfigured" }`. Entitlements deny (`canUse` false, `limit` 0). Empty Polar env does not throw.
-- Live: `PolarBillingLive` when `POLAR_ACCESS_TOKEN` is non-empty. Checkout and portal fail closed with `BillingError` until Polar HTTP and a server-owned catalog are connected. Entitlements still deny.
+- Live: `PolarBillingLive` when `POLAR_ACCESS_TOKEN` is non-empty. Checkout and portal call Polar HTTP and return `{ kind: "url", url }` when successful. Requires product catalog via `POLAR_PRODUCT_<SLUG>=<product_id>` env vars. Entitlements deny until webhook projection exists.
 - Do not register the Better Auth Polar plugin while credentials can be empty. Empty-token customer creation breaks sign-up.
 - Clones bind their own Polar token. No Polar org or product ids in source.
 

@@ -248,6 +248,18 @@ export function billingLiveFromEnv(env: {
   return PolarBillingLive(credentials, catalog);
 }
 
+/**
+ * Select billing layer from Worker env bindings (like AiLive).
+ * Use this at the Worker edge to wire the adapter.
+ */
+export function BillingLive(env: {
+  POLAR_ACCESS_TOKEN?: string;
+  POLAR_SERVER?: string;
+  [key: string]: unknown;
+}): Layer.Layer<BillingService> {
+  return billingLiveFromEnv(env as Record<string, string | undefined>);
+}
+
 export async function runBillingEffect<A, E>(
   effect: Effect.Effect<A, E, BillingService>,
   live: Layer.Layer<BillingService> = FakeBillingLive,

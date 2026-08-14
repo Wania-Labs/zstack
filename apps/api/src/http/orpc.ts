@@ -3,9 +3,11 @@ import { RPCHandler } from "@orpc/server/fetch";
 import { appContract } from "@zstack/contracts/router";
 
 import { completeAi, listAiCapabilities } from "../modules/ai/service";
+import { createCheckout, customerPortal } from "../modules/billing/service";
 import { getHealth } from "../modules/health/service";
 import { getStaffMe } from "../modules/staff/service";
 import { AiLive, runAiEffect } from "../platform/ai/ai-service";
+import { BillingLive, runBillingEffect } from "../platform/billing/billing-service";
 import type { ApiBindings } from "../platform/cloudflare/bindings";
 import { runRequestEffect } from "../platform/effect/runtime";
 import type { RequestContext } from "./context";
@@ -51,6 +53,26 @@ const aiComplete = os.ai.complete.handler(async ({ input, context }) => {
   }
 });
 
+const billingCreateCheckout = os.billing.createCheckout.handler(async ({ input, context }) => {
+  if (!context.user) {
+    throw new ORPCError("UNAUTHORIZED", {
+      message: "Sign in to create checkout.",
+    });
+  }
+
+  return runBillingEffect(createCheckout(input), BillingLive(context.env));
+});
+
+const billingCustomerPortal = os.billing.customerPortal.handler(async ({ input, context }) => {
+  if (!context.user) {
+    throw new ORPCError("UNAUTHORIZED", {
+      message: "Sign in to access customer portal.",
+    });
+  }
+
+  return runBillingEffect(customerPortal(input), BillingLive(context.env));
+});
+
 export const router = os.router({
   health,
   staff: {
@@ -59,6 +81,10 @@ export const router = os.router({
   ai: {
     capabilities: aiCapabilities,
     complete: aiComplete,
+  },
+  billing: {
+    createCheckout: billingCreateCheckout,
+    customerPortal: billingCustomerPortal,
   },
 });
 
