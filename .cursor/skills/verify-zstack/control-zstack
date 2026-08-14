@@ -1,0 +1,440 @@
+#!/usr/bin/env bash
+# Launch, doctor, and tear down a disposable zstack verification stack.
+# Usage is in SKILL.md. Do not kill processes by name.
+set -euo pipefail
+
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SKILL_DIR/../../.." && pwd)"
+RUN_DIR="$SKILL_DIR/.run"
+WEB_URL="http://localhost:3000"
+API_URL="http://localhost:8787"
+HEALTH_URL="$API_URL/health"
+WEB_PORT=3000
+API_PORT=8787
+PG_PORT=5432
+WAIT_SECS="${ZSTACK_VERIFY_WAIT_SECS:-120}"
+
+cmd="${1:-}"
+shift || true
+
+mkdir -p "$RUN_DIR"
+
+die() {
+  echo "control-zstack: $*" >&2
+  exit 1
+}
+
+have() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+json_get() {
+  python3 -c 'import json,sys
+d=json.load(open(sys.argv[1]))
+v=d.get(sys.argv[2],"")
+if isinstance(v,bool):
+    print("true" if v else "false")
+else:
+    print(v)' "$1" "$2"
+}
+
+listen_pids() {
+  local port="$1"
+  lsof -nP "-iTCP:${port}" -sTCP:LISTEN -t 2>/dev/null | sort -u || true
+}
+
+pid_alive() {
+  local pid="$1"
+  [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null
+}
+
+kill_tree() {
+  local pid="$1"
+  if ! pid_alive "$pid"; then
+    return 0
+  fi
+  local child
+  for child in $(pgrep -P "$pid" 2>/dev/null || true); do
+    kill_tree "$child"
+  done
+  kill "$pid" 2>/dev/null || true
+  sleep 0.2
+  if pid_alive "$pid"; then
+    kill -9 "$pid" 2>/dev/null || true
+  fi
+}
+
+kill_recorded() {
+  local file="$1"
+  if [[ ! -f "$file" ]]; then
+    return 0
+  fi
+  local pid
+  while read -r pid; do
+    [[ -z "$pid" ]] && continue
+    kill_tree "$pid"
+  done <"$file"
+}
+
+port_is_ours() {
+  local port="$1"
+  local recorded="$2"
+  local live
+  live="$(listen_pids "$port")"
+  if [[ -z "$live" ]]; then
+    return 1
+  fi
+  if [[ ! -f "$recorded" ]]; then
+    return 1
+  fi
+  local pid
+  while read -r pid; do
+    [[ -z "$pid" ]] && continue
+    if printf '%s\n' "$live" | grep -qx "$pid"; then
+      return 0
+    fi
+  done <"$recorded"
+  return 1
+}
+
+refuse_foreign_port() {
+  local port="$1"
+  local live
+  live="$(listen_pids "$port")"
+  if [[ -n "$live" ]]; then
+    die "port ${port} is already listening (pids: ${live}). Refusing to hijack a shared instance. Stop that stack or pick another checkout."
+  fi
+}
+
+artifact_dir_from_meta() {
+  local run_id=""
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    run_id="$(json_get "$RUN_DIR/meta.json" runId)"
+  fi
+  if [[ -z "$run_id" ]]; then
+    run_id="${ZSTACK_VERIFY_RUN_ID:-$(date +%Y%m%dT%H%M%S)-$$}"
+  fi
+  local dir="$SKILL_DIR/artifacts/$run_id"
+  mkdir -p "$dir"
+  echo "$dir"
+}
+
+write_meta() {
+  local run_id="$1"
+  local started_postgres="$2"
+  local created_dev_vars="$3"
+  python3 - "$RUN_DIR/meta.json" "$run_id" "$WEB_URL" "$API_URL" "$HEALTH_URL" "$started_postgres" "$created_dev_vars" "$REPO_ROOT" <<'PY'
+import json, sys, datetime
+path, run_id, web, api, health, started_pg, created_vars, repo = sys.argv[1:]
+json.dump({
+  "runId": run_id,
+  "webUrl": web,
+  "apiUrl": api,
+  "healthUrl": health,
+  "startedPostgres": started_pg == "true",
+  "createdDevVars": created_vars == "true",
+  "startedAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+  "repoRoot": repo,
+}, open(path, "w"), indent=2)
+PY
+}
+
+wait_port() {
+  local port="$1"
+  local label="$2"
+  local n=0
+  while (( n < WAIT_SECS )); do
+    if [[ -n "$(listen_pids "$port")" ]]; then
+      return 0
+    fi
+    n=$((n + 1))
+    sleep 0.25
+  done
+  echo "control-zstack: timed out waiting for ${label} to listen on :${port}" >&2
+  return 1
+}
+
+dump_logs() {
+  if [[ -f "$RUN_DIR/api.log" ]]; then
+    echo "--- api.log (tail) ---" >&2
+    tail -c 2000 "$RUN_DIR/api.log" >&2 || true
+    echo >&2
+  fi
+  if [[ -f "$RUN_DIR/web.log" ]]; then
+    echo "--- web.log (head) ---" >&2
+    head -c 1500 "$RUN_DIR/web.log" >&2 || true
+    echo >&2
+  fi
+}
+
+wait_http() {
+  local url="$1"
+  local label="$2"
+  local n=0
+  local tmp
+  tmp="$(mktemp)"
+  while (( n < WAIT_SECS )); do
+    local code
+    code="$(curl -sS --max-time 20 -o "$tmp" -w "%{http_code}" "$url" 2>/dev/null || true)"
+    if [[ "$code" =~ ^[1-5] ]]; then
+      rm -f "$tmp"
+      return 0
+    fi
+    n=$((n + 1))
+    sleep 1
+  done
+  rm -f "$tmp"
+  echo "control-zstack: timed out waiting for ${label} at ${url}" >&2
+  dump_logs
+  return 1
+}
+
+ensure_dev_vars() {
+  local path="$REPO_ROOT/apps/api/.dev.vars"
+  if [[ -f "$path" ]]; then
+    echo "false"
+    return 0
+  fi
+  local example="$REPO_ROOT/apps/api/.dev.vars.example"
+  [[ -f "$example" ]] || die "missing $example"
+  have openssl || die "openssl is required to generate BETTER_AUTH_SECRET"
+  local secret
+  secret="$(openssl rand -base64 32)"
+  python3 - "$example" "$path" "$secret" <<'PY'
+from pathlib import Path
+import sys
+example, dest, secret = sys.argv[1:]
+text = Path(example).read_text()
+lines = []
+for line in text.splitlines(keepends=True):
+    if line.startswith("BETTER_AUTH_SECRET="):
+        lines.append(f"BETTER_AUTH_SECRET={secret}\n")
+    else:
+        lines.append(line)
+Path(dest).write_text("".join(lines))
+PY
+  echo "true"
+}
+
+start_detached() {
+  local name="$1"
+  shift
+  local pnpm_bin
+  pnpm_bin="$(command -v pnpm)"
+  python3 - "$RUN_DIR/${name}.pid" "$RUN_DIR/${name}.log" "$REPO_ROOT" "$pnpm_bin" "$@" <<'PY'
+import os, sys
+pid_file, log_file, cwd, *argv = sys.argv[1:]
+r, w = os.pipe()
+pid = os.fork()
+if pid > 0:
+    os.close(w)
+    data = os.read(r, 64)
+    os.close(r)
+    os.waitpid(pid, 0)
+    with open(pid_file, "w") as fh:
+        fh.write(data.decode())
+    sys.exit(0)
+os.close(r)
+os.setsid()
+pid2 = os.fork()
+if pid2 > 0:
+    os._exit(0)
+os.write(w, f"{os.getpid()}\n".encode())
+os.close(w)
+os.chdir(cwd)
+os.umask(0)
+log = os.open(log_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+os.dup2(log, 1)
+os.dup2(log, 2)
+devnull = os.open(os.devnull, os.O_RDONLY)
+os.dup2(devnull, 0)
+os.execvp(argv[0], argv)
+PY
+}
+
+cmd_launch() {
+  local with_admin=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --with-admin) with_admin=true ;;
+      *) die "unknown launch flag: $1" ;;
+    esac
+    shift
+  done
+
+  have pnpm || die "pnpm is not on PATH"
+  have curl || die "curl is not on PATH"
+  have lsof || die "lsof is not on PATH"
+  have python3 || die "python3 is not on PATH"
+
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    if ( cmd_doctor ) >/dev/null 2>&1; then
+      echo "already healthy"
+      cat "$RUN_DIR/meta.json"
+      return 0
+    fi
+    echo "control-zstack: stale .run; stopping leftover verification pids" >&2
+    cmd_cleanup_procs
+  fi
+
+  refuse_foreign_port "$API_PORT"
+  refuse_foreign_port "$WEB_PORT"
+  if $with_admin; then
+    refuse_foreign_port 3001
+  fi
+
+  local started_postgres=false
+  if [[ -z "$(listen_pids "$PG_PORT")" ]]; then
+    have docker || die "Postgres is not on :5432 and docker is not on PATH"
+    (cd "$REPO_ROOT" && pnpm dev:services)
+    started_postgres=true
+  fi
+
+  local created_dev_vars
+  created_dev_vars="$(ensure_dev_vars)"
+
+  [[ -d "$REPO_ROOT/node_modules" ]] || (cd "$REPO_ROOT" && pnpm install)
+  (cd "$REPO_ROOT" && pnpm db:migrate)
+
+  local run_id="${ZSTACK_VERIFY_RUN_ID:-$(date +%Y%m%dT%H%M%S)-$$}"
+  write_meta "$run_id" "$started_postgres" "$created_dev_vars" >/dev/null
+
+  start_detached api --filter @zstack/api dev
+  start_detached web --filter @zstack/web dev
+  if $with_admin; then
+    start_detached admin --filter @zstack/admin dev
+  fi
+
+  if ! wait_port "$API_PORT" "api"; then
+    fail_launch
+  fi
+  if ! wait_http "$HEALTH_URL" "api health"; then
+    fail_launch
+  fi
+  if ! wait_port "$WEB_PORT" "web"; then
+    fail_launch
+  fi
+  if ! wait_http "$WEB_URL/" "web"; then
+    fail_launch
+  fi
+
+  listen_pids "$API_PORT" >"$RUN_DIR/api.listen-pid"
+  listen_pids "$WEB_PORT" >"$RUN_DIR/web.listen-pid"
+  if $with_admin; then
+    wait_http "http://localhost:3001/" "admin" || true
+    listen_pids 3001 >"$RUN_DIR/admin.listen-pid"
+  fi
+
+  echo "ready web=$WEB_URL api=$API_URL health=$HEALTH_URL runId=$run_id"
+  cat "$RUN_DIR/meta.json"
+}
+
+cmd_doctor() {
+  [[ -f "$RUN_DIR/meta.json" ]] || die "no .run/meta.json. This is not a verification instance. Do not drive whatever is on :3000 / :8787."
+
+  local health
+  if ! health="$(curl -sS --max-time 5 "$HEALTH_URL")"; then
+    die "GET $HEALTH_URL failed"
+  fi
+  python3 -c 'import json,sys; d=json.loads(sys.argv[1]);
+assert d.get("ok") is True, d
+assert d.get("database")=="up", d' "$health" || die "health payload is not ok/database=up: $health"
+
+  local body
+  body="$(curl -sS --max-time 20 "$WEB_URL/")" || die "GET $WEB_URL/ failed"
+  printf '%s' "$body" | grep -qi "zstack" || die "web HTML did not contain zstack"
+
+  port_is_ours "$API_PORT" "$RUN_DIR/api.listen-pid" || die "port $API_PORT is not owned by this verification run"
+  port_is_ours "$WEB_PORT" "$RUN_DIR/web.listen-pid" || die "port $WEB_PORT is not owned by this verification run"
+
+  local run_id
+  run_id="$(json_get "$RUN_DIR/meta.json" runId)"
+  echo "doctor ok runId=$run_id web=$WEB_URL api=$API_URL database=up"
+  echo "$health"
+}
+
+cmd_cleanup_procs() {
+  kill_recorded "$RUN_DIR/api.pid"
+  kill_recorded "$RUN_DIR/web.pid"
+  kill_recorded "$RUN_DIR/admin.pid"
+  kill_recorded "$RUN_DIR/api.listen-pid"
+  kill_recorded "$RUN_DIR/web.listen-pid"
+  kill_recorded "$RUN_DIR/admin.listen-pid"
+}
+
+copy_log_tail() {
+  local src="$1"
+  local dest="$2"
+  if [[ ! -f "$src" ]]; then
+    return 0
+  fi
+  tail -c 200000 "$src" >"$dest"
+}
+
+save_run_logs() {
+  local artifacts="$1"
+  mkdir -p "$artifacts"
+  copy_log_tail "$RUN_DIR/api.log" "$artifacts/api.log"
+  copy_log_tail "$RUN_DIR/web.log" "$artifacts/web.log"
+  copy_log_tail "$RUN_DIR/admin.log" "$artifacts/admin.log"
+}
+
+fail_launch() {
+  local artifacts
+  artifacts="$(artifact_dir_from_meta)"
+  save_run_logs "$artifacts"
+  echo "control-zstack: launch failed; log tails copied to $artifacts" >&2
+  dump_logs
+  cmd_cleanup_procs
+  exit 1
+}
+
+cmd_cleanup() {
+  local artifacts=""
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    artifacts="$(artifact_dir_from_meta)"
+    copy_log_tail "$RUN_DIR/api.log" "$artifacts/api.log"
+    copy_log_tail "$RUN_DIR/web.log" "$artifacts/web.log"
+    copy_log_tail "$RUN_DIR/admin.log" "$artifacts/admin.log"
+  fi
+
+  cmd_cleanup_procs
+
+  local created_dev_vars=false
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    created_dev_vars="$(json_get "$RUN_DIR/meta.json" createdDevVars)"
+  fi
+  if [[ "$created_dev_vars" == "true" ]]; then
+    rm -f "$REPO_ROOT/apps/api/.dev.vars"
+  fi
+
+  # Postgres is shared with local dev. Leave the container running.
+  rm -rf "$RUN_DIR"
+  echo "cleaned verification processes. evidence kept at ${artifacts:-$SKILL_DIR/artifacts}"
+}
+
+cmd_artifact_dir() {
+  artifact_dir_from_meta
+}
+
+cmd_urls() {
+  if [[ -f "$RUN_DIR/meta.json" ]]; then
+    cat "$RUN_DIR/meta.json"
+  else
+    echo "web=$WEB_URL"
+    echo "api=$API_URL"
+    echo "health=$HEALTH_URL"
+  fi
+}
+
+case "$cmd" in
+  launch) cmd_launch "$@" ;;
+  doctor) cmd_doctor "$@" ;;
+  cleanup) cmd_cleanup "$@" ;;
+  artifact-dir) cmd_artifact_dir "$@" ;;
+  urls) cmd_urls "$@" ;;
+  *)
+    echo "Usage: control-zstack launch [--with-admin] | doctor | cleanup | artifact-dir | urls" >&2
+    exit 2
+    ;;
+esac
