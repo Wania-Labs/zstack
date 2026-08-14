@@ -1,4 +1,5 @@
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import * as m from "@zstack/i18n/messages";
 import { useState } from "react";
 
 import AuthPageShell from "@/components/AuthPageShell";
@@ -43,7 +44,7 @@ function SignUpPage() {
     try {
       const result = await authClient.signUp.email({ name, email, password });
       if (result.error) {
-        setError(result.error.message ?? "Sign up failed");
+        setError(result.error.message ?? m["auth.signUp.errorFallback"]());
         return;
       }
 
@@ -71,11 +72,11 @@ function SignUpPage() {
   }
 
   return (
-    <AuthPageShell title="Create account" description="Start with a Team after you sign up.">
+    <AuthPageShell title={m["auth.signUp.title"]()} description={m["auth.signUp.description"]()}>
       <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)}>
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="name">Name</FieldLabel>
+            <FieldLabel htmlFor="name">{m["auth.signUp.name"]()}</FieldLabel>
             <Input
               id="name"
               required
@@ -85,7 +86,7 @@ function SignUpPage() {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <FieldLabel htmlFor="email">{m["auth.signUp.email"]()}</FieldLabel>
             <Input
               id="email"
               type="email"
@@ -96,7 +97,7 @@ function SignUpPage() {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <FieldLabel htmlFor="password">{m["auth.signUp.password"]()}</FieldLabel>
             <Input
               id="password"
               type="password"
@@ -106,28 +107,28 @@ function SignUpPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <FieldDescription>At least 8 characters.</FieldDescription>
+            <FieldDescription>{m["auth.signUp.passwordHint"]()}</FieldDescription>
           </Field>
           {error ? (
             <Alert variant="destructive">
-              <AlertTitle>Could not sign up</AlertTitle>
+              <AlertTitle>{m["auth.signUp.errorTitle"]()}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
         </FieldGroup>
         <Button type="submit" disabled={pending} className="w-full">
           {pending ? <Spinner data-icon="inline-start" /> : null}
-          {pending ? "Creating…" : "Create account"}
+          {pending ? m["auth.signUp.submitPending"]() : m["auth.signUp.submit"]()}
         </Button>
       </form>
       <p className="text-sm text-muted-foreground">
-        Already have an account?{" "}
+        {m["auth.signUp.haveAccount"]()}{" "}
         <Link
           to="/login"
           search={search.redirect ? { redirect: search.redirect } : {}}
           className="font-medium text-foreground underline-offset-4 hover:underline"
         >
-          Sign in
+          {m["auth.signUp.signInLink"]()}
         </Link>
       </p>
     </AuthPageShell>
