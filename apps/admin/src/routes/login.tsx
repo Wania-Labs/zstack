@@ -48,7 +48,7 @@ function LoginPage() {
     try {
       const result = await authClient.signIn.email({ email, password });
       if (result.error) {
-        setAuthError(result.error.message ?? "sign-in failed");
+        setAuthError(result.error.message ?? m["auth.signIn.errorFallback"]());
         return;
       }
       await router.navigate({ to: "/" });
@@ -73,7 +73,7 @@ function LoginPage() {
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-4 py-10">
         {signedInNonStaff ? (
           <Alert variant="destructive">
-            <AlertTitle>Not staff</AlertTitle>
+            <AlertTitle>{m["auth.signIn.notStaffTitle"]()}</AlertTitle>
             <AlertDescription>
               Signed in as {session.data?.user.email}, but this account has no staff role. Bootstrap
               with <code>STAFF_EMAIL={session.data?.user.email} pnpm db:seed</code>.
@@ -92,7 +92,7 @@ function LoginPage() {
               {session.isPending ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Spinner />
-                  Loading session…
+                  {m["auth.signIn.loadingSession"]()}
                 </div>
               ) : (
                 <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)}>
@@ -120,7 +120,7 @@ function LoginPage() {
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
                       />
-                      <FieldDescription>At least 8 characters.</FieldDescription>
+                      <FieldDescription>{m["auth.signIn.passwordHint"]()}</FieldDescription>
                     </Field>
 
                     {authError ? (

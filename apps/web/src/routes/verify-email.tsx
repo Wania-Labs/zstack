@@ -1,4 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
+import * as m from "@zstack/i18n/messages";
 import { useEffect, useState } from "react";
 
 import AuthPageShell from "@/components/AuthPageShell";
@@ -42,7 +43,7 @@ function VerifyEmailPage() {
       if (result.error) {
         setState({
           kind: "error",
-          message: result.error.message ?? "Verification failed",
+          message: result.error.message ?? m["auth.verifyEmail.errorFallback"](),
         });
         return;
       }
@@ -55,40 +56,43 @@ function VerifyEmailPage() {
   }, [search.token]);
 
   return (
-    <AuthPageShell title="Verify email" description="Confirming your email address.">
+    <AuthPageShell
+      title={m["auth.verifyEmail.title"]()}
+      description={m["auth.verifyEmail.description"]()}
+    >
       {state.kind === "missing-token" ? (
         <Alert variant="destructive">
-          <AlertTitle>Missing token</AlertTitle>
-          <AlertDescription>Open the link from your verification email.</AlertDescription>
+          <AlertTitle>{m["auth.verifyEmail.missingTokenTitle"]()}</AlertTitle>
+          <AlertDescription>{m["auth.verifyEmail.missingTokenDescription"]()}</AlertDescription>
         </Alert>
       ) : null}
       {state.kind === "pending" ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Spinner />
-          Verifying…
+          {m["auth.verifyEmail.pending"]()}
         </div>
       ) : null}
       {state.kind === "success" ? (
         <Alert>
-          <AlertTitle>Email verified</AlertTitle>
+          <AlertTitle>{m["auth.verifyEmail.successTitle"]()}</AlertTitle>
           <AlertDescription>
-            You're all set.{" "}
+            {m["auth.verifyEmail.successDescription"]()}{" "}
             <Link to="/login" className="underline underline-offset-4">
-              Sign in
+              {m["auth.verifyEmail.signInLink"]()}
             </Link>{" "}
-            to continue.
+            {m["auth.verifyEmail.toContinue"]()}
           </AlertDescription>
         </Alert>
       ) : null}
       {state.kind === "error" ? (
         <Alert variant="destructive">
-          <AlertTitle>Verification failed</AlertTitle>
+          <AlertTitle>{m["auth.verifyEmail.errorTitle"]()}</AlertTitle>
           <AlertDescription>{state.message}</AlertDescription>
         </Alert>
       ) : null}
       {search.error ? (
         <Alert variant="destructive">
-          <AlertTitle>Link error</AlertTitle>
+          <AlertTitle>{m["auth.verifyEmail.linkErrorTitle"]()}</AlertTitle>
           <AlertDescription>{search.error}</AlertDescription>
         </Alert>
       ) : null}

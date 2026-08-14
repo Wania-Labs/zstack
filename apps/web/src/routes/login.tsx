@@ -43,7 +43,7 @@ function LoginPage() {
     try {
       const result = await authClient.signIn.email({ email, password });
       if (result.error) {
-        setError(result.error.message ?? "Sign in failed");
+        setError(result.error.message ?? m["auth.signIn.errorFallback"]());
         return;
       }
 
@@ -99,7 +99,7 @@ function LoginPage() {
           </Field>
           {error ? (
             <Alert variant="destructive">
-              <AlertTitle>Could not sign in</AlertTitle>
+              <AlertTitle>{m["auth.signIn.errorTitle"]()}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
@@ -111,16 +111,16 @@ function LoginPage() {
       </form>
       <div className="flex flex-col gap-2 text-sm text-muted-foreground">
         <Link to="/forgot-password" className="underline-offset-4 hover:underline">
-          Forgot password?
+          {m["auth.signIn.forgotPassword"]()}
         </Link>
         <p>
-          No account?{" "}
+          {m["auth.signIn.noAccount"]()}{" "}
           <Link
             to="/sign-up"
             search={search.redirect ? { redirect: search.redirect } : {}}
             className="font-medium text-foreground underline-offset-4 hover:underline"
           >
-            Sign up
+            {m["auth.signIn.signUpLink"]()}
           </Link>
         </p>
       </div>

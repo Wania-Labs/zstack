@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import * as m from "@zstack/i18n/messages";
 import { useEffect, useState } from "react";
 
 import AuthPageShell from "@/components/AuthPageShell";
@@ -112,7 +113,7 @@ function AcceptInvitationPage() {
       if (result.error) {
         setState({
           kind: "error",
-          message: result.error.message ?? "Invitation not found",
+          message: result.error.message ?? m["auth.acceptInvitation.errorNotFound"](),
         });
         return;
       }
@@ -120,7 +121,7 @@ function AcceptInvitationPage() {
       if (!invitation) {
         setState({
           kind: "error",
-          message: "Invitation payload was unexpected",
+          message: m["auth.acceptInvitation.errorUnexpected"](),
         });
         return;
       }
@@ -144,7 +145,7 @@ function AcceptInvitationPage() {
       if (result.error) {
         setState({
           kind: "error",
-          message: result.error.message ?? "Could not accept invitation",
+          message: result.error.message ?? m["auth.acceptInvitation.errorAcceptFallback"](),
         });
         return;
       }
@@ -166,17 +167,20 @@ function AcceptInvitationPage() {
   }
 
   return (
-    <AuthPageShell title="Team invitation" description="Review and join the Team.">
+    <AuthPageShell
+      title={m["auth.acceptInvitation.title"]()}
+      description={m["auth.acceptInvitation.description"]()}
+    >
       {state.kind === "loading" ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Spinner />
-          Loading invitation…
+          {m["auth.acceptInvitation.loading"]()}
         </div>
       ) : null}
 
       {state.kind === "error" ? (
         <Alert variant="destructive">
-          <AlertTitle>Invitation unavailable</AlertTitle>
+          <AlertTitle>{m["auth.acceptInvitation.errorTitle"]()}</AlertTitle>
           <AlertDescription>{state.message}</AlertDescription>
         </Alert>
       ) : null}
@@ -186,13 +190,19 @@ function AcceptInvitationPage() {
           <Alert>
             <AlertTitle>{state.invitation.organizationName}</AlertTitle>
             <AlertDescription>
-              {state.invitation.inviterEmail} invited {state.invitation.email}
-              {state.invitation.role ? ` as ${state.invitation.role}` : ""}.
+              {state.invitation.inviterEmail} {m["auth.acceptInvitation.invited"]()}{" "}
+              {state.invitation.email}
+              {state.invitation.role
+                ? ` ${m["auth.acceptInvitation.as"]()} ${state.invitation.role}`
+                : ""}
+              .
             </AlertDescription>
           </Alert>
           <Button type="button" disabled={pending} onClick={() => void onAccept()}>
             {pending ? <Spinner data-icon="inline-start" /> : null}
-            {pending ? "Joining…" : "Accept invitation"}
+            {pending
+              ? m["auth.acceptInvitation.submitPending"]()
+              : m["auth.acceptInvitation.submit"]()}
           </Button>
         </div>
       ) : null}
@@ -200,7 +210,7 @@ function AcceptInvitationPage() {
       {state.kind === "accepted" ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Spinner />
-          Opening Team…
+          {m["auth.acceptInvitation.accepted"]()}
         </div>
       ) : null}
     </AuthPageShell>

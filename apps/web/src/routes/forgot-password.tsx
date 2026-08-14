@@ -1,4 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
+import * as m from "@zstack/i18n/messages";
 import { useState } from "react";
 
 import AuthPageShell from "@/components/AuthPageShell";
@@ -34,7 +35,7 @@ function ForgotPasswordPage() {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (result.error) {
-        setError(result.error.message ?? "Could not send reset email");
+        setError(result.error.message ?? m["auth.forgotPassword.errorFallback"]());
         return;
       }
       setSent(true);
@@ -45,21 +46,19 @@ function ForgotPasswordPage() {
 
   return (
     <AuthPageShell
-      title="Forgot password"
-      description="We'll email you a link to choose a new password."
+      title={m["auth.forgotPassword.title"]()}
+      description={m["auth.forgotPassword.description"]()}
     >
       {sent ? (
         <Alert>
-          <AlertTitle>Check your email</AlertTitle>
-          <AlertDescription>
-            If an account exists for that address, a reset link is on the way.
-          </AlertDescription>
+          <AlertTitle>{m["auth.forgotPassword.successTitle"]()}</AlertTitle>
+          <AlertDescription>{m["auth.forgotPassword.successDescription"]()}</AlertDescription>
         </Alert>
       ) : (
         <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)}>
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <FieldLabel htmlFor="email">{m["auth.forgotPassword.email"]()}</FieldLabel>
               <Input
                 id="email"
                 type="email"
@@ -71,14 +70,14 @@ function ForgotPasswordPage() {
             </Field>
             {error ? (
               <Alert variant="destructive">
-                <AlertTitle>Request failed</AlertTitle>
+                <AlertTitle>{m["auth.forgotPassword.errorTitle"]()}</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             ) : null}
           </FieldGroup>
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? <Spinner data-icon="inline-start" /> : null}
-            {pending ? "Sending…" : "Send reset link"}
+            {pending ? m["auth.forgotPassword.submitPending"]() : m["auth.forgotPassword.submit"]()}
           </Button>
         </form>
       )}
@@ -87,7 +86,7 @@ function ForgotPasswordPage() {
           to="/login"
           className="font-medium text-foreground underline-offset-4 hover:underline"
         >
-          Back to sign in
+          {m["auth.forgotPassword.backToSignIn"]()}
         </Link>
       </p>
     </AuthPageShell>
