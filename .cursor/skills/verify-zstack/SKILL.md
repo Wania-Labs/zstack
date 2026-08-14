@@ -67,18 +67,18 @@ Order:
 
 Stable handles live in the feature files. Recurring ones:
 
-| Name | Kind | Where |
-| --- | --- | --- |
-| `zstack` | heading and nav link | marketing, auth shells, app sidebar |
-| `Sign in` / `Sign up` / `Get started` | buttons and links | `/` |
-| `Email`, `Password`, `Name` | labeled textboxes | `/login`, `/sign-up` |
-| `Create account` | submit | `/sign-up` |
-| `Sign in` | submit | `/login` |
-| `Team name` | textbox | `/onboarding` |
-| `Create Team` | submit | `/onboarding` |
-| `Home`, `Members` | sidebar | `/t/$slug` |
-| `Send invite` | submit | `/t/$slug/members` |
-| `Sign out` | menu item | user menu in the sidebar footer |
+| Name                                  | Kind                 | Where                               |
+| ------------------------------------- | -------------------- | ----------------------------------- |
+| `zstack`                              | heading and nav link | marketing, auth shells, app sidebar |
+| `Sign in` / `Sign up` / `Get started` | buttons and links    | `/`                                 |
+| `Email`, `Password`, `Name`           | labeled textboxes    | `/login`, `/sign-up`                |
+| `Create account`                      | submit               | `/sign-up`                          |
+| `Sign in`                             | submit               | `/login`                            |
+| `Team name`                           | textbox              | `/onboarding`                       |
+| `Create Team`                         | submit               | `/onboarding`                       |
+| `Home`, `Members`                     | sidebar              | `/t/$slug`                          |
+| `Send invite`                         | submit               | `/t/$slug/members`                  |
+| `Sign out`                            | menu item            | user menu in the sidebar footer     |
 
 `/` shows Sign in / Sign up twice (header and main). Prefer the main `Get started` and `Sign in` next to the heading. Snapshot refs distinguish them.
 

@@ -87,19 +87,19 @@ This repo is a **starter template**, not a product under the author's SaaS accou
    - `configured` — code + Alchemy bindings exist; behavior stays off/no-op until secrets or flags are set (Bento, Sentry).
 5. Prefer **empty env defaults** over dummy cloud accounts. Prefer **console / Compose / local workerd** over hitting a vendor during template authoring.
 
-| Capability                       | State today | Live default                                                             |
-| -------------------------------- | ----------- | ------------------------------------------------------------------------ |
-| Postgres                         | core        | Compose locally; PlanetScale only on `alchemy:deploy` (consumer chooses) |
-| Auth / orgs / staff              | core        | Better Auth + Compose                                                    |
-| i18n                             | core        | Always-on Paraglide in `packages/i18n`. No vendor secret                 |
-| Email                            | configured  | Console until `EMAIL_FROM` + `BENTO_*`                                   |
-| Observability                    | configured  | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`                              |
-| Object storage (R2)              | configured  | In-memory fake until Worker binding `OBJECTS` is present. Alchemy local R2 under `alchemy:dev`; cloud bucket only on deploy |
-| Feature flags                    | configured  | In-memory map. Missing keys return the call-site default. No PostHog     |
-| Billing                          | configured  | Fake until `POLAR_ACCESS_TOKEN`. Checkout and portal return unconfigured. Entitlements deny. Polar HTTP is not connected yet |
-| Workflows / queues               | absent      | Not scaffolded as live infra yet                                         |
-| Analytics                        | not started | Must follow this policy when added                                       |
-| AI                               | configured  | Fake models until `AI_GATEWAY_API_KEY`                                   |
+| Capability          | State today | Live default                                                                                                                 |
+| ------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Postgres            | core        | Compose locally; PlanetScale only on `alchemy:deploy` (consumer chooses)                                                     |
+| Auth / orgs / staff | core        | Better Auth + Compose                                                                                                        |
+| i18n                | core        | Always-on Paraglide in `packages/i18n`. No vendor secret                                                                     |
+| Email               | configured  | Console until `EMAIL_FROM` + `BENTO_*`                                                                                       |
+| Observability       | configured  | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`                                                                                  |
+| Object storage (R2) | configured  | In-memory fake until Worker binding `OBJECTS` is present. Alchemy local R2 under `alchemy:dev`; cloud bucket only on deploy  |
+| Feature flags       | configured  | In-memory map. Missing keys return the call-site default. No PostHog                                                         |
+| Billing             | configured  | Fake until `POLAR_ACCESS_TOKEN`. Checkout and portal return unconfigured. Entitlements deny. Polar HTTP is not connected yet |
+| Workflows / queues  | absent      | Not scaffolded as live infra yet                                                                                             |
+| Analytics           | not started | Must follow this policy when added                                                                                           |
+| AI                  | configured  | Fake models until `AI_GATEWAY_API_KEY`                                                                                       |
 
 ## Deploy authority
 

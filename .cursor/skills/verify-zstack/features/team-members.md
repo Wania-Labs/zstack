@@ -26,7 +26,7 @@ Preconditions:
 - **Open from sidebar.** Go back via sidebar `Home`, then choose sidebar `Members`. Same Members heading.
 - **Owner row.** Under `Current members`, a row shows `Verify User` and `zstack-verify-<runId>@example.com` with role `owner`.
 - **Send invite.** Fill `Email` (id `invite-email`, labeled Email on this page) with `zstack-verify-<runId>-guest@example.com`. Choose `Send invite`. Run `browser_fill` then `browser_click`. An alert titled `Invite sent` appears. The owner row is still listed. The guest is not a current member.
-- **Log side effect.** Copy the invite URL from `.run/api.log` (console EmailService). Proof of send is the alert plus that log line. Do not mark invitation *accept* as verified unless you also run a second account through `/accept-invitation/{id}`.
+- **Log side effect.** Copy the invite URL from `.run/api.log` (console EmailService). Proof of send is the alert plus that log line. Do not mark invitation _accept_ as verified unless you also run a second account through `/accept-invitation/{id}`.
 - **Proof.** Save snapshot and screenshot of Members after the invite as `artifacts/<runId>/team-members.aria.yml` and `.png`. They show `Members`, the owner email, and `Invite sent`.
 
 ## Gotchas
