@@ -215,11 +215,3 @@ Pinned to `drizzle-orm` / `drizzle-kit` `1.0.0-rc.*`. App queries use `drizzle-o
 After `pnpm --filter @zstack/api auth:generate`, strip any RQBv1 `relations(...)` helpers from `auth-schema.ts` (tables only). RQB lives in `src/platform/db/relations.ts` via `defineRelations`.
 
 When drizzle-kit says the migrations folder format is outdated, run `pnpm --filter @zstack/api db:up` once, then generate/migrate as usual.
-
-`drizzle-orm@1.0.0-rc.1` still calls `Schema.TaggedErrorClass`, which Effect `4.0.0-beta.106` renamed to `Schema.TaggedError`. Keep:
-
-- `patches/effect@4.0.0-beta.106.patch` — restores `Schema.TaggedErrorClass` and `Command.withHidden` (Alchemy still uses both names; Effect renamed the latter to `unlisted`)
-- `patches/drizzle-orm@1.0.0-rc.1.patch` — drizzle → `TaggedError`
-- `patches/alchemy@2.0.0-beta.70.patch` — alchemy → `TaggedError` (redundant with the Effect alias, kept until Alchemy catches up)
-
-Without the Effect/Alchemy patches the CLI dies at import with `(void 0) is not a function` / missing `withHidden`. Without the drizzle patch the Worker fails the same way at startup.
