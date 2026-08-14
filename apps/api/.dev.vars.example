@@ -22,3 +22,7 @@ BETTER_AUTH_SECRET=replace-me-run-openssl-rand-or-auth-secret
 # Optional Polar billing (omit → FakeBillingLive, checkout/portal unconfigured)
 # POLAR_ACCESS_TOKEN=
 # POLAR_SERVER=sandbox
+# POLAR_CHECKOUT_SUCCESS_URL=
+# Product catalog: POLAR_PRODUCT_<SLUG_UPPERCASE>=<product_id>
+# POLAR_PRODUCT_PRO=
+# POLAR_PRODUCT_ENTERPRISE=
