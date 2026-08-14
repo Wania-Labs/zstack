@@ -64,9 +64,7 @@ function makeFeatureFlags(overrides: FlagOverrides): FeatureFlags["Service"] {
   });
 }
 
-export function makeFakeFeatureFlagsLive(
-  overrides: FlagOverrides = {},
-): Layer.Layer<FeatureFlags> {
+export function makeFakeFeatureFlagsLive(overrides: FlagOverrides = {}): Layer.Layer<FeatureFlags> {
   return Layer.succeed(FeatureFlags, makeFeatureFlags(overrides));
 }
 
