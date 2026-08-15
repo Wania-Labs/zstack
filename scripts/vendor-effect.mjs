@@ -19,10 +19,7 @@ const PREFIX = "repos/effect";
 const REMOTE = "https://github.com/Effect-TS/effect.git";
 
 function effectGitRef() {
-  const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  };
+  const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
   const raw = pkg.devDependencies?.effect ?? pkg.dependencies?.effect;
   if (!raw) {
     throw new Error("root package.json has no effect dependency to pin the subtree");
