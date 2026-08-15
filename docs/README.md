@@ -2,7 +2,7 @@
 
 Standalone TanStack Start + Fumadocs site for the **zstack authoring repository**.
 
-Not part of the product monorepo workspace, Alchemy stack, Turborepo product tasks, or `create-zstack` clones. Own lockfile and CI (`.github/workflows/docs.yml`). Production is a Cloudflare Worker (`zstack-docs`), not Alchemy. Deploy is Workers Builds in the dashboard, not GitHub Actions.
+Not part of the product monorepo workspace, Alchemy stack, Turborepo product tasks, or `create-zstack` clones. Own lockfile and CI (`.github/workflows/docs.yml`). Production is a Cloudflare Worker (`zstack`), not Alchemy. Deploy is Workers Builds in the dashboard, not GitHub Actions.
 
 ```bash
 pnpm install
@@ -13,7 +13,7 @@ pnpm lint
 pnpm build
 ```
 
-Workers Builds settings: root `docs`, build `pnpm build`, deploy `npx wrangler deploy`, production branch `main`. Worker name in the dashboard must match `wrangler.jsonc` (`zstack-docs`).
+Workers Builds settings: root `docs`, build `pnpm build`, deploy `npx wrangler deploy`, production branch `main`. Worker name in the dashboard must match `wrangler.jsonc` (`zstack`).
 
 ## Agent ingest
 
