@@ -33,6 +33,15 @@ function createRequestId(): string {
   return crypto.randomUUID();
 }
 
+export function systemRequestContext(): RequestContext {
+  return {
+    requestId: createRequestId(),
+    releaseId: "local",
+    actor: { type: "system" },
+    locale: "en",
+  };
+}
+
 export async function attachRequestContext(c: Context<{ Variables: ApiVariables }>, next: Next) {
   const requestId = c.req.header("x-request-id")?.trim() || createRequestId();
 

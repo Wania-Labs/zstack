@@ -7,8 +7,9 @@
  * Optional vendors stay off until a clone sets secrets or flips the manifest.
  * See AUTHORING.md → Template wiring policy.
  *
- * Workflows and queues are backend capabilities on the Hono Worker
- * (`apps/api`), not separate apps. They stay absent until a feature needs them.
+ * Workflows and queues are configured: JobQueue and DurableWorkflow always
+ * exist. Missing Worker bindings use in-memory fakes. Alchemy binds a Queue
+ * producer/consumer and the example Cloudflare Workflow on the API Worker.
  *
  * Email is configured: React Email + EmailService always exist. Transport is
  * console until Bento credentials are bound (`EMAIL_FROM` + `BENTO_*`).
@@ -23,21 +24,31 @@
  * and wrangler / drizzle-kit use Compose only — no cloud DB create.
  *
  * Object storage is configured: ObjectStore always exists. Missing R2 binding
- * uses an in-memory fake. Alchemy binds a bucket on the API Worker; alchemy:dev
- * uses Alchemy local R2, not a cloud bucket on the author's account.
+ * uses an in-memory fake. Sign intents use Worker `/api/objects/*` until R2
+ * S3 API tokens are set, then aws4fetch presigns. Alchemy binds a bucket on
+ * the API Worker; alchemy:dev uses Alchemy local R2, not a cloud bucket on
+ * the author's account.
  *
  * Feature flags are configured: FeatureFlags always exists. The in-memory
  * provider returns the caller-supplied default when a key is missing. No flag SaaS.
  *
  * Billing is configured: BillingService always exists. Empty POLAR_ACCESS_TOKEN
- * keeps checkout/portal unconfigured and entitlements denied. No Polar org or
- * product IDs in source. Clones bind their own Polar token.
+ * keeps checkout/portal unconfigured and entitlements denied. With a token,
+ * checkout/portal call Polar HTTP. Verified Polar webhooks write a unique
+ * Postgres ledger and entitlement projection; canUse/limit read the projection
+ * first and fall back to Polar customer state. Usage goes through an outbox
+ * job (`billing.usage`) then Polar `events.ingest`. No Polar org or product IDs
+ * in source.
+ *
+ * Analytics is configured: typed events in `@zstack/analytics`. Empty
+ * POSTHOG_API_KEY / VITE_PUBLIC_POSTHOG_KEY keeps a no-op client. Staff capture
+ * is skipped. PostHog flags stay off.
  */
 export const product = {
   name: "zstack",
   capabilities: {
-    workflows: "absent",
-    queues: "absent",
+    workflows: "configured",
+    queues: "configured",
     email: "configured",
     observability: "configured",
     ai: "configured",
@@ -45,5 +56,6 @@ export const product = {
     objectStorage: "configured",
     flags: "configured",
     billing: "configured",
+    analytics: "configured",
   },
 } as const;

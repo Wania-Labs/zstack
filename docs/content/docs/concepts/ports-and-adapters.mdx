@@ -13,10 +13,13 @@ A port is an Effect `Context.Service`. Examples in `apps/api/src/platform/`:
 - `AiService` — complete against a product capability ID
 - `ObjectStore` — put, get, delete, and signed upload/download intent
 - `FeatureFlags` — typed boolean, string, and number evaluation with a call-site default
-- `BillingService` — checkout, customer portal, and product entitlements for an organization
+- `BillingService` — checkout, customer portal, entitlements, and usage for an organization
+- `Analytics` — typed product events (`@zstack/analytics`)
+- `JobQueue` — publish named jobs
+- `DurableWorkflow` — start named durable runs
 - `Database` — Drizzle access through the request runtime
 
-Feature modules call the port. They do not import Bento, the AI Gateway SDK, Polar, or console logging directly.
+Feature modules call the port. They do not import Bento, the AI Gateway SDK, Polar, PostHog, aws4fetch, Queue/Workflow internals, or console logging directly.
 
 ## Adapters (Effect Layers)
 
@@ -26,10 +29,13 @@ A Layer provides a concrete implementation of a port at the edge.
 | ---------------- | --------------------------------------- | --------------------- | --------------------------------- |
 | `EmailService`   | `ConsoleEmailLive`                      | `BentoEmailLive`      | `EMAIL_FROM` + `BENTO_*`          |
 | `AiService`      | Fake models                             | Vercel AI Gateway     | `AI_GATEWAY_API_KEY`              |
-| `ObjectStore`    | `FakeObjectStoreLive`                   | R2 Worker binding     | `OBJECTS` present on the Worker   |
-| `FeatureFlags`   | `FakeFeatureFlagsLive`                  | In-memory map         | Always the fake today             |
-| `BillingService` | `FakeBillingLive`                       | `PolarBillingLive`    | `POLAR_ACCESS_TOKEN`              |
-| `Database`       | Compose via Hyperdrive in `ALCHEMY_DEV` | PlanetScale on deploy | `alchemy:dev` vs `alchemy:deploy` |
+| `ObjectStore`    | `FakeObjectStoreLive`                   | R2 Worker binding     | `OBJECTS` present. Presign when `R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY` + account id are set |
+| `FeatureFlags`   | `FakeFeatureFlagsLive`                  | In-memory map         | `FEATURE_FLAG_*` env overlays     |
+| `BillingService`   | `FakeBillingLive`                       | `PolarBillingLive`    | `POLAR_ACCESS_TOKEN`. Webhooks need `POLAR_WEBHOOK_SECRET` |
+| `Analytics`      | No-op Capture client                    | PostHog Capture API   | `POSTHOG_API_KEY` / `VITE_PUBLIC_POSTHOG_KEY` |
+| `JobQueue`         | `FakeJobQueueLive`                      | Cloudflare Queue      | `JOBS` present on the Worker      |
+| `DurableWorkflow`  | `FakeDurableWorkflowLive`               | Cloudflare Workflow   | `EXAMPLE_WORKFLOW` present        |
+| `Database`         | Compose via Hyperdrive in `ALCHEMY_DEV` | PlanetScale on deploy | `alchemy:dev` vs `alchemy:deploy` |
 
 Wiring lives under `apps/api/src/platform/` and the Effect runtime at `apps/api/src/platform/effect/runtime.ts`.
 
@@ -44,7 +50,7 @@ When docs say “swap the Layer,” they mean the Effect adapter, not a new Reac
 
 | Concern | Default                           | Notes                                                                       |
 | ------- | --------------------------------- | --------------------------------------------------------------------------- |
-| Auth    | Better Auth + drizzle adapter     | Org IDs stay opaque so auth can move later without rewriting product tables |
+| Auth    | Better Auth + drizzle adapter     | Dual Postgres: Better Auth uses `pg.Client` (no Effect adapter). Org IDs stay opaque so auth can move later without rewriting product tables |
 | UI host | TanStack Start + shadcn base-nova | You can replace the host; keep oRPC contracts                               |
 | Deploy  | Alchemy sole authority            | Wrangler is a local escape, not a second deploy path                        |
 

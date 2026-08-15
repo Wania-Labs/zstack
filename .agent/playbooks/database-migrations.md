@@ -2,6 +2,8 @@
 
 Drizzle ORM / Kit are pinned to `1.0.0-rc.*`. App queries use `drizzle-orm/effect-postgres`.
 
+Postgres schema changes go through drizzle-kit only (`pnpm db:generate` then `pnpm db:migrate`). Do not add Alchemy `migrationsDir` — it expects flat numeric-prefixed `.sql`, not Drizzle 1.0 folders.
+
 ## Usual path
 
 ```bash
@@ -28,6 +30,6 @@ pnpm auth:generate
 2. Strip any RQBv1 `relations(...)` helpers from that file.
 3. Put relational query config in `apps/api/src/platform/db/relations.ts` via `defineRelations`.
 
-## Patches
+## Dual Postgres drivers
 
-Do not remove `patches/effect@*`, `patches/drizzle-orm@*`, or `patches/alchemy@*`. Without them the Alchemy CLI or Worker fails at import/startup on renamed Effect APIs.
+Better Auth has no Effect adapter. Auth routes keep `pg.Client` + `drizzle-orm/node-postgres`. Product modules keep `@effect/sql-pg` via `Database`. Do not invent a bridge.

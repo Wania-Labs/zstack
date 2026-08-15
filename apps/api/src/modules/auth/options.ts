@@ -3,11 +3,17 @@ import type { BetterAuthOptions } from "better-auth";
 import { admin, organization } from "better-auth/plugins";
 import { Effect, type Layer } from "effect";
 
+import {
+  Analytics,
+  FakeAnalyticsLive,
+  runAnalyticsEffect,
+} from "../../platform/analytics/analytics-service";
 import { ConsoleEmailLive, EmailService, runEmailEffect } from "../../platform/email/email-service";
 
 export type BetterAuthOptionsInput = {
   baseURL: string;
   emailLive?: Layer.Layer<EmailService>;
+  analyticsLive?: Layer.Layer<Analytics>;
 };
 
 /**
@@ -16,6 +22,7 @@ export type BetterAuthOptionsInput = {
  */
 export function createBetterAuthOptions(input: BetterAuthOptionsInput) {
   const emailLive = input.emailLive ?? ConsoleEmailLive;
+  const analyticsLive = input.analyticsLive ?? FakeAnalyticsLive;
 
   return {
     emailAndPassword: {
@@ -48,6 +55,24 @@ export function createBetterAuthOptions(input: BetterAuthOptionsInput) {
           }),
           emailLive,
         );
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          after: async (user) => {
+            await runAnalyticsEffect(
+              Effect.gen(function* () {
+                const analytics = yield* Analytics;
+                yield* analytics.capture(
+                  { name: "account_signed_up", properties: { source: "web" } },
+                  { distinctId: user.id, environment: "development" },
+                );
+              }),
+              analyticsLive,
+            );
+          },
+        },
       },
     },
     plugins: [

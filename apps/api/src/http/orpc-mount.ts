@@ -20,7 +20,6 @@ export async function mountOrpc(
     prefix: "/api/rpc",
     context: {
       requestContext: c.get("requestContext"),
-      connectionString: c.env.HYPERDRIVE.connectionString,
       env: c.env,
       user: c.get("user"),
     },

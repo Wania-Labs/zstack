@@ -23,6 +23,12 @@ export const Web = (api: Cloudflare.Worker) =>
         Config.withDefault("development"),
       ),
       VITE_SENTRY_RELEASE: Config.string("SENTRY_RELEASE").pipe(Config.withDefault("")),
+      VITE_PUBLIC_POSTHOG_KEY: Config.string("VITE_PUBLIC_POSTHOG_KEY").pipe(
+        Config.withDefault(""),
+      ),
+      VITE_PUBLIC_POSTHOG_HOST: Config.string("VITE_PUBLIC_POSTHOG_HOST").pipe(
+        Config.withDefault("https://us.i.posthog.com"),
+      ),
     },
     assets: {
       runWorkerFirst: true,

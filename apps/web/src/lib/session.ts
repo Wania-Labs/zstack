@@ -8,6 +8,7 @@ export type SessionUser = {
   email: string;
   image: string | null;
   emailVerified: boolean;
+  role: string | null;
 };
 
 export type TeamSummary = {
@@ -58,6 +59,7 @@ function parseUser(value: unknown): SessionUser | null {
     email: value.email,
     emailVerified: value.emailVerified,
     image: typeof value.image === "string" ? value.image : null,
+    role: typeof value.role === "string" ? value.role : null,
   };
 }
 

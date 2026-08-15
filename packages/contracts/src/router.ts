@@ -1,7 +1,13 @@
 import { oc } from "@orpc/contract";
 
 import { AiCapabilitiesResponse, AiCompleteInput, AiCompleteResponse } from "./ai";
-import { CheckoutIntent, CreateCheckoutInput, CustomerPortalInput, PortalIntent } from "./billing";
+import {
+  BillingSnapshot,
+  CheckoutIntent,
+  CreateCheckoutInput,
+  CustomerPortalInput,
+  PortalIntent,
+} from "./billing";
 import { HealthResponse } from "./health";
 import { StaffMeResponse } from "./staff";
 
@@ -19,6 +25,7 @@ export const ai = {
 export const billing = {
   createCheckout: oc.input(CreateCheckoutInput).output(CheckoutIntent),
   customerPortal: oc.input(CustomerPortalInput).output(PortalIntent),
+  snapshot: oc.output(BillingSnapshot),
 };
 
 /**

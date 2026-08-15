@@ -2,7 +2,6 @@ import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
-  FakeFeatureFlagsLive,
   FeatureFlags,
   featureFlagsLiveFromEnv,
   makeFakeFeatureFlagsLive,
@@ -120,10 +119,7 @@ describe("FakeFeatureFlagsLive", () => {
 });
 
 describe("featureFlagsLiveFromEnv", () => {
-  it("uses the in-memory fake", async () => {
-    const live = featureFlagsLiveFromEnv({});
-    expect(live).toBe(FakeFeatureFlagsLive);
-
+  it("keeps the starter default when no flag env is set", async () => {
     await runFeatureFlagsEffect(
       Effect.gen(function* () {
         const flags = yield* FeatureFlags;
@@ -133,7 +129,31 @@ describe("featureFlagsLiveFromEnv", () => {
         });
         expect(ready).toEqual({ value: true, reason: "static" });
       }),
-      live,
+      featureFlagsLiveFromEnv({}),
+    );
+  });
+
+  it("overlays FEATURE_FLAG_* bindings", async () => {
+    await runFeatureFlagsEffect(
+      Effect.gen(function* () {
+        const flags = yield* FeatureFlags;
+        expect(
+          yield* flags.boolean({
+            key: "example.ready",
+            defaultValue: true,
+          }),
+        ).toEqual({ value: false, reason: "static" });
+        expect(
+          yield* flags.number({
+            key: "example.limit",
+            defaultValue: 0,
+          }),
+        ).toEqual({ value: 3, reason: "static" });
+      }),
+      featureFlagsLiveFromEnv({
+        FEATURE_FLAG_EXAMPLE_READY: "false",
+        FEATURE_FLAG_EXAMPLE_LIMIT: "3",
+      }),
     );
   });
 });

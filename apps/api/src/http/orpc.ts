@@ -1,20 +1,26 @@
+import { Effect } from "effect";
 import { ORPCError, implement, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { appContract } from "@zstack/contracts/router";
 
-import { completeAi, listAiCapabilities } from "../modules/ai/service";
-import { createCheckout, customerPortal } from "../modules/billing/service";
+import { completeAi, listAiCapabilities, AI_USAGE_EVENT } from "../modules/ai/service";
+import {
+  createCheckout,
+  customerPortal,
+  customerSnapshot,
+  reportUsage,
+} from "../modules/billing/service";
 import { getHealth } from "../modules/health/service";
 import { getStaffMe } from "../modules/staff/service";
-import { AiLive, runAiEffect } from "../platform/ai/ai-service";
-import { BillingLive, runBillingEffect } from "../platform/billing/billing-service";
+import { Analytics } from "../platform/analytics/analytics-service";
 import type { ApiBindings } from "../platform/cloudflare/bindings";
+import { CurrentRequestContext } from "../platform/effect/request-context";
 import { runRequestEffect } from "../platform/effect/runtime";
 import type { RequestContext } from "./context";
+import { captureOrpcError, orpcFailure } from "./orpc-errors";
 
 export type OrpcContext = {
   requestContext: RequestContext;
-  connectionString: string;
   env: ApiBindings;
   user: {
     id: string;
@@ -27,7 +33,7 @@ export type OrpcContext = {
 const os = implement(appContract).$context<OrpcContext>();
 
 const health = os.health.handler(async ({ context }) => {
-  return runRequestEffect(getHealth(), context.requestContext, context.connectionString);
+  return runRequestEffect(getHealth(), context.requestContext, context.env);
 });
 
 const staffMe = os.staff.me.handler(async ({ context }) => {
@@ -35,7 +41,7 @@ const staffMe = os.staff.me.handler(async ({ context }) => {
 });
 
 const aiCapabilities = os.ai.capabilities.handler(async ({ context }) => {
-  return runAiEffect(listAiCapabilities(), AiLive(context.env));
+  return runRequestEffect(listAiCapabilities(), context.requestContext, context.env);
 });
 
 const aiComplete = os.ai.complete.handler(async ({ input, context }) => {
@@ -46,10 +52,42 @@ const aiComplete = os.ai.complete.handler(async ({ input, context }) => {
   }
 
   try {
-    return await runAiEffect(completeAi(input), AiLive(context.env));
+    return await runRequestEffect(
+      Effect.gen(function* () {
+        const result = yield* completeAi(input);
+        const analytics = yield* Analytics;
+        const request = yield* CurrentRequestContext;
+        if (request.organizationId) {
+          yield* reportUsage({
+            organizationId: request.organizationId,
+            name: AI_USAGE_EVENT,
+            operationId: request.idempotencyKey ?? crypto.randomUUID(),
+          }).pipe(Effect.catch(() => Effect.void));
+        }
+        yield* analytics.capture(
+          {
+            name: "ai_generation_completed",
+            properties: {
+              capability: input.capability,
+              route: result.route,
+            },
+          },
+          {
+            distinctId: request.effectiveUserId ?? request.requestId,
+            ...(request.organizationId ? { organizationId: request.organizationId } : {}),
+            ...(request.staffCapabilities && request.staffCapabilities.size > 0
+              ? { isStaff: true }
+              : {}),
+            environment: context.env.SENTRY_ENVIRONMENT?.trim() || "development",
+          },
+        );
+        return result;
+      }),
+      context.requestContext,
+      context.env,
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "ai complete failed";
-    throw new ORPCError("INTERNAL_SERVER_ERROR", { message });
+    orpcFailure(error, "AI completion failed.");
   }
 });
 
@@ -67,13 +105,13 @@ const billingCreateCheckout = os.billing.createCheckout.handler(async ({ input, 
   }
 
   try {
-    return await runBillingEffect(
+    return await runRequestEffect(
       createCheckout(input, context.requestContext.organizationId),
-      BillingLive(context.env),
+      context.requestContext,
+      context.env,
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "billing checkout failed";
-    throw new ORPCError("INTERNAL_SERVER_ERROR", { message });
+    orpcFailure(error, "Checkout failed.");
   }
 });
 
@@ -91,13 +129,37 @@ const billingCustomerPortal = os.billing.customerPortal.handler(async ({ input, 
   }
 
   try {
-    return await runBillingEffect(
+    return await runRequestEffect(
       customerPortal(input, context.requestContext.organizationId),
-      BillingLive(context.env),
+      context.requestContext,
+      context.env,
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "billing portal failed";
-    throw new ORPCError("INTERNAL_SERVER_ERROR", { message });
+    orpcFailure(error, "Customer portal failed.");
+  }
+});
+
+const billingSnapshot = os.billing.snapshot.handler(async ({ context }) => {
+  if (!context.user) {
+    throw new ORPCError("UNAUTHORIZED", {
+      message: "Sign in to read billing entitlements.",
+    });
+  }
+
+  if (!context.requestContext.organizationId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Select a Team to continue.",
+    });
+  }
+
+  try {
+    return await runRequestEffect(
+      customerSnapshot(context.requestContext.organizationId),
+      context.requestContext,
+      context.env,
+    );
+  } catch (error) {
+    orpcFailure(error, "Billing snapshot failed.");
   }
 });
 
@@ -113,6 +175,7 @@ export const router = os.router({
   billing: {
     createCheckout: billingCreateCheckout,
     customerPortal: billingCustomerPortal,
+    snapshot: billingSnapshot,
   },
 });
 
@@ -121,7 +184,13 @@ export type AppRouter = typeof router;
 export const rpcHandler = new RPCHandler(router, {
   interceptors: [
     onError((error) => {
-      console.error("[orpc]", error);
+      if (error instanceof ORPCError) {
+        const status = typeof error.status === "number" ? error.status : 500;
+        if (status < 500) {
+          return;
+        }
+      }
+      captureOrpcError(error);
     }),
   ],
 });

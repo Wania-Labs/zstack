@@ -3,9 +3,13 @@ import * as Config from "effect/Config";
 
 /**
  * Hono API Worker — async entry at `apps/api/src/index.ts`.
- * Workflows, queues, steps, and cron live in that same Worker when selected.
+ * Workflows, queues, steps, and cron live in that same Worker.
  */
-export const Api = (hyperdrive: Cloudflare.Hyperdrive.Connection, objects: Cloudflare.R2.Bucket) =>
+export const Api = (
+  hyperdrive: Cloudflare.Hyperdrive.Connection,
+  objects: Cloudflare.R2.Bucket,
+  jobs: Cloudflare.Queues.Queue,
+) =>
   Cloudflare.Worker("Api", {
     main: "./apps/api/src/index.ts",
     compatibility: {
@@ -15,6 +19,10 @@ export const Api = (hyperdrive: Cloudflare.Hyperdrive.Connection, objects: Cloud
     env: {
       HYPERDRIVE: hyperdrive,
       OBJECTS: objects,
+      JOBS: jobs,
+      EXAMPLE_WORKFLOW: Cloudflare.Workflow("ExampleWorkflow", {
+        className: "ExampleWorkflow",
+      }),
       BETTER_AUTH_URL: Config.string("BETTER_AUTH_URL").pipe(
         Config.withDefault("http://localhost:3000"),
       ),
@@ -38,6 +46,25 @@ export const Api = (hyperdrive: Cloudflare.Hyperdrive.Connection, objects: Cloud
       // Empty → FakeBillingLive until POLAR_ACCESS_TOKEN is set.
       POLAR_ACCESS_TOKEN: Config.redacted("POLAR_ACCESS_TOKEN").pipe(Config.withDefault("")),
       POLAR_SERVER: Config.string("POLAR_SERVER").pipe(Config.withDefault("")),
+      POLAR_CHECKOUT_SUCCESS_URL: Config.string("POLAR_CHECKOUT_SUCCESS_URL").pipe(
+        Config.withDefault(""),
+      ),
+      POLAR_PRODUCT_PRO: Config.string("POLAR_PRODUCT_PRO").pipe(Config.withDefault("")),
+      POLAR_PRODUCT_ENTERPRISE: Config.string("POLAR_PRODUCT_ENTERPRISE").pipe(
+        Config.withDefault(""),
+      ),
+      POLAR_WEBHOOK_SECRET: Config.redacted("POLAR_WEBHOOK_SECRET").pipe(Config.withDefault("")),
+      POSTHOG_API_KEY: Config.redacted("POSTHOG_API_KEY").pipe(Config.withDefault("")),
+      POSTHOG_HOST: Config.string("POSTHOG_HOST").pipe(
+        Config.withDefault("https://us.i.posthog.com"),
+      ),
+      CLOUDFLARE_ACCOUNT_ID: objects.accountId,
+      OBJECTS_BUCKET_NAME: objects.bucketName,
+      R2_ACCESS_KEY_ID: Config.redacted("R2_ACCESS_KEY_ID").pipe(Config.withDefault("")),
+      R2_SECRET_ACCESS_KEY: Config.redacted("R2_SECRET_ACCESS_KEY").pipe(Config.withDefault("")),
+      FEATURE_FLAG_EXAMPLE_READY: Config.string("FEATURE_FLAG_EXAMPLE_READY").pipe(
+        Config.withDefault("true"),
+      ),
     },
     dev: {
       port: 8787,

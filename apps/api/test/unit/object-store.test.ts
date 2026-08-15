@@ -8,6 +8,10 @@ import {
   objectStoreLiveFromEnv,
   runObjectStoreEffect,
 } from "../../src/platform/object-store/object-store-service";
+import {
+  readR2PresignCredentials,
+  signR2ObjectUrl,
+} from "../../src/platform/object-store/r2-presign";
 
 describe("FakeObjectStoreLive", () => {
   it("put/get/delete roundtrips", async () => {
@@ -38,11 +42,17 @@ describe("FakeObjectStoreLive", () => {
       Effect.gen(function* () {
         const store = yield* ObjectStore;
         const upload = yield* store.signUpload({ key: "obj_sign_1" });
-        expect(upload.method).toBe("PUT");
-        expect(upload.url.startsWith("memory://objects/upload/")).toBe(true);
+        expect(upload).toMatchObject({
+          kind: "worker",
+          method: "PUT",
+          path: "/api/objects/obj_sign_1",
+        });
         const download = yield* store.signDownload({ key: "obj_sign_1" });
-        expect(download.method).toBe("GET");
-        expect(download.url.startsWith("memory://objects/download/")).toBe(true);
+        expect(download).toMatchObject({
+          kind: "worker",
+          method: "GET",
+          path: "/api/objects/obj_sign_1",
+        });
       }),
       live,
     );
@@ -66,5 +76,51 @@ describe("objectStoreLiveFromEnv", () => {
       }),
       live,
     );
+  });
+});
+
+describe("readR2PresignCredentials", () => {
+  it("returns undefined until every S3 field is set", () => {
+    expect(
+      readR2PresignCredentials({
+        CLOUDFLARE_ACCOUNT_ID: "acct",
+        OBJECTS_BUCKET_NAME: "bucket",
+      }),
+    ).toBeUndefined();
+  });
+
+  it("reads complete S3 credentials", () => {
+    expect(
+      readR2PresignCredentials({
+        CLOUDFLARE_ACCOUNT_ID: "acct",
+        R2_ACCESS_KEY_ID: "key",
+        R2_SECRET_ACCESS_KEY: "secret",
+        OBJECTS_BUCKET_NAME: "bucket",
+      }),
+    ).toEqual({
+      accountId: "acct",
+      accessKeyId: "key",
+      secretAccessKey: "secret",
+      bucketName: "bucket",
+    });
+  });
+});
+
+describe("signR2ObjectUrl", () => {
+  it("returns an S3 query-signed URL", async () => {
+    const url = await signR2ObjectUrl({
+      credentials: {
+        accountId: "acct",
+        accessKeyId: "AKIAEXAMPLE",
+        secretAccessKey: "secret",
+        bucketName: "bucket",
+      },
+      key: "obj/key",
+      method: "PUT",
+      expiresInSeconds: 60,
+    });
+    expect(url).toContain("https://acct.r2.cloudflarestorage.com/bucket/obj/key");
+    expect(url).toContain("X-Amz-Expires=60");
+    expect(url).toContain("X-Amz-Signature=");
   });
 });

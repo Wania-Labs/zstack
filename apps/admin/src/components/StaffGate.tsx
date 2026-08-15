@@ -54,6 +54,34 @@ export function StaffGate({ children }: StaffGateProps) {
   }
 
   if (staffQuery.isError || !staffQuery.data) {
+    const code = readErrorCode(staffQuery.error);
+    if (code === "UNAUTHORIZED") {
+      return (
+        <div className="mx-auto flex min-h-svh w-full max-w-lg flex-col justify-center gap-4 px-4">
+          <Alert variant="destructive">
+            <AlertTitle>Signed out</AlertTitle>
+            <AlertDescription>Sign in again to open the staff console.</AlertDescription>
+          </Alert>
+          <SignOutButton />
+        </div>
+      );
+    }
+
+    if (code !== "FORBIDDEN") {
+      return (
+        <div className="mx-auto flex min-h-svh w-full max-w-lg flex-col justify-center gap-4 px-4">
+          <Alert variant="destructive">
+            <AlertTitle>Staff check failed</AlertTitle>
+            <AlertDescription>
+              Signed in as {email ?? "unknown"}, but the staff check did not complete. Retry after
+              the API is reachable.
+            </AlertDescription>
+          </Alert>
+          <SignOutButton />
+        </div>
+      );
+    }
+
     return (
       <div className="mx-auto flex min-h-svh w-full max-w-lg flex-col justify-center gap-4 px-4">
         <Alert variant="destructive">
@@ -70,4 +98,24 @@ export function StaffGate({ children }: StaffGateProps) {
   }
 
   return <AppShell staff={staffQuery.data}>{children}</AppShell>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function readErrorCode(error: unknown): string | undefined {
+  if (!isRecord(error)) {
+    return undefined;
+  }
+  if (typeof error.code === "string") {
+    return error.code;
+  }
+  if (isRecord(error.data) && typeof error.data.code === "string") {
+    return error.data.code;
+  }
+  if (isRecord(error.cause) && typeof error.cause.code === "string") {
+    return error.cause.code;
+  }
+  return undefined;
 }

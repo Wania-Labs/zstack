@@ -1,5 +1,6 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 
+import { initBrowserAnalytics } from "./lib/analytics";
 import { initBrowserSentry } from "./lib/sentry";
 import { routeTree } from "./routeTree.gen";
 
@@ -12,6 +13,7 @@ export function getRouter() {
   });
 
   initBrowserSentry(router, "zstack-web");
+  initBrowserAnalytics(router);
 
   return router;
 }

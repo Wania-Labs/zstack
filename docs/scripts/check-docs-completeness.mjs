@@ -20,6 +20,7 @@ const REQUIRED = [
   "guides/turn-on-email",
   "guides/turn-on-ai",
   "guides/turn-on-observability",
+  "guides/turn-on-analytics",
   "guides/turn-on-billing",
   "guides/swap-email-transport",
   "guides/swap-ai-provider",
@@ -50,6 +51,8 @@ const MUST_MENTION = {
   "guides/swap-email-transport": ["EmailService", "Bento"],
   "guides/swap-ai-provider": ["capability", "AI_GATEWAY"],
   "guides/turn-on-observability": ["VITE_SENTRY_DSN_WEB", "VITE_SENTRY_DSN_ADMIN"],
+  "guides/turn-on-analytics": ["POSTHOG_API_KEY", "VITE_PUBLIC_POSTHOG_KEY"],
+  "guides/turn-on-billing": ["POLAR_WEBHOOK_SECRET", "/api/webhooks/polar", "billing.snapshot"],
   "reference/create-zstack": [".audit/**", "agent-transcripts/**"],
 };
 

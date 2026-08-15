@@ -68,12 +68,53 @@ export function makeFakeFeatureFlagsLive(overrides: FlagOverrides = {}): Layer.L
   return Layer.succeed(FeatureFlags, makeFeatureFlags(overrides));
 }
 
-export const FakeFeatureFlagsLive = makeFakeFeatureFlagsLive({
+export const DEFAULT_FLAG_OVERRIDES: FlagOverrides = {
   "example.ready": true,
-});
+};
 
-export function featureFlagsLiveFromEnv(_env: Record<string, unknown>): Layer.Layer<FeatureFlags> {
-  return FakeFeatureFlagsLive;
+export const FakeFeatureFlagsLive = makeFakeFeatureFlagsLive(DEFAULT_FLAG_OVERRIDES);
+
+function parseFlagValue(raw: string): FlagValue {
+  const trimmed = raw.trim();
+  if (trimmed === "true") {
+    return true;
+  }
+  if (trimmed === "false") {
+    return false;
+  }
+  if (trimmed !== "" && Number.isFinite(Number(trimmed))) {
+    return Number(trimmed);
+  }
+  return trimmed;
+}
+
+function flagKeyFromEnvName(name: string): string {
+  return name.slice("FEATURE_FLAG_".length).toLowerCase().replaceAll("_", ".");
+}
+
+/**
+ * Read `FEATURE_FLAG_<KEY>` string bindings into the in-memory map.
+ * Example: FEATURE_FLAG_EXAMPLE_READY=true → example.ready.
+ */
+export function readFlagOverrides(env: Record<string, unknown>): FlagOverrides {
+  const overrides: Record<string, FlagValue> = {};
+  const prefix = "FEATURE_FLAG_";
+
+  for (const [key, value] of Object.entries(env)) {
+    if (!key.startsWith(prefix) || typeof value !== "string" || !value.trim()) {
+      continue;
+    }
+    overrides[flagKeyFromEnvName(key)] = parseFlagValue(value);
+  }
+
+  return overrides;
+}
+
+export function featureFlagsLiveFromEnv(env: Record<string, unknown>): Layer.Layer<FeatureFlags> {
+  return makeFakeFeatureFlagsLive({
+    ...DEFAULT_FLAG_OVERRIDES,
+    ...readFlagOverrides(env),
+  });
 }
 
 export async function runFeatureFlagsEffect<A>(

@@ -1,0 +1,52 @@
+---
+title: Turn on analytics
+description: Bind PostHog keys so typed product events leave the no-op client.
+---
+
+Analytics is `configured` in `product.config.ts`. Typed events live in `@zstack/analytics`. Capture is a no-op until PostHog keys are set. There is no `posthog-js` SDK, no feature flags, and no session replay.
+
+## Steps
+
+1. Create a PostHog project and copy the project API key.
+2. Set the server key on the API Worker (`.dev.vars` locally, Alchemy secrets on deploy):
+
+```bash
+POSTHOG_API_KEY=phc_…
+POSTHOG_HOST=https://us.i.posthog.com
+```
+
+3. Set the browser key for the customer app (`.env.example` / Alchemy web env):
+
+```bash
+VITE_PUBLIC_POSTHOG_KEY=phc_…
+VITE_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+```
+
+Use the same project for both, or split server and browser projects if you want. Empty either key and that side stays silent.
+
+4. Restart `alchemy:dev` or redeploy so Worker and Vite see the env.
+5. Sign up on the customer app, click around, then complete an AI call or Polar checkout if those are bound.
+
+## What you should see
+
+With keys bound, PostHog receives:
+
+| Event | Where |
+| --- | --- |
+| `account_signed_up` | API, after sign-up |
+| `$pageview` (`page_viewed` in the typed catalog) | customer web |
+| `$identify` plus `$anon_distinct_id` | customer web, signed-in |
+| `checkout_completed` | API, Polar webhook |
+| `subscription_changed` | API, Polar webhook |
+| `ai_generation_completed` | API, after `ai.complete` |
+
+Staff roles are skipped. Empty keys log nothing and spend nothing.
+
+Do not turn on PostHog feature flags or replay. Product flags stay on the in-memory `FeatureFlags` port.
+
+## Related
+
+- Events and Capture client live in `packages/analytics`
+- Effect port lives in `apps/api/src/platform/analytics/analytics-service.ts`
+- Customer web wiring lives in `apps/web/src/lib/analytics.ts`
+- Architecture guide: `tech-stack-architecture-guide/07-analytics.md`

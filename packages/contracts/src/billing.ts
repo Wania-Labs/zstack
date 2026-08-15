@@ -33,3 +33,10 @@ export const PortalIntent = z.discriminatedUnion("kind", [
 ]);
 
 export type PortalIntent = z.infer<typeof PortalIntent>;
+
+export const BillingSnapshot = z.object({
+  capabilities: z.array(z.string()),
+  limits: z.record(z.string(), z.number()),
+});
+
+export type BillingSnapshot = z.infer<typeof BillingSnapshot>;

@@ -7,6 +7,8 @@
     "turn-on-email",
     "turn-on-ai",
     "turn-on-observability",
+    "turn-on-analytics",
+    "turn-on-billing",
     "swap-email-transport",
     "swap-ai-provider",
     "deploy",

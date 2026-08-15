@@ -10,6 +10,7 @@ import {
   readPolarCredentials,
   readProductCatalog,
   runBillingEffect,
+  type PolarTransport,
 } from "../../src/platform/billing/billing-service";
 
 const orgId = "org_opaque_1";
@@ -47,6 +48,19 @@ describe("FakeBillingLive", () => {
           name: "projects",
         });
         expect(projects).toBe(0);
+        expect(yield* billing.remaining({ customerId: orgId, name: "projects" })).toBe(0);
+        expect(yield* billing.entitlement({ customerId: orgId, name: "ai.chat.premium" })).toEqual({
+          granted: false,
+          remaining: 0,
+        });
+        expect(
+          yield* billing.ingestUsage({
+            customerId: orgId,
+            name: "ai.generation",
+            operationId: "op_1",
+          }),
+        ).toEqual({});
+        expect(yield* billing.isConfigured()).toBe(false);
       }),
       FakeBillingLive,
     );
@@ -197,9 +211,88 @@ describe("PolarBillingLive", () => {
     }
   });
 
-  it("denies entitlements until projection exists", async () => {
+  it("reads entitlements from Polar customer state", async () => {
     const catalog = new Map([["pro", "prod_abc123"]]);
-    const live = PolarBillingLive({ accessToken: "pol_test", server: "sandbox" }, catalog);
+    const transport: PolarTransport = {
+      createCheckout: async () => ({ url: "https://example.com/checkout" }),
+      createCustomerSession: async () => ({
+        customer_portal_url: "https://example.com/portal",
+      }),
+      getCustomerState: async () => ({
+        grantedBenefits: [{ feature: "ai.chat.premium" }],
+        meters: [{ name: "projects", balance: 4 }],
+      }),
+      ingestUsage: async () => ({ polarEventId: "op_usage" }),
+    };
+    const live = PolarBillingLive(
+      { accessToken: "pol_test", server: "sandbox" },
+      catalog,
+      undefined,
+      transport,
+    );
+
+    await runBillingEffect(
+      Effect.gen(function* () {
+        const billing = yield* BillingService;
+        expect(
+          yield* billing.canUse({
+            customerId: orgId,
+            capability: "ai.chat.premium",
+          }),
+        ).toBe(true);
+        expect(
+          yield* billing.canUse({
+            customerId: orgId,
+            capability: "missing.capability",
+          }),
+        ).toBe(false);
+        expect(
+          yield* billing.limit({
+            customerId: orgId,
+            name: "projects",
+          }),
+        ).toBe(4);
+        expect(
+          yield* billing.remaining({
+            customerId: orgId,
+            name: "projects",
+          }),
+        ).toBe(4);
+        expect(
+          yield* billing.entitlement({
+            customerId: orgId,
+            name: "ai.chat.premium",
+          }),
+        ).toEqual({ granted: true, remaining: 0 });
+        expect(
+          yield* billing.ingestUsage({
+            customerId: orgId,
+            name: "ai.generation",
+            operationId: "op_usage",
+          }),
+        ).toEqual({ polarEventId: "op_usage" });
+        expect(yield* billing.isConfigured()).toBe(true);
+      }),
+      live,
+    );
+  });
+
+  it("denies entitlements when Polar has no customer yet", async () => {
+    const catalog = new Map([["pro", "prod_abc123"]]);
+    const transport: PolarTransport = {
+      createCheckout: async () => ({ url: "https://example.com/checkout" }),
+      createCustomerSession: async () => ({
+        customer_portal_url: "https://example.com/portal",
+      }),
+      getCustomerState: async () => undefined,
+      ingestUsage: async () => ({}),
+    };
+    const live = PolarBillingLive(
+      { accessToken: "pol_test", server: "sandbox" },
+      catalog,
+      undefined,
+      transport,
+    );
 
     await runBillingEffect(
       Effect.gen(function* () {

@@ -1,5 +1,7 @@
 import { Context, Effect, Layer, Schema } from "effect";
 
+import { readR2PresignCredentials, signR2ObjectUrl, type R2PresignCredentials } from "./r2-presign";
+
 export class ObjectStoreError extends Schema.TaggedError<ObjectStoreError>()("ObjectStoreError", {
   message: Schema.String,
 }) {}
@@ -21,14 +23,27 @@ export type SignObjectInput = {
   expiresInSeconds?: number;
 };
 
-export type SignedObjectIntent = {
-  key: string;
-  url: string;
-  method: "PUT" | "GET";
-  expiresAt: Date;
-};
+export type SignedObjectIntent =
+  | {
+      kind: "worker";
+      key: string;
+      path: string;
+      method: "PUT" | "GET";
+      expiresAt: Date;
+    }
+  | {
+      kind: "presigned";
+      key: string;
+      url: string;
+      method: "PUT" | "GET";
+      expiresAt: Date;
+    };
 
 const DEFAULT_SIGN_TTL_SECONDS = 3600;
+
+export function objectWorkerPath(key: string): string {
+  return `/api/objects/${encodeURIComponent(key)}`;
+}
 
 /**
  * Application object-storage boundary. Domain code uses opaque keys;
@@ -97,19 +112,21 @@ type MemoryObject = {
   contentType: string | undefined;
 };
 
+function workerSignIntent(input: SignObjectInput, method: "PUT" | "GET"): SignedObjectIntent {
+  return {
+    kind: "worker",
+    key: input.key,
+    path: objectWorkerPath(input.key),
+    method,
+    expiresAt: expiryDate(input.expiresInSeconds),
+  };
+}
+
 function makeFakeBackend(): ObjectStore["Service"] {
   const objects = new Map<string, MemoryObject>();
 
   const sign = (input: SignObjectInput, method: "PUT" | "GET"): SignedObjectIntent => {
-    const expiresAt = expiryDate(input.expiresInSeconds);
-    const token = crypto.randomUUID();
-    const kind = method === "PUT" ? "upload" : "download";
-    return {
-      key: input.key,
-      url: `memory://objects/${kind}/${token}`,
-      method,
-      expiresAt,
-    };
+    return workerSignIntent(input, method);
   };
 
   return {
@@ -150,16 +167,42 @@ export function makeFakeObjectStoreLive(): Layer.Layer<ObjectStore> {
 
 export const FakeObjectStoreLive = makeFakeObjectStoreLive();
 
-function makeR2Backend(bucket: R2Bucket): ObjectStore["Service"] {
-  const sign = (input: SignObjectInput, method: "PUT" | "GET"): SignedObjectIntent => {
-    const expiresAt = expiryDate(input.expiresInSeconds);
-    const kind = method === "PUT" ? "upload" : "download";
-    return {
-      key: input.key,
-      url: `r2-intent://${kind}/${encodeURIComponent(input.key)}?exp=${expiresAt.getTime()}`,
-      method,
-      expiresAt,
-    };
+function makeR2Backend(
+  bucket: R2Bucket,
+  credentials: R2PresignCredentials | undefined,
+): ObjectStore["Service"] {
+  const sign = (
+    input: SignObjectInput,
+    method: "PUT" | "GET",
+  ): Effect.Effect<SignedObjectIntent, ObjectStoreError> => {
+    if (!credentials) {
+      return Effect.succeed(workerSignIntent(input, method));
+    }
+
+    const expiresInSeconds = input.expiresInSeconds ?? DEFAULT_SIGN_TTL_SECONDS;
+    const expiresAt = expiryDate(expiresInSeconds);
+    return Effect.tryPromise({
+      try: async () => {
+        const url = await signR2ObjectUrl({
+          credentials,
+          key: input.key,
+          method,
+          expiresInSeconds,
+        });
+        return {
+          kind: "presigned",
+          key: input.key,
+          url,
+          method,
+          expiresAt,
+        } satisfies SignedObjectIntent;
+      },
+      catch: (cause) =>
+        new ObjectStoreError({
+          message:
+            cause instanceof Error ? `object sign failed: ${cause.message}` : "object sign failed",
+        }),
+    });
   };
 
   return {
@@ -213,13 +256,16 @@ function makeR2Backend(bucket: R2Bucket): ObjectStore["Service"] {
                 : "object delete failed",
           }),
       }),
-    signUpload: (input) => Effect.sync(() => sign(input, "PUT")),
-    signDownload: (input) => Effect.sync(() => sign(input, "GET")),
+    signUpload: (input) => sign(input, "PUT"),
+    signDownload: (input) => sign(input, "GET"),
   };
 }
 
-export function R2ObjectStoreLive(bucket: R2Bucket): Layer.Layer<ObjectStore> {
-  return Layer.succeed(ObjectStore, makeObjectStore(makeR2Backend(bucket)));
+export function R2ObjectStoreLive(
+  bucket: R2Bucket,
+  credentials?: R2PresignCredentials,
+): Layer.Layer<ObjectStore> {
+  return Layer.succeed(ObjectStore, makeObjectStore(makeR2Backend(bucket, credentials)));
 }
 
 export function isR2BucketBinding(value: unknown): value is R2Bucket {
@@ -236,8 +282,17 @@ export function isR2BucketBinding(value: unknown): value is R2Bucket {
   );
 }
 
-export function objectStoreLiveFromEnv(env: { OBJECTS?: R2Bucket }): Layer.Layer<ObjectStore> {
-  return isR2BucketBinding(env.OBJECTS) ? R2ObjectStoreLive(env.OBJECTS) : FakeObjectStoreLive;
+export function objectStoreLiveFromEnv(env: {
+  OBJECTS?: R2Bucket;
+  CLOUDFLARE_ACCOUNT_ID?: string | undefined;
+  R2_ACCESS_KEY_ID?: string | undefined;
+  R2_SECRET_ACCESS_KEY?: string | undefined;
+  OBJECTS_BUCKET_NAME?: string | undefined;
+}): Layer.Layer<ObjectStore> {
+  if (!isR2BucketBinding(env.OBJECTS)) {
+    return FakeObjectStoreLive;
+  }
+  return R2ObjectStoreLive(env.OBJECTS, readR2PresignCredentials(env));
 }
 
 export async function runObjectStoreEffect<A>(

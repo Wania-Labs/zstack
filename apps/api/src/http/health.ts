@@ -8,10 +8,6 @@ import type { ApiVariables } from "./context";
 export async function healthHandler(
   c: Context<{ Bindings: ApiBindings; Variables: ApiVariables }>,
 ) {
-  const body = await runRequestEffect(
-    getHealth(),
-    c.get("requestContext"),
-    c.env.HYPERDRIVE.connectionString,
-  );
+  const body = await runRequestEffect(getHealth(), c.get("requestContext"), c.env);
   return c.json(body);
 }

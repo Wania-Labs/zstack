@@ -10,7 +10,9 @@ import { sentryOptions } from "../platform/observability/sentry";
 import { attachAuthSession, mountAuthRoutes } from "./auth";
 import { attachRequestContext, type ApiVariables } from "./context";
 import { healthHandler } from "./health";
+import { deleteObjectHandler, getObjectHandler, putObjectHandler } from "./objects";
 import { mountOrpc } from "./orpc-mount";
+import { polarWebhookHandler } from "./polar-webhook";
 
 initLogger({
   env: { service: "zstack-api" },
@@ -53,7 +55,11 @@ export function createApp() {
   app.use("*", attachRequestContext);
   app.use("*", attachAuthSession);
   app.on(["POST", "GET"], "/api/auth/*", mountAuthRoutes);
+  app.post("/api/webhooks/polar", polarWebhookHandler);
   app.use("/api/rpc/*", mountOrpc);
+  app.put("/api/objects/*", putObjectHandler);
+  app.get("/api/objects/*", getObjectHandler);
+  app.delete("/api/objects/*", deleteObjectHandler);
   app.get("/health", healthHandler);
 
   return app;

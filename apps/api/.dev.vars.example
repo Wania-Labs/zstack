@@ -19,10 +19,26 @@ BETTER_AUTH_SECRET=replace-me-run-openssl-rand-or-auth-secret
 # Object storage is a Worker R2 binding (OBJECTS), not a secret.
 # alchemy:dev binds Alchemy local R2. wrangler without the binding uses the in-memory fake.
 
+# Queues and workflows are Worker bindings (JOBS, EXAMPLE_WORKFLOW), not secrets.
+# alchemy:dev binds a local queue + the example Cloudflare Workflow. Missing bindings use in-memory fakes.
+
+# Optional in-memory flag overlays (FEATURE_FLAG_<KEY>=value → key with dots)
+# FEATURE_FLAG_EXAMPLE_READY=true
+
 # Optional Polar billing (omit → FakeBillingLive, checkout/portal unconfigured)
 # POLAR_ACCESS_TOKEN=
 # POLAR_SERVER=sandbox
 # POLAR_CHECKOUT_SUCCESS_URL=
+# POLAR_WEBHOOK_SECRET=
 # Product catalog: POLAR_PRODUCT_<SLUG_UPPERCASE>=<product_id>
 # POLAR_PRODUCT_PRO=
 # POLAR_PRODUCT_ENTERPRISE=
+
+# Optional PostHog product analytics (omit → no-op). Do not enable PostHog flags.
+# POSTHOG_API_KEY=
+# POSTHOG_HOST=https://us.i.posthog.com
+
+# Optional R2 S3 API tokens for presigned object URLs (omit → Worker /api/objects/*).
+# CLOUDFLARE_ACCOUNT_ID is also bound from the Alchemy R2 bucket on deploy.
+# R2_ACCESS_KEY_ID=
+# R2_SECRET_ACCESS_KEY=

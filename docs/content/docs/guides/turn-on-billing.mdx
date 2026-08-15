@@ -1,29 +1,37 @@
 ---
 title: Turn on billing
-description: Wire Polar checkout and customer portal when credentials and product catalog are bound.
+description: Wire Polar checkout, portal, webhooks, entitlements, and usage when credentials and catalog are bound.
 ---
 
-Billing is `configured` in `product.config.ts`. `BillingService` always exists. Checkout and portal are unconfigured until Polar credentials and product catalog are set.
+Billing is `configured` in `product.config.ts`. `BillingService` always exists. Checkout, portal, webhooks, and usage stay quiet until Polar credentials are set. Empty `POLAR_ACCESS_TOKEN` keeps fake billing. Do not register the Better Auth Polar plugin. An empty token would break sign-up.
 
 ## Steps
 
 1. Create a Polar organization and access token (sandbox or production).
-2. Create products in your Polar dashboard and copy their product IDs.
-3. Set in the API Worker env (`.dev.vars` locally, Alchemy secrets on deploy):
+2. Create products in Polar and copy their product IDs.
+3. Add a webhook in Polar that POSTs to your API Worker at `/api/webhooks/polar`. Copy the signing secret.
+4. Set in the API Worker env (`.dev.vars` locally, Alchemy secrets on deploy):
 
 ```bash
 POLAR_ACCESS_TOKEN=pol_your_token_here
 POLAR_SERVER=sandbox  # or "production"
+POLAR_WEBHOOK_SECRET=whsec_…
+# Optional. Defaults to BETTER_AUTH_URL if unset.
+# POLAR_CHECKOUT_SUCCESS_URL=http://localhost:3000
 
 # Product catalog: POLAR_PRODUCT_<SLUG>=<product_id>
 POLAR_PRODUCT_PRO=prod_abc123xyz
 POLAR_PRODUCT_ENTERPRISE=prod_def456uvw
 ```
 
-4. Restart `alchemy:dev` or redeploy so the Worker sees the env.
-5. Call the billing oRPC endpoints from your app:
-   - `billing.createCheckout({ customerId, productSlug })` → checkout URL
-   - `billing.customerPortal({ customerId })` → portal URL
+Polar must reach `/api/webhooks/polar` on a public URL. Local `alchemy:dev` needs a tunnel or Polar's sandbox delivery against a deployed Worker.
+
+5. Restart `alchemy:dev` or redeploy so the Worker sees the env.
+6. Call billing oRPC from a signed-in Team session. The organization id comes from the session, not the client.
+
+   - `billing.createCheckout({ productSlug })` → checkout URL
+   - `billing.customerPortal({})` → portal URL
+   - `billing.snapshot()` → projected capabilities and limits
 
 ## What you should see
 
@@ -31,36 +39,37 @@ With credentials and catalog bound:
 
 - `createCheckout` returns `{ kind: "url", url: "https://buy.polar.sh/..." }`
 - `customerPortal` returns `{ kind: "url", url: "https://polar.sh/.../portal/..." }`
+- Polar `external_customer_id` is the Better Auth organization id
+- Verified webhooks return `202` and write `billing_webhook_event` plus `billing_entitlement`
+- Bad signatures return `403`. Missing `POLAR_WEBHOOK_SECRET` returns `503`
+- `canUse` / `limit` / `remaining` read the Postgres projection first, then Polar customer state
+- Usage goes through `billing_usage_outbox`, an in-process flush, the `billing.usage` queue job, then Polar `events.ingest` with `external_id` equal to the operation id
+- `ai.complete` checks `canUse("ai.<capability>")` when Polar is configured. Empty Polar does not block fake AI. Usage failures after a successful completion are swallowed so the model reply still returns
 
 Without credentials:
 
-- Both return `{ kind: "unconfigured" }`
+- Checkout and portal return `{ kind: "unconfigured" }`
+- Entitlements stay denied
+- Fake AI still runs
 
 ## Product catalog
 
-The server maps product slugs to Polar product IDs. Clients request a slug (e.g., `"pro"`); the server verifies it against the catalog before calling Polar. This keeps Polar product IDs out of client code and product logic.
+The server maps product slugs to Polar product IDs. Clients request a slug such as `"pro"`. The server checks the catalog before calling Polar, so Polar IDs stay out of client code.
 
-Slugs are normalized to lowercase. For example:
+Slugs are normalized to lowercase:
 
 - `POLAR_PRODUCT_PRO=prod_abc123` → slug `"pro"`
 - `POLAR_PRODUCT_STARTER=prod_def456` → slug `"starter"`
 
 ## Customer identity
 
-The billable customer is the Better Auth organization ID. Pass it as `customerId` in checkout and portal calls. Polar tracks this via `external_customer_id` to keep identity reconciliation simple.
-
-## Out of scope
-
-This guide covers checkout and portal URLs only. Not yet wired:
-
-- Webhook ingestion and event ledger
-- Entitlement projection (canUse / limit stay fail-closed)
-- Usage event outbox and credits enforcement
-- Better Auth Polar plugin (do not register it while the token can be empty)
+The billable customer is the Better Auth organization. Polar stores it as `external_customer_id`. oRPC handlers refuse checkout, portal, and snapshot unless the session has a Team.
 
 ## Related
 
 - Service and Layers live in `apps/api/src/platform/billing/billing-service.ts`
+- Webhook HTTP lives in `apps/api/src/http/polar-webhook.ts`
+- Ledger tables live in `apps/api/src/platform/db/billing-schema.ts`
 - Contracts live in `packages/contracts/src/billing.ts`
 - Module handlers live in `apps/api/src/modules/billing/service.ts`
 - Architecture guide: `tech-stack-architecture-guide/13-billing.md`

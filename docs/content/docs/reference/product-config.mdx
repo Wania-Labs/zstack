@@ -11,8 +11,8 @@ Path: `product.config.ts` at the monorepo root.
 export const product = {
   name: "zstack",
   capabilities: {
-    workflows: "absent",
-    queues: "absent",
+    workflows: "configured",
+    queues: "configured",
     email: "configured",
     observability: "configured",
     ai: "configured",
@@ -20,6 +20,7 @@ export const product = {
     objectStorage: "configured",
     flags: "configured",
     billing: "configured",
+    analytics: "configured",
   },
 } as const;
 ```

@@ -7,5 +7,15 @@ import * as Effect from "effect/Effect";
  * Deploy generates a physical name from the stack; it does not pin an account bucket.
  */
 export const Objects = Effect.gen(function* () {
-  return yield* Cloudflare.R2.Bucket("Objects");
+  return yield* Cloudflare.R2.Bucket("Objects", {
+    cors: [
+      {
+        allowedOrigins: ["*"],
+        allowedMethods: ["GET", "PUT", "HEAD"],
+        allowedHeaders: ["*"],
+        exposeHeaders: ["etag", "content-type"],
+        maxAgeSeconds: 3600,
+      },
+    ],
+  });
 });

@@ -1,13 +1,40 @@
+import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { staffCapabilitiesForRole, isStaff } from "../../src/modules/auth/staff";
+import { completeAi, listAiCapabilities } from "../../src/modules/ai/service";
+import { isStaff, staffCapabilitiesForRole } from "../../src/modules/auth/staff";
+import type { RequestContext } from "../../src/http/context";
+import { AiLive, runAiEffect } from "../../src/platform/ai/ai-service";
 import {
-  listAiCapabilityPolicies,
   getAiCapabilityPolicy,
+  listAiCapabilityPolicies,
 } from "../../src/platform/ai/capabilities";
 import { resolveAiModel, resolveAiRoute } from "../../src/platform/ai/registry";
-import { AiLive, runAiEffect } from "../../src/platform/ai/ai-service";
-import { completeAi, listAiCapabilities } from "../../src/modules/ai/service";
+import {
+  BillingError,
+  FakeBillingLive,
+  PolarBillingLive,
+  type PolarTransport,
+} from "../../src/platform/billing/billing-service";
+import { CurrentRequestContext } from "../../src/platform/effect/request-context";
+
+const guestRequest: RequestContext = {
+  requestId: "req_test",
+  releaseId: "local",
+  actor: { type: "user", userId: "user_1" },
+  locale: "en",
+};
+
+function completeAiLayer(request: RequestContext, billing = FakeBillingLive) {
+  return Layer.mergeAll(AiLive({}), billing, Layer.succeed(CurrentRequestContext, request));
+}
+
+function runCompleteAi<A>(
+  effect: Effect.Effect<A, unknown, unknown>,
+  live: Layer.Layer<never, never, unknown>,
+): Promise<A> {
+  return Effect.runPromise(effect.pipe(Effect.provide(live)) as Effect.Effect<A>);
+}
 
 describe("staffCapabilitiesForRole", () => {
   it("maps admin to staff.console", () => {
@@ -66,11 +93,37 @@ describe("AiService fake complete", () => {
     expect(listed.provider).toBe("fake");
     expect(listed.capabilities.length).toBeGreaterThan(0);
 
-    const result = await runAiEffect(
+    const result = await runCompleteAi(
       completeAi({ capability: "chat.fast", prompt: "ping" }),
-      AiLive({}),
+      completeAiLayer(guestRequest),
     );
     expect(result.text).toBe("pong");
     expect(result.route).toBe("fake");
+  });
+
+  it("denies AI when Polar is live and the org lacks the entitlement", async () => {
+    const transport: PolarTransport = {
+      createCheckout: async () => ({ url: "https://example.com/checkout" }),
+      createCustomerSession: async () => ({ customer_portal_url: "https://example.com/portal" }),
+      getCustomerState: async () => undefined,
+      ingestUsage: async () => ({}),
+    };
+    const billing = PolarBillingLive(
+      { accessToken: "pol_test", server: "sandbox" },
+      new Map([["pro", "prod_abc123"]]),
+      undefined,
+      transport,
+    );
+    const request: RequestContext = {
+      ...guestRequest,
+      organizationId: "org_1",
+    };
+
+    await expect(
+      runCompleteAi(
+        completeAi({ capability: "chat.fast", prompt: "ping" }),
+        completeAiLayer(request, billing),
+      ),
+    ).rejects.toBeInstanceOf(BillingError);
   });
 });

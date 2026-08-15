@@ -14,4 +14,24 @@
       "localConnectionString": "postgresql://zstack:zstack@127.0.0.1:5432/zstack",
     },
   ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "JOBS",
+        "queue": "zstack-jobs",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "zstack-jobs",
+      },
+    ],
+  },
+  "workflows": [
+    {
+      "name": "zstack-example",
+      "binding": "EXAMPLE_WORKFLOW",
+      "class_name": "ExampleWorkflow",
+    },
+  ],
 }

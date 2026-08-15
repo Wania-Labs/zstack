@@ -12,6 +12,7 @@ Deep tutorials live on the zstack docs site when published. This file must stay 
 | `apps/web`                  | Customer TanStack Start app                                                                  |
 | `apps/admin`                | Staff TanStack Start console                                                                 |
 | `packages/contracts`        | Zod + oRPC contracts (client-safe)                                                           |
+| `packages/analytics`        | Typed product events; PostHog adapter (no SDK in apps)                                       |
 | `packages/email`            | React Email templates only (no transport)                                                    |
 | `packages/auth-access`      | Better Auth admin role access control                                                        |
 | `packages/i18n`             | Paraglide catalogs; compiled messages and runtime                                            |
@@ -26,11 +27,11 @@ Nested `AGENTS.md` files add package-local rules. Read the nearest one when edit
 
 1. **Alchemy owns deploy.** Entry is `alchemy.run.ts` + `infra/*`. `wrangler` in `apps/api` is local/dry-run only. Do not add a parallel Wrangler deploy path.
 2. **Modules call ports.** Feature code under `apps/api/src/modules/` uses Effect services from `apps/api/src/platform/`. Do not import Bento, AI Gateway, Sentry, R2 SDK, Polar SDK, or console email adapters directly from modules.
-3. **Frontends import contracts and i18n only.** `apps/web` and `apps/admin` may import `@zstack/contracts` and `@zstack/i18n`. They must not import `apps/api` source.
-4. **Keep `patches/`.** The three pnpm patches under `patches/` are required for Effect / Drizzle / Alchemy beta interop. Removing them breaks the Alchemy CLI or the Worker at startup.
+3. **Frontends import contracts, i18n, and analytics only.** `apps/web` and `apps/admin` may import `@zstack/contracts`, `@zstack/i18n`, and `@zstack/analytics`. They must not import `apps/api` source.
+4. **Pin Effect / Drizzle / Alchemy.** Versions live in root and workspace `package.json`. There is no `patches/` directory; do not add pnpm patches unless a future pin actually needs one.
 5. **No `@cloudflare/vite-plugin` on web/admin.** Alchemy injects its own under `alchemy dev` / deploy.
 6. **Secrets stay out of `product.config.ts`.** Flip optional vendors with empty vs set env (see `.dev.vars.example`).
-7. **Workflows and queues stay inside `apps/api`.** Do not create separate Worker apps for them.
+7. **Workflows and queues stay inside `apps/api`.** Do not create separate Worker apps for them. `JobQueue` and `DurableWorkflow` are Effect ports; Cloudflare Queue + Workflow bindings are adapters.
 
 ## Effect v4
 
@@ -94,6 +95,8 @@ Staff promote after sign-up: `STAFF_EMAIL=you@example.com pnpm db:seed`.
 | `BETTER_AUTH_SECRET` | `apps/api/.dev.vars`                                     | Process / stage env                |
 | Compose DB           | `DATABASE_URL` / Hyperdrive → Compose when `ALCHEMY_DEV` | Deploy uses PlanetScale origin     |
 | Optional vendors     | Empty in `.dev.vars` → safe defaults                     | Same: empty = off / fake / console |
+
+Better Auth has no Effect adapter. Session and auth routes use `pg.Client` + `drizzle-orm/node-postgres`. Product modules use `@effect/sql-pg` via `Database`. Keep both until Better Auth can run on Effect (the official Drizzle adapter is promise-only).
 
 ## Playbooks
 

@@ -88,19 +88,19 @@ This repo is a **starter template**, not a product under the author's SaaS accou
    - `configured` — code + Alchemy bindings exist; behavior stays off/no-op until secrets or flags are set (Bento, Sentry).
 5. Prefer **empty env defaults** over dummy cloud accounts. Prefer **console / Compose / local workerd** over hitting a vendor during template authoring.
 
-| Capability          | State today | Live default                                                                                                                 |
-| ------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Postgres            | core        | Compose locally; PlanetScale only on `alchemy:deploy` (consumer chooses)                                                     |
-| Auth / orgs / staff | core        | Better Auth + Compose                                                                                                        |
-| i18n                | core        | Always-on Paraglide in `packages/i18n`. No vendor secret                                                                     |
-| Email               | configured  | Console until `EMAIL_FROM` + `BENTO_*`                                                                                       |
-| Observability       | configured  | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`                                                                                  |
-| Object storage (R2) | configured  | In-memory fake until Worker binding `OBJECTS` is present. Alchemy local R2 under `alchemy:dev`; cloud bucket only on deploy  |
-| Feature flags       | configured  | In-memory map. Missing keys return the call-site default. No PostHog                                                         |
-| Billing             | configured  | Fake until `POLAR_ACCESS_TOKEN`. Checkout and portal return unconfigured. Entitlements deny. Polar HTTP is not connected yet |
-| Workflows / queues  | absent      | Not scaffolded as live infra yet                                                                                             |
-| Analytics           | not started | Must follow this policy when added                                                                                           |
-| AI                  | configured  | Fake models until `AI_GATEWAY_API_KEY`                                                                                       |
+| Capability          | State today | Live default                                                                                                                                                                                                                    |
+| ------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Postgres            | core        | Compose locally; PlanetScale only on `alchemy:deploy` (consumer chooses)                                                                                                                                                        |
+| Auth / orgs / staff | core        | Better Auth + Compose                                                                                                                                                                                                           |
+| i18n                | core        | Always-on Paraglide in `packages/i18n`. No vendor secret                                                                                                                                                                        |
+| Email               | configured  | Console until `EMAIL_FROM` + `BENTO_*`                                                                                                                                                                                          |
+| Observability       | configured  | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`                                                                                                                                                                                     |
+| Object storage (R2) | configured  | In-memory fake until Worker binding `OBJECTS`. Presigned S3 URLs when `R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY` are set; otherwise Worker `/api/objects/*`. Alchemy local R2 under `alchemy:dev`; cloud bucket only on deploy |
+| Feature flags       | configured  | In-memory map. `FEATURE_FLAG_*` env overlays. Missing keys return the call-site default. No PostHog                                                                                                                             |
+| Billing             | configured  | Fake until `POLAR_ACCESS_TOKEN`. Token set: Polar checkout/portal, verified webhooks, entitlement projection, usage outbox                                                                                                      |
+| Workflows / queues  | configured  | In-memory fakes until `JOBS` / `EXAMPLE_WORKFLOW` are bound. Alchemy Queue + example Cloudflare Workflow on the API Worker                                                                                                      |
+| Analytics           | configured  | No-op until `POSTHOG_API_KEY` / `VITE_PUBLIC_POSTHOG_KEY`. Typed events in `@zstack/analytics`. PostHog flags stay off                                                                                                          |
+| AI                  | configured  | Fake models until `AI_GATEWAY_API_KEY`                                                                                                                                                                                          |
 
 ## Deploy authority
 
@@ -189,6 +189,7 @@ Capability registry + Effect `AiService` in `apps/api/src/platform/ai/`. Product
 `ObjectStore` in `apps/api/src/platform/object-store/` is the Effect boundary. Keys are opaque strings, not filenames.
 
 - Default: in-memory fake when the Worker `OBJECTS` R2 binding is missing (wrangler without r2).
+- Sign intents: Worker `/api/objects/*` unless `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, account id, and bucket name are set. Then aws4fetch signs an S3 URL. The Worker binding cannot presign.
 - Alchemy: `infra/storage.ts` declares `Cloudflare.R2.Bucket("Objects")` and binds it on the API Worker. `alchemy:dev` uses Alchemy local R2 (no cloud bucket on the author's account). `alchemy:deploy` provisions a real bucket named from the stack.
 - Clones do not inherit an author account bucket. Physical names come from the personalized Alchemy stack.
 
@@ -197,7 +198,7 @@ Capability registry + Effect `AiService` in `apps/api/src/platform/ai/`. Product
 `FeatureFlags` in `apps/api/src/platform/flags/` is the Effect boundary. Callers pass the safe default at the call site.
 
 - Default: in-memory map (`FakeFeatureFlagsLive`). Missing keys and empty config return the caller default with reason `default`. They do not throw.
-- `featureFlagsLiveFromEnv` currently always selects the fake. A later snapshot Layer can swap in without changing modules.
+- `featureFlagsLiveFromEnv` overlays `FEATURE_FLAG_*` bindings onto that map (`FEATURE_FLAG_EXAMPLE_READY=true` → `example.ready`).
 - No PostHog, OpenFeature npm package, KV snapshot, or admin authoring.
 
 ## Billing
@@ -205,9 +206,22 @@ Capability registry + Effect `AiService` in `apps/api/src/platform/ai/`. Product
 `BillingService` in `apps/api/src/platform/billing/` is the Effect boundary. The billable customer is the Better Auth organization id. Callers ask `canUse(capability)` and `limit(name)`, not Polar subscription status. The client may pass a product slug, never a Polar product id.
 
 - Default: `FakeBillingLive` when `POLAR_ACCESS_TOKEN` is empty. Checkout and portal return `{ kind: "unconfigured" }`. Entitlements deny (`canUse` false, `limit` 0). Empty Polar env does not throw.
-- Live: `PolarBillingLive` when `POLAR_ACCESS_TOKEN` is non-empty. Checkout and portal call Polar HTTP and return `{ kind: "url", url }` when successful. Requires product catalog via `POLAR_PRODUCT_<SLUG>=<product_id>` env vars. Entitlements deny until webhook projection exists.
-- Do not register the Better Auth Polar plugin while credentials can be empty. Empty-token customer creation breaks sign-up.
+- Live: `PolarBillingLive` when `POLAR_ACCESS_TOKEN` is non-empty. Checkout and portal call Polar HTTP and return `{ kind: "url", url }` when successful. Requires product catalog via `POLAR_PRODUCT_<SLUG>=<product_id>` env vars.
+- Webhooks: `POST /api/webhooks/polar` verifies Standard Webhooks (`POLAR_WEBHOOK_SECRET`). Events land in `billing_webhook_event` (Polar event id is the primary key). Entitlements recompute into `billing_entitlement`. Duplicates recompute, they do not double-capture analytics.
+- Usage: `reportUsage` writes `billing_usage_outbox`, flushes Polar ingest in-process (so wrangler without `JOBS` still delivers), then publishes `billing.usage` for retries. `ai.complete` checks `canUse("ai.<capability>")` when Polar is configured and reports `ai.generation` after success. Empty Polar does not block the fake AI path.
+- Product `canUse` / `limit` / `remaining` / `entitlement` read the projection first, then Polar customer state.
+- Do not register the Better Auth Polar plugin while credentials can be empty. Empty-token customer creation breaks sign-up. Association is `external_customer_id` = organization id on checkout.
 - Clones bind their own Polar token. No Polar org or product ids in source.
+
+## Analytics
+
+`@zstack/analytics` is the PostHog setup: typed events and Capture API adapters. There is no `posthog-js` and no `apps/api` analytics module. `Analytics` in `apps/api` is the Effect port. The customer app identifies after session load and sends `$pageview` on route changes.
+
+- Default: no-op when `POSTHOG_API_KEY` / `VITE_PUBLIC_POSTHOG_KEY` are empty. Clones create their own PostHog US Cloud project, same as Sentry.
+- Live: PostHog Capture API (`/capture/`). No session replay, no PostHog feature flags.
+- Server events: `account_signed_up`, `checkout_completed`, `subscription_changed`, `ai_generation_completed`. Browser: `page_viewed` (sent as `$pageview`) plus `$identify` with `$anon_distinct_id`.
+- Staff capture is skipped (server `isStaff`, browser staff roles).
+- Analytics failure never fails the calling feature.
 
 ## Drizzle 1.0 RC
 

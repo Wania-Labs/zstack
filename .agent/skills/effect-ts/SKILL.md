@@ -18,7 +18,7 @@ This product uses Effect `4.0.0-rc.*` with `@effect/sql-pg`, platform ports unde
 ## Project rules
 
 - Use `Effect.gen` and `Effect.fn("name")`. Avoid bare `Effect.gen` wrappers as named exports.
-- Define errors with `Schema.TaggedError` (or the patched `TaggedErrorClass` alias only where patches require it).
+- Define errors with `Schema.TaggedError`.
 - Feature modules call Effect services from `apps/api/src/platform/`. Do not construct vendor clients inside modules.
 - Select Layers at the Worker edge from env (empty credential → safe default).
 - Prefer `@effect/vitest` patterns for Effect unit tests.

@@ -12,6 +12,173 @@ export type PolarCredentials = {
   server: PolarServer;
 };
 
+export type PolarCustomerState = {
+  grantedBenefits: ReadonlyArray<{
+    benefitId?: string;
+    feature?: string;
+  }>;
+  meters: ReadonlyArray<{
+    name: string;
+    balance: number;
+  }>;
+};
+
+export type PolarTransport = {
+  createCheckout(input: {
+    productId: string;
+    customerId: string;
+    successUrl?: string;
+  }): Promise<{ url?: string | null }>;
+  createCustomerSession(input: { customerId: string }): Promise<{
+    customer_portal_url?: string | null;
+  }>;
+  getCustomerState(customerId: string): Promise<PolarCustomerState | undefined>;
+  ingestUsage(input: {
+    customerId: string;
+    name: string;
+    operationId: string;
+  }): Promise<{ polarEventId?: string }>;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isNotFound(error: unknown): boolean {
+  if (!isRecord(error)) {
+    return false;
+  }
+  const status = error.status ?? error.statusCode ?? error.status_code;
+  if (status === 404) {
+    return true;
+  }
+  const nested = error.error;
+  if (isRecord(nested) && (nested.status === 404 || nested.statusCode === 404)) {
+    return true;
+  }
+  const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
+  return message.includes("not found") || message.includes("404");
+}
+
+function readFeature(metadata: unknown): string | undefined {
+  if (!isRecord(metadata)) {
+    return undefined;
+  }
+  const feature = metadata.feature;
+  return typeof feature === "string" && feature.trim() ? feature.trim() : undefined;
+}
+
+function normalizeCustomerState(value: unknown): PolarCustomerState {
+  if (!isRecord(value)) {
+    return { grantedBenefits: [], meters: [] };
+  }
+
+  const rawBenefits = Array.isArray(value.granted_benefits)
+    ? value.granted_benefits
+    : Array.isArray(value.grantedBenefits)
+      ? value.grantedBenefits
+      : [];
+  const grantedBenefits: PolarCustomerState["grantedBenefits"] = rawBenefits.flatMap((entry) => {
+    if (!isRecord(entry)) {
+      return [];
+    }
+    const benefitId =
+      typeof entry.benefit_id === "string"
+        ? entry.benefit_id
+        : typeof entry.benefitId === "string"
+          ? entry.benefitId
+          : undefined;
+    const feature =
+      readFeature(entry.benefit_metadata) ??
+      readFeature(entry.benefitMetadata) ??
+      (typeof entry.benefit_type === "string" ? entry.benefit_type : undefined);
+    return [
+      {
+        ...(benefitId ? { benefitId } : {}),
+        ...(feature ? { feature } : {}),
+      },
+    ];
+  });
+
+  const rawMeters = Array.isArray(value.active_meters)
+    ? value.active_meters
+    : Array.isArray(value.activeMeters)
+      ? value.activeMeters
+      : [];
+  const meters = rawMeters.flatMap((entry) => {
+    if (!isRecord(entry)) {
+      return [];
+    }
+    const name =
+      typeof entry.meter_id === "string"
+        ? entry.meter_id
+        : typeof entry.meterId === "string"
+          ? entry.meterId
+          : typeof entry.name === "string"
+            ? entry.name
+            : undefined;
+    const balance = typeof entry.balance === "number" ? entry.balance : undefined;
+    if (!name || balance === undefined) {
+      return [];
+    }
+    return [{ name, balance }];
+  });
+
+  return { grantedBenefits, meters };
+}
+
+function canUseFromState(state: PolarCustomerState, capability: string): boolean {
+  return state.grantedBenefits.some(
+    (benefit) => benefit.feature === capability || benefit.benefitId === capability,
+  );
+}
+
+function limitFromState(state: PolarCustomerState, name: string): number {
+  return state.meters.find((meter) => meter.name === name)?.balance ?? 0;
+}
+
+export function makePolarSdkTransport(polar: ReturnType<typeof createPolar>): PolarTransport {
+  return {
+    createCheckout: async (input) => {
+      const checkout = await polar.checkouts.create({
+        products: [input.productId],
+        external_customer_id: input.customerId,
+        success_url: input.successUrl ?? null,
+      });
+      return { url: checkout.url };
+    },
+    createCustomerSession: async (input) => {
+      const session = await polar.customerSessions.create({
+        external_customer_id: input.customerId,
+      });
+      return { customer_portal_url: session.customer_portal_url };
+    },
+    getCustomerState: async (customerId) => {
+      try {
+        const state = await polar.customers.getStateExternal(customerId);
+        return normalizeCustomerState(state);
+      } catch (error) {
+        if (isNotFound(error)) {
+          return undefined;
+        }
+        throw error;
+      }
+    },
+    ingestUsage: async (input) => {
+      await polar.events.ingest({
+        events: [
+          {
+            name: input.name,
+            external_customer_id: input.customerId,
+            external_id: input.operationId,
+          },
+        ],
+      });
+      return { polarEventId: input.operationId };
+    },
+  };
+}
+
 /**
  * Product catalog mapping product slugs to Polar product IDs.
  * Configure via environment variables (e.g., POLAR_PRODUCT_PRO=<product_id>).
@@ -43,6 +210,31 @@ export type LimitInput = {
   name: string;
 };
 
+export type RemainingInput = LimitInput;
+
+export type EntitlementInput = {
+  customerId: string;
+  name: string;
+};
+
+export type EntitlementResult = {
+  granted: boolean;
+  remaining: number;
+};
+
+export type ReportUsageInput = {
+  customerId: string;
+  name: string;
+  operationId: string;
+};
+
+export type CustomerSnapshot = {
+  capabilities: string[];
+  limits: Record<string, number>;
+};
+
+export type IngestUsageInput = ReportUsageInput;
+
 /**
  * Application billing boundary. The billable customer is the organization id.
  * Callers use product slugs and entitlement vocabulary. Adapters own Polar.
@@ -54,6 +246,11 @@ export class BillingService extends Context.Service<
     customerPortal(input: CustomerPortalInput): Effect.Effect<PortalIntent, BillingError>;
     canUse(input: CanUseInput): Effect.Effect<boolean, BillingError>;
     limit(input: LimitInput): Effect.Effect<number, BillingError>;
+    remaining(input: RemainingInput): Effect.Effect<number, BillingError>;
+    entitlement(input: EntitlementInput): Effect.Effect<EntitlementResult, BillingError>;
+    customerSnapshot(customerId: string): Effect.Effect<CustomerSnapshot, BillingError>;
+    ingestUsage(input: IngestUsageInput): Effect.Effect<{ polarEventId?: string }, BillingError>;
+    isConfigured(): Effect.Effect<boolean>;
   }
 >()("@zstack/api/platform/billing/BillingService") {}
 
@@ -98,6 +295,31 @@ function makeBillingService(backend: BillingService["Service"]): BillingService[
         const name = yield* requireOpaque(input.name, "limit name");
         return yield* backend.limit({ customerId, name });
       }),
+    remaining: (input) =>
+      Effect.gen(function* () {
+        const customerId = yield* requireOpaque(input.customerId, "customer id");
+        const name = yield* requireOpaque(input.name, "limit name");
+        return yield* backend.remaining({ customerId, name });
+      }),
+    entitlement: (input) =>
+      Effect.gen(function* () {
+        const customerId = yield* requireOpaque(input.customerId, "customer id");
+        const name = yield* requireOpaque(input.name, "entitlement name");
+        return yield* backend.entitlement({ customerId, name });
+      }),
+    customerSnapshot: (customerId) =>
+      Effect.gen(function* () {
+        const id = yield* requireOpaque(customerId, "customer id");
+        return yield* backend.customerSnapshot(id);
+      }),
+    ingestUsage: (input) =>
+      Effect.gen(function* () {
+        const customerId = yield* requireOpaque(input.customerId, "customer id");
+        const name = yield* requireOpaque(input.name, "usage name");
+        const operationId = yield* requireOpaque(input.operationId, "operation id");
+        return yield* backend.ingestUsage({ customerId, name, operationId });
+      }),
+    isConfigured: () => backend.isConfigured(),
   });
 }
 
@@ -107,6 +329,11 @@ function makeFakeBackend(): BillingService["Service"] {
     customerPortal: () => Effect.succeed({ kind: "unconfigured" }),
     canUse: () => Effect.succeed(false),
     limit: () => Effect.succeed(0),
+    remaining: () => Effect.succeed(0),
+    entitlement: () => Effect.succeed({ granted: false, remaining: 0 }),
+    customerSnapshot: () => Effect.succeed({ capabilities: [], limits: {} }),
+    ingestUsage: () => Effect.succeed({}),
+    isConfigured: () => Effect.succeed(false),
   };
 }
 
@@ -116,15 +343,10 @@ function makeFakeBackend(): BillingService["Service"] {
 export const FakeBillingLive = Layer.succeed(BillingService, makeBillingService(makeFakeBackend()));
 
 function makePolarBackend(
-  credentials: PolarCredentials,
+  transport: PolarTransport,
   catalog: ProductCatalog,
   successUrl?: string,
 ): BillingService["Service"] {
-  const polar = createPolar({
-    accessToken: credentials.accessToken,
-    environment: credentials.server,
-  });
-
   return {
     createCheckout: (input) =>
       Effect.gen(function* () {
@@ -137,16 +359,17 @@ function makePolarBackend(
           );
         }
 
+        const resolvedSuccess = successUrl ?? input.successUrl;
         const checkout = yield* Effect.tryPromise({
           try: () =>
-            polar.checkouts.create({
-              products: [productId],
-              external_customer_id: input.customerId,
-              success_url: successUrl ?? null,
+            transport.createCheckout({
+              productId,
+              customerId: input.customerId,
+              ...(resolvedSuccess ? { successUrl: resolvedSuccess } : {}),
             }),
-          catch: (error) =>
+          catch: () =>
             new BillingError({
-              message: `polar checkout failed: ${error instanceof Error ? error.message : String(error)}`,
+              message: "polar checkout failed",
             }),
         });
 
@@ -164,13 +387,10 @@ function makePolarBackend(
     customerPortal: (input) =>
       Effect.gen(function* () {
         const session = yield* Effect.tryPromise({
-          try: () =>
-            polar.customerSessions.create({
-              external_customer_id: input.customerId,
-            }),
-          catch: (error) =>
+          try: () => transport.createCustomerSession({ customerId: input.customerId }),
+          catch: () =>
             new BillingError({
-              message: `polar customer portal failed: ${error instanceof Error ? error.message : String(error)}`,
+              message: "polar customer portal failed",
             }),
         });
 
@@ -185,8 +405,106 @@ function makePolarBackend(
         return { kind: "url", url: session.customer_portal_url };
       }),
 
-    canUse: () => Effect.succeed(false),
-    limit: () => Effect.succeed(0),
+    canUse: (input) =>
+      Effect.gen(function* () {
+        const state = yield* Effect.tryPromise({
+          try: () => transport.getCustomerState(input.customerId),
+          catch: () =>
+            new BillingError({
+              message: "polar customer state failed",
+            }),
+        });
+        if (!state) {
+          return false;
+        }
+        return canUseFromState(state, input.capability);
+      }),
+
+    limit: (input) =>
+      Effect.gen(function* () {
+        const state = yield* Effect.tryPromise({
+          try: () => transport.getCustomerState(input.customerId),
+          catch: () =>
+            new BillingError({
+              message: "polar customer state failed",
+            }),
+        });
+        if (!state) {
+          return 0;
+        }
+        return limitFromState(state, input.name);
+      }),
+
+    remaining: (input) =>
+      Effect.gen(function* () {
+        const state = yield* Effect.tryPromise({
+          try: () => transport.getCustomerState(input.customerId),
+          catch: () =>
+            new BillingError({
+              message: "polar customer state failed",
+            }),
+        });
+        if (!state) {
+          return 0;
+        }
+        return limitFromState(state, input.name);
+      }),
+
+    entitlement: (input) =>
+      Effect.gen(function* () {
+        const state = yield* Effect.tryPromise({
+          try: () => transport.getCustomerState(input.customerId),
+          catch: () =>
+            new BillingError({
+              message: "polar customer state failed",
+            }),
+        });
+        if (!state) {
+          return { granted: false, remaining: 0 };
+        }
+        return {
+          granted: canUseFromState(state, input.name),
+          remaining: limitFromState(state, input.name),
+        };
+      }),
+
+    customerSnapshot: (customerId) =>
+      Effect.gen(function* () {
+        const state = yield* Effect.tryPromise({
+          try: () => transport.getCustomerState(customerId),
+          catch: () =>
+            new BillingError({
+              message: "polar customer state failed",
+            }),
+        });
+        if (!state) {
+          return { capabilities: [], limits: {} };
+        }
+        return {
+          capabilities: [
+            ...new Set(
+              state.grantedBenefits.flatMap((benefit) => {
+                const values = [benefit.feature, benefit.benefitId].filter(
+                  (value): value is string => typeof value === "string" && value.length > 0,
+                );
+                return values;
+              }),
+            ),
+          ],
+          limits: Object.fromEntries(state.meters.map((meter) => [meter.name, meter.balance])),
+        };
+      }),
+
+    ingestUsage: (input) =>
+      Effect.tryPromise({
+        try: () => transport.ingestUsage(input),
+        catch: () =>
+          new BillingError({
+            message: "polar usage ingest failed",
+          }),
+      }),
+
+    isConfigured: () => Effect.succeed(true),
   };
 }
 
@@ -198,10 +516,19 @@ export function PolarBillingLive(
   credentials: PolarCredentials,
   catalog: ProductCatalog,
   successUrl?: string,
+  transport?: PolarTransport,
 ): Layer.Layer<BillingService> {
+  const polarTransport =
+    transport ??
+    makePolarSdkTransport(
+      createPolar({
+        accessToken: credentials.accessToken,
+        environment: credentials.server,
+      }),
+    );
   return Layer.succeed(
     BillingService,
-    makeBillingService(makePolarBackend(credentials, catalog, successUrl)),
+    makeBillingService(makePolarBackend(polarTransport, catalog, successUrl)),
   );
 }
 

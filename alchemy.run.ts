@@ -7,6 +7,7 @@ import * as Layer from "effect/Layer";
 import { Admin } from "./infra/admin.ts";
 import { Api } from "./infra/api.ts";
 import { Database } from "./infra/database.ts";
+import { Jobs } from "./infra/jobs.ts";
 import { Objects } from "./infra/storage.ts";
 import { Web } from "./infra/web.ts";
 
@@ -27,7 +28,12 @@ export default Alchemy.Stack(
   Effect.gen(function* () {
     const db = yield* Database;
     const objects = yield* Objects;
-    const api = yield* Api(db.hyperdrive, objects);
+    const jobs = yield* Jobs;
+    const api = yield* Api(db.hyperdrive, objects, jobs);
+    yield* Cloudflare.Queues.Consumer("JobsConsumer", {
+      queueId: jobs.queueId,
+      scriptName: api.workerName,
+    });
     const web = yield* Web(api);
     const admin = yield* Admin(api);
 

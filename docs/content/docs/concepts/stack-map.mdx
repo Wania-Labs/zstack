@@ -16,13 +16,13 @@ Browser (web or admin)
   ← Alchemy bindings (Hyperdrive, secrets, Workers)
 ```
 
-Frontends import `@zstack/contracts` only. They do not import `apps/api` source.
+Frontends import `@zstack/contracts`, `@zstack/i18n`, and `@zstack/analytics` only. They do not import `apps/api` source.
 
 ## Apps
 
 | Path         | Package         | Role                                                                                        |
 | ------------ | --------------- | ------------------------------------------------------------------------------------------- |
-| `apps/api`   | `@zstack/api`   | Hono Worker: auth, oRPC, Effect services, DB. Workflows and queues live here when selected. |
+| `apps/api`   | `@zstack/api`   | Hono Worker: auth, oRPC, Effect services, DB, queues, workflows             |
 | `apps/web`   | `@zstack/web`   | Customer TanStack Start shell                                                               |
 | `apps/admin` | `@zstack/admin` | Staff TanStack Start shell (`staff.me` gate)                                                |
 
@@ -31,8 +31,10 @@ Frontends import `@zstack/contracts` only. They do not import `apps/api` source.
 | Path                   | Package               | Role                               |
 | ---------------------- | --------------------- | ---------------------------------- |
 | `packages/contracts`   | `@zstack/contracts`   | Zod + oRPC contracts (client-safe) |
+| `packages/analytics`   | `@zstack/analytics`   | Typed product events; PostHog Capture when keyed |
 | `packages/auth-access` | `@zstack/auth-access` | Shared Better Auth admin role AC   |
 | `packages/email`       | `@zstack/email`       | React Email templates              |
+| `packages/i18n`        | `@zstack/i18n`        | Paraglide catalogs and runtime     |
 
 ## Infrastructure
 
@@ -44,9 +46,11 @@ Local Postgres is Compose (`compose.yaml`). Deploy uses PlanetScale Postgres thr
 
 | Area      | Path                     | Role                                                               |
 | --------- | ------------------------ | ------------------------------------------------------------------ |
-| HTTP edge | `apps/api/src/http/`     | Session, mount auth/oRPC/health                                    |
-| Modules   | `apps/api/src/modules/`  | Product verticals (auth, ai, staff, health)                        |
-| Platform  | `apps/api/src/platform/` | Ports and adapters (email, ai, db, billing, observability, effect) |
+| HTTP edge | `apps/api/src/http/`     | Session, mount auth/oRPC/health/objects                    |
+| Modules   | `apps/api/src/modules/`  | Product verticals (auth, ai, staff, health, billing)       |
+| Platform  | `apps/api/src/platform/` | Ports and adapters (email, ai, db, billing, analytics, object store, flags, queue, workflow, observability, effect) |
+| Queues    | `apps/api/src/queues/`   | `JOBS` consumer on this Worker                             |
+| Workflows | `apps/api/src/workflows/`| Cloudflare Workflow classes on this Worker                 |
 
 ## Not in consumer clones
 

@@ -15,6 +15,8 @@ function requireAuthEnv(env: ApiBindings): {
   BENTO_SITE_UUID?: string;
   BENTO_PUBLISHABLE_KEY?: string;
   BENTO_SECRET_KEY?: string;
+  POSTHOG_API_KEY?: string;
+  POSTHOG_HOST?: string;
 } {
   const { BETTER_AUTH_URL, BETTER_AUTH_SECRET } = env;
   if (!BETTER_AUTH_URL || !BETTER_AUTH_SECRET) {
@@ -27,6 +29,8 @@ function requireAuthEnv(env: ApiBindings): {
     ...(env.BENTO_SITE_UUID ? { BENTO_SITE_UUID: env.BENTO_SITE_UUID } : {}),
     ...(env.BENTO_PUBLISHABLE_KEY ? { BENTO_PUBLISHABLE_KEY: env.BENTO_PUBLISHABLE_KEY } : {}),
     ...(env.BENTO_SECRET_KEY ? { BENTO_SECRET_KEY: env.BENTO_SECRET_KEY } : {}),
+    ...(env.POSTHOG_API_KEY ? { POSTHOG_API_KEY: env.POSTHOG_API_KEY } : {}),
+    ...(env.POSTHOG_HOST ? { POSTHOG_HOST: env.POSTHOG_HOST } : {}),
   };
 }
 
@@ -55,7 +59,7 @@ export async function attachAuthSession(
   c: Context<{ Bindings: ApiBindings; Variables: ApiVariables }>,
   next: Next,
 ) {
-  if (c.req.path.startsWith("/api/auth")) {
+  if (c.req.path.startsWith("/api/auth") || c.req.path.startsWith("/api/webhooks")) {
     await next();
     return;
   }
