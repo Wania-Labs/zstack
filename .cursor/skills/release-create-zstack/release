@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "Usage: release [patch|minor|major] [--dry-run]" >&2
+  exit 2
+}
+
+bump="patch"
+dry_run="false"
+
+for arg in "$@"; do
+  case "${arg}" in
+    patch | minor | major) bump="${arg}" ;;
+    --dry-run) dry_run="true" ;;
+    -h | --help) usage ;;
+    *) usage ;;
+  esac
+done
+
+root="$(git rev-parse --show-toplevel)"
+cd "${root}"
+
+if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then
+  echo "Release from main (current branch: $(git rev-parse --abbrev-ref HEAD))." >&2
+  exit 1
+fi
+
+if [ -n "$(git status --porcelain)" ]; then
+  echo "Working tree is dirty. Commit or stash, then retry." >&2
+  git status --short >&2
+  exit 1
+fi
+
+git fetch origin main
+if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+  echo "HEAD is not origin/main. Push or pull, then retry." >&2
+  exit 1
+fi
+
+before="$(gh run list --workflow=publish-create-zstack.yml --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+
+gh workflow run publish-create-zstack.yml --ref main -f "bump=${bump}" -f "dry_run=${dry_run}"
+
+run_id=""
+for _ in $(seq 1 30); do
+  sleep 2
+  run_id="$(gh run list --workflow=publish-create-zstack.yml --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+  if [ -n "${run_id}" ] && [ "${run_id}" != "${before}" ]; then
+    break
+  fi
+done
+
+if [ -z "${run_id}" ] || [ "${run_id}" = "${before}" ]; then
+  echo "Timed out waiting for the workflow run to appear." >&2
+  exit 1
+fi
+
+url="$(gh run view "${run_id}" --json url --jq .url)"
+echo "Watching ${url}"
+gh run watch "${run_id}" --exit-status
+
+gh run view "${run_id}" --json conclusion,url,headSha --jq '"conclusion=" + .conclusion + "\n" + .url + "\nsha=" + .headSha'
+git fetch origin --tags
+tag="$(git tag -l 'create-zstack@*' --sort=-v:refname | head -n 1)"
+if [ -n "${tag}" ]; then
+  echo "latest tag: ${tag}"
+  gh release view "${tag}" --json url,tagName --jq '"release=" + .url'
+fi
+echo "npm: https://www.npmjs.com/package/@wanialabs/create-zstack"

@@ -1,12 +1,16 @@
 name: Publish create-zstack
 
 # Trusted publishing (OIDC) — no NPM_TOKEN.
-# After the first manual publish (or once the package exists), configure on npm:
-#   Package → Settings → Trusted Publisher
+# npm package settings must match this file name:
 #   Organization: Wania-Labs
 #   Repository: zstack
 #   Workflow: publish-create-zstack.yml
-#   Environment: (leave empty unless you add one)
+#   Environment: (leave empty)
+#
+# Happy path: workflow_dispatch with bump=patch|minor|major.
+# That bumps create-zstack/package.json on main, publishes, tags
+# create-zstack@x.y.z, and opens a GitHub release.
+# Tag pushes still publish if that version is not already on npm.
 
 on:
   push:
@@ -14,30 +18,39 @@ on:
       - "create-zstack@*"
   workflow_dispatch:
     inputs:
+      bump:
+        description: "Semver bump on main (ignored on tag pushes)"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
       dry_run:
-        description: "Pack and validate only (skip npm publish)"
+        description: "Pack and validate only (skip bump, npm, tag, release)"
         type: boolean
         default: false
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 concurrency:
-  group: publish-create-zstack-${{ github.ref }}
+  group: publish-create-zstack
   cancel-in-progress: false
 
 jobs:
   publish:
     name: Publish @wanialabs/create-zstack
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: create-zstack
+    timeout-minutes: 20
+    env:
+      PACKAGE_DIR: create-zstack
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
@@ -47,24 +60,98 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       - name: Ensure npm supports OIDC trusted publishing
         run: npm install -g npm@latest
+
+      - name: Bump version
+        id: bump
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == false }}
+        working-directory: .
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "Dispatch a release from main (got ${GITHUB_REF})."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version "${{ inputs.bump }}" --no-git-tag-version --prefix "${PACKAGE_DIR}"
+          VERSION="$(node -p "require('./${PACKAGE_DIR}/package.json').version")"
+          TAG="create-zstack@${VERSION}"
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists."
+            exit 1
+          fi
+          git add "${PACKAGE_DIR}/package.json"
+          git commit -m "Release @wanialabs/create-zstack ${VERSION}."
+          git tag "${TAG}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+
+      - name: Resolve version
+        id: meta
+        working-directory: .
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./${PACKAGE_DIR}/package.json').version")"
+          TAG="create-zstack@${VERSION}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
 
       - name: Install workspace
         working-directory: .
         run: pnpm install --frozen-lockfile
 
       - name: Build, test, typecheck
+        working-directory: create-zstack
         run: pnpm run build && pnpm test && pnpm typecheck
-
-      - name: Publish
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run == false }}
-        run: pnpm publish --access public --no-git-checks
-        env:
-          NPM_CONFIG_PROVENANCE: "true"
 
       - name: Dry run
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        working-directory: create-zstack
         run: pnpm publish --dry-run --access public --no-git-checks
+
+      - name: Push bump and tag
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == false }}
+        working-directory: .
+        run: |
+          set -euo pipefail
+          git push origin HEAD:main
+          git push origin "${{ steps.meta.outputs.tag }}"
+
+      - name: Publish to npm
+        id: npm
+        if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+        working-directory: create-zstack
+        env:
+          NPM_CONFIG_PROVENANCE: "true"
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          NAME="$(node -p "require('./package.json').name")"
+          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+            echo "already_published=true" >> "${GITHUB_OUTPUT}"
+            echo "${NAME}@${VERSION} is already on npm; skipping publish."
+            exit 0
+          fi
+          pnpm publish --access public --no-git-checks
+          echo "already_published=false" >> "${GITHUB_OUTPUT}"
+
+      - name: GitHub release
+        if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.meta.outputs.tag }}"
+          VERSION="${{ steps.meta.outputs.version }}"
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists."
+            exit 0
+          fi
+          gh release create "${TAG}" \
+            --title "@wanialabs/create-zstack ${VERSION}" \
+            --notes "npm: https://www.npmjs.com/package/@wanialabs/create-zstack/v/${VERSION}
+
+The CLI still clones gh:Wania-Labs/zstack at runtime (usually main). This tag is the published CLI, not a frozen template snapshot."

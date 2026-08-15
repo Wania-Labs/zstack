@@ -63,6 +63,18 @@ ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke-agents --force -
 
 Default remote template: `gh:Wania-Labs/zstack` (public; override with `--template` or `ZSTACK_TEMPLATE`). CLI requires Node `>=22.5`.
 
+## Releasing create-zstack
+
+npm trusted publisher is already set for `.github/workflows/publish-create-zstack.yml`. Do not use `NPM_TOKEN`. Do not `npm publish` from a laptop.
+
+From `main` with a clean tree:
+
+```bash
+.cursor/skills/release-create-zstack/release patch
+```
+
+That dispatches the workflow. CI bumps `create-zstack/package.json`, publishes `@wanialabs/create-zstack`, pushes `create-zstack@x.y.z`, and opens a GitHub release. The published CLI still clones `gh:Wania-Labs/zstack` at runtime (usually `main`); the tag is the CLI version, not a frozen template snapshot.
+
 - Agent pack flags:
   - `--package-manager` / `-p` — `pnpm` (default with `--yes`) \| `npm` \| `yarn` \| `bun`
   - `--agent-tools=none|all|claude,cursor,opencode,codex` — omit to prompt on a TTY; non-TTY / `--yes` defaults to none
