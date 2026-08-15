@@ -18,3 +18,5 @@ dist
 .tanstack
 
 .source
+/public/llms.txt
+/public/llms-full.txt

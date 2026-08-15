@@ -15,6 +15,8 @@ pnpm build
 
 Workers Builds settings: root `docs`, build `pnpm build`, deploy `npx wrangler deploy`, production branch `main`. Worker name in the dashboard must match `wrangler.jsonc` (`zstack`).
 
+`pnpm build` writes `public/llms.txt` and `public/llms-full.txt` from the MDX tree so Cloudflare can serve them as static assets. Browser navigations to those paths otherwise hit the SPA shell, which has no page component and looks empty. Markdown twins (`/docs/*.md`) still go through the Worker (`assets.run_worker_first`).
+
 ## Agent ingest
 
 | URL                                    | Purpose                      |

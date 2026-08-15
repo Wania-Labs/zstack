@@ -4,8 +4,8 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "dev": "vite dev --port 4000",
-    "build": "vite build",
+    "dev": "node scripts/write-llms-assets.mjs && vite dev --port 4000",
+    "build": "node scripts/write-llms-assets.mjs && vite build",
     "preview": "vite preview --port 4000",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",

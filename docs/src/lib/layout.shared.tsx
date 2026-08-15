@@ -15,6 +15,7 @@ export function baseOptions(): BaseLayoutProps {
       {
         text: "llms.txt",
         url: "/llms.txt",
+        external: true,
       },
       {
         text: "GitHub",
