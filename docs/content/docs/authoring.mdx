@@ -20,10 +20,10 @@ cd docs && pnpm install && pnpm dev    # :4000
 
 ## CI
 
-| Workflow                     | Scope                                                                            |
-| ---------------------------- | -------------------------------------------------------------------------------- |
-| `.github/workflows/ci.yml`   | Product monorepo — ignores `docs/**`                                             |
-| `.github/workflows/docs.yml` | Docs only — install, `check:docs`, typecheck, lint, format, build inside `docs/` |
+| Workflow                     | Scope                                                                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/ci.yml`   | Product monorepo — ignores `docs/**`                                                                                 |
+| `.github/workflows/docs.yml` | Docs only — install, `check:docs`, typecheck, lint, format, Worker build. Deploy is Workers Builds, not this job |
 
 Never fold docs typecheck or install into the product CI job.
 

@@ -5,6 +5,8 @@ node_modules
 .vercel
 .output
 .nitro
+.wrangler
+dist
 /build/
 /api/
 /server/build

@@ -17,19 +17,19 @@ Empty credentials are the day-one default. Prefer console, Compose, and fake mod
 
 ## What ships today
 
-| Capability          | State in config                           | Live default                                                                         |
-| ------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------ |
-| Postgres            | `database: "planetscale"` (deploy target) | Compose locally; PlanetScale on `alchemy:deploy`                                     |
-| Auth / orgs / staff | always on (not a capability key)          | Better Auth against Compose                                                          |
-| i18n                | always on (not a capability key)          | Paraglide in `packages/i18n`. No vendor secret                                       |
-| Email               | `configured`                              | Console until `EMAIL_FROM` + `BENTO_*`                                               |
-| Observability       | `configured`                              | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`                                          |
-| AI                  | `configured`                              | Fake models until `AI_GATEWAY_API_KEY`                                               |
+| Capability          | State in config                           | Live default                                                                                                                   |
+| ------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Postgres            | `database: "planetscale"` (deploy target) | Compose locally; PlanetScale on `alchemy:deploy`                                                                               |
+| Auth / orgs / staff | always on (not a capability key)          | Better Auth against Compose                                                                                                    |
+| i18n                | always on (not a capability key)          | Paraglide in `packages/i18n`. No vendor secret                                                                                 |
+| Email               | `configured`                              | Console until `EMAIL_FROM` + `BENTO_*`                                                                                         |
+| Observability       | `configured`                              | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`                                                                                    |
+| AI                  | `configured`                              | Fake models until `AI_GATEWAY_API_KEY`                                                                                         |
 | Object storage      | `configured` (`objectStorage`)            | In-memory fake until `OBJECTS` is bound. Sign intents are Worker paths until R2 S3 API tokens are set, then aws4fetch presigns |
-| Feature flags       | `configured` (`flags`)                    | In-memory map. `FEATURE_FLAG_*` env overlays. Missing keys return the call-site default     |
-| Billing             | `configured` (`billing`)                  | Fake until `POLAR_ACCESS_TOKEN`. With a token: Polar checkout/portal, webhooks, ledger, entitlements, usage |
-| Analytics           | `configured` (`analytics`)                | No-op until `POSTHOG_API_KEY` / `VITE_PUBLIC_POSTHOG_KEY`. Capture API only. No flags, no replay |
-| Workflows / queues  | `configured`                              | In-memory fakes until `JOBS` / `EXAMPLE_WORKFLOW`. Alchemy binds both on the API Worker     |
+| Feature flags       | `configured` (`flags`)                    | In-memory map. `FEATURE_FLAG_*` env overlays. Missing keys return the call-site default                                        |
+| Billing             | `configured` (`billing`)                  | Fake until `POLAR_ACCESS_TOKEN`. With a token: Polar checkout/portal, webhooks, ledger, entitlements, usage                    |
+| Analytics           | `configured` (`analytics`)                | No-op until `POSTHOG_API_KEY` / `VITE_PUBLIC_POSTHOG_KEY`. Capture API only. No flags, no replay                               |
+| Workflows / queues  | `configured`                              | In-memory fakes until `JOBS` / `EXAMPLE_WORKFLOW`. Alchemy binds both on the API Worker                                        |
 
 Feature-flag SaaS, KV snapshots, and admin flag authoring are not shipped. Product flags stay on the in-memory map.
 

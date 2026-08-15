@@ -16,6 +16,7 @@ agent-transcripts/**
 .audit/**
 .github/workflows/publish-create-zstack.yml
 .github/workflows/generate-clone.yml
+.github/workflows/docs.yml
 scripts/smoke-create-zstack
 apps/*/.cta.json
 repos/**
@@ -164,13 +165,13 @@ Suggested project split: one Sentry project each for api, web, and admin.
 
 Product gate: `.github/workflows/ci.yml` — typecheck / test / lint / format for the monorepo. **Ignores `docs/**`.**
 
-Docs gate: `.github/workflows/docs.yml` — install/typecheck/lint/format/build **inside `docs/` only** (separate lockfile). Never fold docs into the product job.
+Docs gate: `.github/workflows/docs.yml` — install/typecheck/lint/format/Worker build **inside `docs/` only** (separate lockfile). Never fold docs into the product job. Production deploy is Workers Builds in the Cloudflare dashboard (root `docs`), not this workflow.
 
 `pnpm test` runs API unit tests plus deterministic `vitest-evals` (fake models). Workerd pool tests (`pnpm test:workers`) stay local/optional. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
 
 ## Docs site (authoring only)
 
-`docs/` is a standalone TanStack Start + Fumadocs site. Not in `pnpm-workspace.yaml`, not in Alchemy, not in product turbo tasks, excluded from `create-zstack`.
+`docs/` is a standalone TanStack Start + Fumadocs site. Not in `pnpm-workspace.yaml`, not in Alchemy, not in product turbo tasks, excluded from `create-zstack`. Production target is a Cloudflare Worker via `@cloudflare/vite-plugin` and `docs/wrangler.jsonc`. That is authoring-only. It is not a second product deploy path.
 
 ```bash
 cd docs && pnpm install && pnpm dev   # :4000

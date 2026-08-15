@@ -44,14 +44,14 @@ Vite proxies `/api` to the API Worker. Do not add `@cloudflare/vite-plugin` to w
 
 ## Optional vendors
 
-| Capability    | Default     | Turn on with                      |
-| ------------- | ----------- | --------------------------------- |
-| Email         | Console     | `EMAIL_FROM` + `BENTO_*`          |
-| Observability | Off         | `SENTRY_DSN` / `VITE_SENTRY_DSN*` |
-| AI            | Fake models | `AI_GATEWAY_API_KEY`              |
-| Analytics     | No-op       | `POSTHOG_API_KEY` / `VITE_PUBLIC_POSTHOG_KEY` |
+| Capability    | Default      | Turn on with                                  |
+| ------------- | ------------ | --------------------------------------------- |
+| Email         | Console      | `EMAIL_FROM` + `BENTO_*`                      |
+| Observability | Off          | `SENTRY_DSN` / `VITE_SENTRY_DSN*`             |
+| AI            | Fake models  | `AI_GATEWAY_API_KEY`                          |
+| Analytics     | No-op        | `POSTHOG_API_KEY` / `VITE_PUBLIC_POSTHOG_KEY` |
 | Billing       | Unconfigured | `POLAR_ACCESS_TOKEN` + `POLAR_WEBHOOK_SECRET` |
-| Object sign   | Worker paths | R2 S3 API tokens (`R2_ACCESS_KEY_ID`, …) |
+| Object sign   | Worker paths | R2 S3 API tokens (`R2_ACCESS_KEY_ID`, …)      |
 
 How-tos: [Turn on email](/docs/guides/turn-on-email), [Turn on AI](/docs/guides/turn-on-ai), [Turn on observability](/docs/guides/turn-on-observability), [Turn on analytics](/docs/guides/turn-on-analytics), [Turn on billing](/docs/guides/turn-on-billing).
 

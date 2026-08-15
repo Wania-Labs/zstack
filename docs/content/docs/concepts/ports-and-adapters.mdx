@@ -25,17 +25,17 @@ Feature modules call the port. They do not import Bento, the AI Gateway SDK, Pol
 
 A Layer provides a concrete implementation of a port at the edge.
 
-| Port             | Default adapter                         | Live adapter          | Flip                              |
-| ---------------- | --------------------------------------- | --------------------- | --------------------------------- |
-| `EmailService`   | `ConsoleEmailLive`                      | `BentoEmailLive`      | `EMAIL_FROM` + `BENTO_*`          |
-| `AiService`      | Fake models                             | Vercel AI Gateway     | `AI_GATEWAY_API_KEY`              |
-| `ObjectStore`    | `FakeObjectStoreLive`                   | R2 Worker binding     | `OBJECTS` present. Presign when `R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY` + account id are set |
-| `FeatureFlags`   | `FakeFeatureFlagsLive`                  | In-memory map         | `FEATURE_FLAG_*` env overlays     |
-| `BillingService`   | `FakeBillingLive`                       | `PolarBillingLive`    | `POLAR_ACCESS_TOKEN`. Webhooks need `POLAR_WEBHOOK_SECRET` |
-| `Analytics`      | No-op Capture client                    | PostHog Capture API   | `POSTHOG_API_KEY` / `VITE_PUBLIC_POSTHOG_KEY` |
-| `JobQueue`         | `FakeJobQueueLive`                      | Cloudflare Queue      | `JOBS` present on the Worker      |
-| `DurableWorkflow`  | `FakeDurableWorkflowLive`               | Cloudflare Workflow   | `EXAMPLE_WORKFLOW` present        |
-| `Database`         | Compose via Hyperdrive in `ALCHEMY_DEV` | PlanetScale on deploy | `alchemy:dev` vs `alchemy:deploy` |
+| Port              | Default adapter                         | Live adapter          | Flip                                                                                             |
+| ----------------- | --------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------ |
+| `EmailService`    | `ConsoleEmailLive`                      | `BentoEmailLive`      | `EMAIL_FROM` + `BENTO_*`                                                                         |
+| `AiService`       | Fake models                             | Vercel AI Gateway     | `AI_GATEWAY_API_KEY`                                                                             |
+| `ObjectStore`     | `FakeObjectStoreLive`                   | R2 Worker binding     | `OBJECTS` present. Presign when `R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY` + account id are set |
+| `FeatureFlags`    | `FakeFeatureFlagsLive`                  | In-memory map         | `FEATURE_FLAG_*` env overlays                                                                    |
+| `BillingService`  | `FakeBillingLive`                       | `PolarBillingLive`    | `POLAR_ACCESS_TOKEN`. Webhooks need `POLAR_WEBHOOK_SECRET`                                       |
+| `Analytics`       | No-op Capture client                    | PostHog Capture API   | `POSTHOG_API_KEY` / `VITE_PUBLIC_POSTHOG_KEY`                                                    |
+| `JobQueue`        | `FakeJobQueueLive`                      | Cloudflare Queue      | `JOBS` present on the Worker                                                                     |
+| `DurableWorkflow` | `FakeDurableWorkflowLive`               | Cloudflare Workflow   | `EXAMPLE_WORKFLOW` present                                                                       |
+| `Database`        | Compose via Hyperdrive in `ALCHEMY_DEV` | PlanetScale on deploy | `alchemy:dev` vs `alchemy:deploy`                                                                |
 
 Wiring lives under `apps/api/src/platform/` and the Effect runtime at `apps/api/src/platform/effect/runtime.ts`.
 
@@ -48,11 +48,11 @@ When docs say “swap the Layer,” they mean the Effect adapter, not a new Reac
 
 ## What is not swapped in code today
 
-| Concern | Default                           | Notes                                                                       |
-| ------- | --------------------------------- | --------------------------------------------------------------------------- |
+| Concern | Default                           | Notes                                                                                                                                        |
+| ------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | Auth    | Better Auth + drizzle adapter     | Dual Postgres: Better Auth uses `pg.Client` (no Effect adapter). Org IDs stay opaque so auth can move later without rewriting product tables |
-| UI host | TanStack Start + shadcn base-nova | You can replace the host; keep oRPC contracts                               |
-| Deploy  | Alchemy sole authority            | Wrangler is a local escape, not a second deploy path                        |
+| UI host | TanStack Start + shadcn base-nova | You can replace the host; keep oRPC contracts                                                                                                |
+| Deploy  | Alchemy sole authority            | Wrangler is a local escape, not a second deploy path                                                                                         |
 
 ## How to swap in practice
 

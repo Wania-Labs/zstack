@@ -1,9 +1,9 @@
 import react from "@vitejs/plugin-react";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import { fumadocsMdx } from "fumadocs-mdx/vite";
-import { nitro } from "nitro/vite";
 
 export default defineConfig({
   server: {
@@ -13,6 +13,7 @@ export default defineConfig({
   plugins: [
     fumadocsMdx(),
     tailwindcss(),
+    cloudflare({ viteEnvironment: { name: "ssr" } }),
     tanstackStart({
       // Prerender hangs at Concurrency: 0 with this Start+Fumadocs pairing; SSR only.
       prerender: {
@@ -20,9 +21,6 @@ export default defineConfig({
       },
     }),
     react(),
-    nitro({
-      preset: "node-server",
-    }),
   ],
   resolve: {
     tsconfigPaths: true,

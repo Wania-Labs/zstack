@@ -31,14 +31,14 @@ Use the same project for both, or split server and browser projects if you want.
 
 With keys bound, PostHog receives:
 
-| Event | Where |
-| --- | --- |
-| `account_signed_up` | API, after sign-up |
-| `$pageview` (`page_viewed` in the typed catalog) | customer web |
-| `$identify` plus `$anon_distinct_id` | customer web, signed-in |
-| `checkout_completed` | API, Polar webhook |
-| `subscription_changed` | API, Polar webhook |
-| `ai_generation_completed` | API, after `ai.complete` |
+| Event                                            | Where                    |
+| ------------------------------------------------ | ------------------------ |
+| `account_signed_up`                              | API, after sign-up       |
+| `$pageview` (`page_viewed` in the typed catalog) | customer web             |
+| `$identify` plus `$anon_distinct_id`             | customer web, signed-in  |
+| `checkout_completed`                             | API, Polar webhook       |
+| `subscription_changed`                           | API, Polar webhook       |
+| `ai_generation_completed`                        | API, after `ai.complete` |
 
 Staff roles are skipped. Empty keys log nothing and spend nothing.
 

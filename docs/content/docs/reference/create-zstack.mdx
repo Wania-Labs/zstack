@@ -54,6 +54,7 @@ agent-transcripts/**
 .audit/**
 .github/workflows/publish-create-zstack.yml
 .github/workflows/generate-clone.yml
+.github/workflows/docs.yml
 scripts/smoke-create-zstack
 apps/*/.cta.json
 repos/**
@@ -76,7 +77,7 @@ After download, `stripAuthoringManifest` also:
 - drops the `create-zstack` workspace member from `pnpm-workspace.yaml`
 - removes the root `create-zstack` and `smoke:create` scripts from `package.json`
 - removes the `create-zstack` importer from `pnpm-lock.yaml`
-- deletes `.github/workflows/docs.yml` and `.github/workflows/generate-clone.yml`
+- deletes `.github/workflows/docs.yml` and `.github/workflows/generate-clone.yml` (`docs.yml` is also in `CONSUMER_IGNORE`)
 - deletes `scripts/smoke-create-zstack`
 - rewrites consumer README so it no longer points at authoring-only paths
 

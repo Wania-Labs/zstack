@@ -37,6 +37,7 @@ export const CONSUMER_IGNORE = [
   ".audit/**",
   ".github/workflows/publish-create-zstack.yml",
   ".github/workflows/generate-clone.yml",
+  ".github/workflows/docs.yml",
   "scripts/smoke-create-zstack",
   "apps/*/.cta.json",
   "repos/**",
