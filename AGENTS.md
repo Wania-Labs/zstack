@@ -36,11 +36,20 @@ Nested `AGENTS.md` files add package-local rules. Read the nearest one when edit
 
 Before writing Effect / Layer / Schema / `@effect/sql*` code:
 
-1. Read `node_modules/effect/AGENTS.md` completely (pnpm may nest it under `node_modules/.pnpm/effect@…/node_modules/effect/`).
-2. Prefer searching `node_modules/effect/src` and related `@effect/*` packages over web search.
-3. Follow `.agent/skills/effect-ts/SKILL.md`.
+1. If `repos/effect/LLMS.md` exists, read it completely.
+2. Read `node_modules/effect/AGENTS.md` completely (pnpm may nest it under `node_modules/.pnpm/effect@…/node_modules/effect/`).
+3. Prefer searching `repos/effect/` (when present) or `node_modules/effect/src` and related `@effect/*` packages over web search.
+4. Follow `.agent/skills/effect-ts/SKILL.md`.
 
-Optional deeper checkout (Effect’s recommended agent workflow): `pnpm agent:vendor-effect` vendors upstream into `repos/effect/` via **git subtree** (default) or `--submodule`. Treat `repos/**` as read-only reference. Never import app code from `repos/`. See `.agent/playbooks/vendor-effect.md`.
+`pnpm agent:vendor-effect` vendors Effect-TS/effect into `repos/effect/` via **git subtree** (default) or `--submodule`. The subtree tracks the same git tag as the root `effect` pin (`effect@x.y.z`), not `main`. See `.agent/playbooks/vendor-effect.md`.
+
+## Vendored repositories
+
+External git trees live under `repos/`.
+
+- Read them as reference. Prefer examples, tests, and module structure there over web search.
+- Do not edit `repos/` unless explicitly updating upstream.
+- Do not import from `repos/`. Application code keeps using npm `effect` / `@effect/*`.
 
 ## Dependency knowledge (MCPs + Context7)
 

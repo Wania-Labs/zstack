@@ -18,11 +18,12 @@ agent-transcripts/**
 .github/workflows/generate-clone.yml
 scripts/smoke-create-zstack
 apps/*/.cta.json
+repos/**
 ```
 
 Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template). The ignore list is encoded in `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`) — keep both in sync.
 
-After download, `create-zstack/src/prepare-consumer.ts` (`stripAuthoringManifest`) rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and the `create-zstack` / `smoke:create` root scripts, remove the `create-zstack` importer from `pnpm-lock.yaml`, remove `.github/workflows/docs.yml` and `.github/workflows/generate-clone.yml`, remove `scripts/smoke-create-zstack`, and scrub authoring-only README lines.
+After download, `create-zstack/src/prepare-consumer.ts` (`stripAuthoringManifest`) rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and the `create-zstack` / `smoke:create` root scripts, remove the `create-zstack` importer from `pnpm-lock.yaml`, remove `.github/workflows/docs.yml` and `.github/workflows/generate-clone.yml`, remove `scripts/smoke-create-zstack`, remove `repos/` (vendored Effect source), and scrub authoring-only README lines.
 
 Then, unless `--keep-identity` is set, `personalizeClone` rewrites product identity from `--name` / `--scope` (or the target directory basename): root package name, `@scope/*` workspace packages, Compose/Postgres/Hyperdrive locals, Alchemy stack, Worker names, brand strings, and related filters/imports.
 

@@ -70,6 +70,8 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, lockf
     await writeFile(join(root, ".github/workflows/generate-clone.yml"), "name: generate\n");
     await mkdir(join(root, "scripts"), { recursive: true });
     await writeFile(join(root, "scripts/smoke-create-zstack"), "#!/usr/bin/env bash\n");
+    await mkdir(join(root, "repos/effect"), { recursive: true });
+    await writeFile(join(root, "repos/effect/LLMS.md"), "# effect\n");
     await writeFile(
       join(root, "README.md"),
       [
@@ -114,6 +116,7 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, lockf
     await assert.rejects(readFile(join(root, ".github/workflows/docs.yml")));
     await assert.rejects(readFile(join(root, ".github/workflows/generate-clone.yml")));
     await assert.rejects(readFile(join(root, "scripts/smoke-create-zstack")));
+    await assert.rejects(readFile(join(root, "repos/effect/LLMS.md")));
 
     const readme = await readFile(join(root, "README.md"), "utf8");
     assert.equal(readme.includes("create-zstack"), false);

@@ -9,7 +9,7 @@
  *   node scripts/vendor-effect.mjs --pull
  */
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,7 +17,21 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PREFIX = "repos/effect";
 const REMOTE = "https://github.com/Effect-TS/effect.git";
-const REF = "main";
+
+function effectGitRef() {
+  const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+  const raw = pkg.devDependencies?.effect ?? pkg.dependencies?.effect;
+  if (!raw) {
+    throw new Error("root package.json has no effect dependency to pin the subtree");
+  }
+  const version = raw.replace(/^[^\d]*/, "");
+  return `effect@${version}`;
+}
+
+const REF = effectGitRef();
 
 const args = new Set(process.argv.slice(2));
 const useSubmodule = args.has("--submodule");
@@ -74,6 +88,8 @@ async function main() {
     console.error("vendor-effect requires a git checkout (run inside a clone).");
     process.exit(1);
   }
+
+  console.log(`Vendoring ${REMOTE} ${REF} -> ${PREFIX}`);
 
   if (useSubmodule) {
     if (pull) {

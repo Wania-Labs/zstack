@@ -11,6 +11,7 @@
     "**/dist/**",
     "**/.wrangler/**",
     "packages/i18n/src/paraglide/**",
-    "packages/i18n/project.inlang/cache/**"
+    "packages/i18n/project.inlang/cache/**",
+    "repos/**"
   ]
 }

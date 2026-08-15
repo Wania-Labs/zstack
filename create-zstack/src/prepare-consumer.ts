@@ -39,6 +39,7 @@ export async function stripAuthoringManifest(root: string): Promise<void> {
   await rm(join(root, ".github/workflows/docs.yml"), { force: true });
   await rm(join(root, ".github/workflows/generate-clone.yml"), { force: true });
   await rm(join(root, "scripts/smoke-create-zstack"), { force: true });
+  await rm(join(root, "repos"), { recursive: true, force: true });
 
   const readmePath = join(root, "README.md");
   try {

@@ -15,10 +15,12 @@ node scripts/vendor-effect.mjs
 This runs (approximately):
 
 ```bash
-git subtree add --prefix=repos/effect https://github.com/Effect-TS/effect.git main --squash
+git subtree add --prefix=repos/effect https://github.com/Effect-TS/effect.git effect@<root package.json effect version> --squash
 ```
 
 Then updates `.vscode/settings.json` excludes so humans do not auto-import from `repos/**`.
+
+Consumer clones skip `repos/**` (giget ignore + strip). Clones that want the tree run the same command locally. Do not import application code from `repos/`.
 
 ## Alternative: submodule
 
@@ -30,7 +32,7 @@ Submodules need `git submodule update --init` after clone. Effect prefers subtre
 
 ## After vendoring
 
-Confirm root `AGENTS.md` already points agents at `repos/effect/` when present. Do not import application code from `repos/`. Do not edit vendored trees unless explicitly updating upstream.
+Confirm root `AGENTS.md` already points agents at `repos/effect/` when present. Agents should read `repos/effect/LLMS.md` before writing Effect code. Do not import application code from `repos/`. Do not edit vendored trees unless explicitly updating upstream.
 
 ## Refresh
 

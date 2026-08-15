@@ -39,6 +39,7 @@ export const CONSUMER_IGNORE = [
   ".github/workflows/generate-clone.yml",
   "scripts/smoke-create-zstack",
   "apps/*/.cta.json",
+  "repos/**",
 ] as const;
 
 /** Override with ZSTACK_TEMPLATE (e.g. `git:$(pwd)` or `gh:org/zstack`). */

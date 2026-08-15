@@ -5,14 +5,15 @@ description: Idiomatic Effect v4 usage in this monorepo. Read before writing Eff
 
 # Effect in zstack
 
-This product uses Effect `4.0.0-beta.*` with `@effect/sql-pg`, platform ports under `apps/api/src/platform/`, and modules that call those ports.
+This product uses Effect `4.0.0-rc.*` with `@effect/sql-pg`, platform ports under `apps/api/src/platform/`, and modules that call those ports.
 
 ## Before writing Effect code
 
-1. Read `node_modules/effect/AGENTS.md` **completely** (pnpm path may be under `node_modules/.pnpm/effect@…/node_modules/effect/AGENTS.md`).
-2. Follow links from that file when needed.
-3. Prefer searching `node_modules/effect/src` (and `@effect/sql-pg`, `@effect/vitest`) over web search for API shape.
-4. If `repos/effect/` exists (optional vendored checkout), treat it as read-only source of truth and prefer it over guesses. Do not import from `repos/`. Do not edit `repos/` unless asked.
+1. If `repos/effect/LLMS.md` exists, read it **completely**.
+2. Read `node_modules/effect/AGENTS.md` **completely** (pnpm path may be under `node_modules/.pnpm/effect@…/node_modules/effect/AGENTS.md`).
+3. Follow links from those files when needed.
+4. Prefer searching `repos/effect/` when present, else `node_modules/effect/src` (and `@effect/sql-pg`, `@effect/vitest`), over web search.
+5. Treat `repos/effect/` as read-only. Do not import from `repos/`. Do not edit `repos/` unless asked.
 
 ## Project rules
 
