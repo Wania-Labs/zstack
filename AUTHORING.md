@@ -32,7 +32,7 @@ Optional coding-agent packs are **not** taken from the authoring tree's `.cursor
 
 ## What consumers get
 
-The product monorepo: `apps/`, `packages/`, root toolchain configs, root + nested `AGENTS.md`, `.agent/playbooks/`, and `.agent/skills/`.
+The product monorepo: `apps/`, `packages/`, root toolchain configs, root + nested `AGENTS.md`, `.agent/playbooks/`, and `.agent/skills/`. `pnpm-workspace.yaml` sets `allowBuilds.sharp: false` so clone `pnpm install` does not compile sharp against a system libvips.
 
 Optional at init (`--agent-tools` / `--mcp` / `--skills`): thin tool adapters (`CLAUDE.md`, `.cursor/rules`, `opencode.json`), MCP servers, and skill install mode. Docs group by default (`cloudflare-docs`, `context7`, `shadcn`); account group (`sentry`, `planetscale`, Cloudflare bindings/observability) via `--mcp=account` or `--mcp=all`. These are coding-environment files, not `product.config.ts` capabilities.
 
@@ -42,7 +42,7 @@ Human architecture docs live on the separate zstack website, not in cloned produ
 
 ## Packaging stack
 
-- **citty** — `@wanialabs/create-zstack` CLI (`create-zstack/` in this repo; published; excluded from clones)
+- **citty** — `@wanialabs/create-zstack` CLI (`create-zstack/` in this repo; published; excluded from clones). `--version` is read from `create-zstack/package.json` so the trusted-publisher bump stays in sync. Install sets `SHARP_IGNORE_GLOBAL_LIBVIPS=1` (nypm has no `env` on `installDependencies`).
 - **giget** — template download without git history (`ignore` for the paths above)
 - **nypm** — install with the user's chosen package manager (`--package-manager`)
 
@@ -50,9 +50,9 @@ Published consumers:
 
 ```bash
 npm create @wanialabs/zstack@latest my-app
-pnpm create @wanialabs/zstack my-app
-yarn create @wanialabs/zstack my-app
-bunx @wanialabs/create-zstack my-app
+pnpm create @wanialabs/zstack@latest my-app
+yarn create @wanialabs/zstack@latest my-app
+bunx @wanialabs/create-zstack@latest my-app
 ```
 
 Local smoke against this tree (giget local provider is `git:`, not `file:`):
@@ -117,7 +117,7 @@ This repo is a **starter template**, not a product under the author's SaaS accou
 
 ## Deploy authority
 
-Alchemy v2 (`alchemy@2.0.0-beta.*`) is the sole owner of provisioned Cloudflare resources, secret bindings, and production deploys. Entry: `alchemy.run.ts` + `infra/*`. Pin the exact beta and upgrade with Effect.
+Alchemy v2 (`alchemy@2.0.0-beta.*`) is the sole owner of provisioned Cloudflare resources, secret bindings, and production deploys. Entry: `alchemy.run.ts` + `infra/*`. Pin the exact beta and upgrade with Effect. Current pin is `2.0.0-beta.72`. beta.70 dies on Effect `4.0.0-rc.108` (`Schema.TaggedErrorClass` was renamed to `Schema.TaggedError`).
 
 `wrangler` in `apps/api` remains a local development / dry-run escape hatch. Do not grow a parallel Wrangler deploy path.
 
@@ -238,7 +238,7 @@ Capability registry + Effect `AiService` in `apps/api/src/platform/ai/`. Product
 
 ## Drizzle 1.0 RC
 
-Pinned to `drizzle-orm` / `drizzle-kit` `1.0.0-rc.*`. App queries use `drizzle-orm/effect-postgres` + `@effect/sql-pg`. Better Auth keeps the promise `node-postgres` driver until it supports Effect.
+Pinned to `drizzle-orm` / `drizzle-kit` `1.0.0-rc.5-ab785fc` (Alchemy 72's exact peer; `1.0.0-rc.4` crashes at import against Effect `>=4.0.0-beta.105`). App queries use `drizzle-orm/effect-postgres` + `@effect/sql-pg`. Better Auth keeps the promise `node-postgres` driver until it supports Effect. Do not widen the range until drizzle publishes a real `1.0.0-rc.5`.
 
 After `pnpm --filter @zstack/api auth:generate`, strip any RQBv1 `relations(...)` helpers from `auth-schema.ts` (tables only). RQB lives in `src/platform/db/relations.ts` via `defineRelations`.
 

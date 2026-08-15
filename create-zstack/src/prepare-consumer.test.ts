@@ -83,7 +83,7 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, lockf
         "",
         "```bash",
         "npm create @wanialabs/zstack@latest my-app",
-        "pnpm create @wanialabs/zstack my-app",
+        "pnpm create @wanialabs/zstack@latest my-app",
         "cd docs && pnpm install && pnpm dev   # authoring docs :4000",
         "```",
         "",

@@ -21,8 +21,8 @@ Human architecture essays stay on this site. Do not expect `tech-stack-architect
 ## Scaffold with packs
 
 ```bash
-pnpm create @wanialabs/zstack my-product --yes --agent-tools=cursor,claude --mcp=defaults --skills=copy
-pnpm create @wanialabs/zstack my-product --yes --agent-tools=all --mcp=all --skills=symlink
+pnpm create @wanialabs/zstack@latest my-product --yes --agent-tools=cursor,claude --mcp=defaults --skills=copy
+pnpm create @wanialabs/zstack@latest my-product --yes --agent-tools=all --mcp=all --skills=symlink
 ```
 
 | Flag                       | Values                                                    | Notes                                                         |
@@ -113,7 +113,7 @@ Goals
 
 If this directory is not yet a zstack product clone
 - Run one of:
-  pnpm create @wanialabs/zstack <target-dir> --yes --agent-tools=all --mcp=all --skills=symlink
+  pnpm create @wanialabs/zstack@latest <target-dir> --yes --agent-tools=all --mcp=all --skills=symlink
   npm create @wanialabs/zstack@latest <target-dir> -- --yes --agent-tools=all --mcp=all --skills=symlink
 - Then cd into <target-dir> and continue.
 
@@ -172,7 +172,7 @@ Report what you wrote, what needs interactive OAuth (Sentry / PlanetScale / Clou
 In this zstack clone, install coding-agent packs for all tools with account MCPs and symlinked skills, then vendor Effect:
 
 1) If @wanialabs/create-zstack is available, prefer regenerating packs with:
-   pnpm create @wanialabs/zstack . --force --yes --agent-tools=all --mcp=all --skills=symlink
+   pnpm create @wanialabs/zstack@latest . --force --yes --agent-tools=all --mcp=all --skills=symlink
    Otherwise write CLAUDE.md, .cursor/rules/{zstack,contracts,effect}.mdc, opencode.json, .cursor/mcp.json, .mcp.json as in AGENTS.md / coding-agents docs.
 2) Symlink .cursor/skills and .claude/skills → ../.agent/skills
 3) pnpm agent:vendor-effect

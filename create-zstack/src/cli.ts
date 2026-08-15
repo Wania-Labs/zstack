@@ -3,6 +3,7 @@ import { downloadTemplate } from "giget";
 import { installDependencies } from "nypm";
 import * as p from "@clack/prompts";
 import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
 import { applyAgentPacks, resolveAgentPackSelection, type AgentTool } from "./apply-agent-packs.js";
@@ -45,6 +46,10 @@ export const CONSUMER_IGNORE = [
 
 /** Override with ZSTACK_TEMPLATE (e.g. `git:$(pwd)` or `gh:org/zstack`). */
 const DEFAULT_TEMPLATE = process.env.ZSTACK_TEMPLATE?.trim() || "gh:Wania-Labs/zstack";
+
+const { version } = createRequire(import.meta.url)("../package.json") as {
+  version: string;
+};
 
 const PACKAGE_MANAGERS = [
   "pnpm",
@@ -92,7 +97,7 @@ async function resolvePackageManager(options: {
 const main = defineCommand({
   meta: {
     name: "create-zstack",
-    version: "0.1.1",
+    version,
     description: "Scaffold a product from the zstack template (giget + nypm).",
   },
   args: {
@@ -309,6 +314,8 @@ const main = defineCommand({
     }
 
     if (args.install) {
+      // nypm's installDependencies does not take env. Inherit into the child install.
+      process.env.SHARP_IGNORE_GLOBAL_LIBVIPS ??= "1";
       console.log(`Installing dependencies with ${packageManager}…`);
       await installDependencies({
         cwd: result.dir,

@@ -58,7 +58,7 @@ export async function stripAuthoringManifest(root: string): Promise<void> {
         "Product PRs run `.github/workflows/ci.yml`.",
       )
       .replace(/\nnpm create @wanialabs\/zstack@latest my-app\n/g, "\n")
-      .replace(/\npnpm create @wanialabs\/zstack my-app\n/g, "\n")
+      .replace(/\npnpm create @wanialabs\/zstack(?:@latest)? my-app\n/g, "\n")
       .replace(/\npnpm create-zstack my-app\n/g, "\n")
       .replace(/\ncd docs && pnpm install && pnpm dev {3}# authoring docs :4000\n/g, "\n")
       .replace(/\ncreate-zstack\/ {13}# authoring-only scaffold CLI \(not in clones\)\n/g, "\n")

@@ -11,7 +11,7 @@ Optional vendors (Sentry, Bento, …) are scaffolded and **off until a clone bin
 - `apps/web` TanStack Start + shadcn (Base UI / nova) + TanStack Query
 - `apps/admin` staff TanStack Start shell (Better Auth admin role → `staff.me` gate)
 - `@zstack/email` React Email + EmailService (console default, Bento when secrets set)
-- Alchemy v2 (`alchemy@2.0.0-beta.70`) owns deploy / PlanetScale / Hyperdrive / secrets
+- Alchemy v2 (`alchemy@2.0.0-beta.72`) owns deploy / PlanetScale / Hyperdrive / secrets
 - Sentry + evlog scaffolded (DSN-gated; quiet until consumers bind projects)
 - AI capability registry + Effect AiService (fake until `AI_GATEWAY_API_KEY`)
 - Effect BillingService (fake until `POLAR_ACCESS_TOKEN`; Polar HTTP + webhook ledger when keyed)
@@ -63,7 +63,7 @@ Product PRs run `.github/workflows/ci.yml` (ignores `docs/**`). Docs changes run
 pnpm test              # api unit + vitest-evals (fake)
 pnpm test:workers      # optional workerd pool
 npm create @wanialabs/zstack@latest my-app
-pnpm create @wanialabs/zstack my-app
+pnpm create @wanialabs/zstack@latest my-app
 cd docs && pnpm install && pnpm dev   # authoring docs :4000
 ```
 

@@ -9,19 +9,21 @@ Published as `@wanialabs/create-zstack` (citty + giget + nypm). The package sour
 
 ```bash
 npm create @wanialabs/zstack@latest my-app
-pnpm create @wanialabs/zstack my-app
-yarn create @wanialabs/zstack my-app
-bunx @wanialabs/create-zstack my-app
+pnpm create @wanialabs/zstack@latest my-app
+yarn create @wanialabs/zstack@latest my-app
+bunx @wanialabs/create-zstack@latest my-app
 
-pnpm create @wanialabs/zstack my-app --template git:$(pwd) --force --yes
-pnpm create @wanialabs/zstack my-app --no-install --yes
-pnpm create @wanialabs/zstack my-app --yes --package-manager=npm
-pnpm create @wanialabs/zstack my-app --yes --agent-tools=all
-pnpm create @wanialabs/zstack my-app --yes --agent-tools=cursor,claude --mcp=defaults --skills=symlink
-pnpm create @wanialabs/zstack acme --name Acme --scope acme --yes
+pnpm create @wanialabs/zstack@latest my-app --template git:$(pwd) --force --yes
+pnpm create @wanialabs/zstack@latest my-app --no-install --yes
+pnpm create @wanialabs/zstack@latest my-app --yes --package-manager=npm
+pnpm create @wanialabs/zstack@latest my-app --yes --agent-tools=all
+pnpm create @wanialabs/zstack@latest my-app --yes --agent-tools=cursor,claude --mcp=defaults --skills=symlink
+pnpm create @wanialabs/zstack@latest acme --name Acme --scope acme --yes
 ```
 
-Environment override: `ZSTACK_TEMPLATE`. Default remote: `gh:Wania-Labs/zstack` (public). Local paths use `git:$(pwd)` or `git:./` (not `file:`). Requires Node.js `>=22.5`.
+Environment override: `ZSTACK_TEMPLATE`. Default remote: `gh:Wania-Labs/zstack` (public). Local paths use `git:$(pwd)` or `git:./` (not `file:`). Requires Node.js `>=22.5`. Pin `@latest` on first scaffold so `pnpm create` does not reuse a cached CLI.
+
+The CLI `--version` string is read from `create-zstack/package.json`. The install step sets `SHARP_IGNORE_GLOBAL_LIBVIPS=1` so a system libvips does not force sharp to compile. Later `pnpm install` in the clone skips that compile because `allowBuilds.sharp` is `false`.
 
 ## Coding-agent packs
 

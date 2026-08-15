@@ -7,7 +7,8 @@ allowBuilds:
   esbuild: true
   workerd: true
   msgpackr-extract: false
-  sharp: true
+  # skip install/check.js; a system libvips makes sharp compile and fail
+  sharp: false
   "@sentry/cli": true
 
 minimumReleaseAgeExclude:
@@ -19,3 +20,6 @@ minimumReleaseAgeExclude:
   - "@effect/sql-pg@4.0.0-rc.108"
   - "@effect/vitest@4.0.0-rc.108"
   - effect@4.0.0-rc.108
+  - alchemy@2.0.0-beta.72
+  - drizzle-orm@1.0.0-rc.5-ab785fc
+  - drizzle-kit@1.0.0-rc.5-ab785fc

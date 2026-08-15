@@ -6,9 +6,9 @@ Scaffold a zstack product with citty + giget + nypm. The CLI package lives in th
 
 ```bash
 npm create @wanialabs/zstack@latest my-app
-pnpm create @wanialabs/zstack my-app
-yarn create @wanialabs/zstack my-app
-bunx @wanialabs/create-zstack my-app
+pnpm create @wanialabs/zstack@latest my-app
+yarn create @wanialabs/zstack@latest my-app
+bunx @wanialabs/create-zstack@latest my-app
 ```
 
 Authoring smoke against this tree:

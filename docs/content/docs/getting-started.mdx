@@ -9,19 +9,23 @@ You will scaffold a consumer product, start Compose Postgres, migrate, and open 
 
 ```bash
 npm create @wanialabs/zstack@latest my-product
-pnpm create @wanialabs/zstack my-product
-yarn create @wanialabs/zstack my-product
-bunx @wanialabs/create-zstack my-product
+pnpm create @wanialabs/zstack@latest my-product
+yarn create @wanialabs/zstack@latest my-product
+bunx @wanialabs/create-zstack@latest my-product
 
 # non-interactive + coding-agent packs (symlink skills into Cursor/Claude dirs):
-pnpm create @wanialabs/zstack my-product --yes --agent-tools=cursor,claude --skills=symlink
+pnpm create @wanialabs/zstack@latest my-product --yes --agent-tools=cursor,claude --skills=symlink
 
 # pick install tool explicitly (default with --yes is pnpm):
-pnpm create @wanialabs/zstack my-product --yes --package-manager=npm
+pnpm create @wanialabs/zstack@latest my-product --yes --package-manager=npm
 
 # name the product (default: title-cased directory + @<slug> packages):
-pnpm create @wanialabs/zstack acme --name Acme --scope acme --yes
+pnpm create @wanialabs/zstack@latest acme --name Acme --scope acme --yes
 ```
+
+Pin `@latest` on first scaffold. Bare `pnpm create @wanialabs/zstack` can reuse a cached CLI.
+
+`pnpm-workspace.yaml` sets `allowBuilds.sharp: false` so a system libvips (Arch, Homebrew) does not force sharp to compile. create-zstack also sets `SHARP_IGNORE_GLOBAL_LIBVIPS=1` for the install it runs. If an older clone already compiled and failed, run `SHARP_IGNORE_GLOBAL_LIBVIPS=1 pnpm install` in that clone.
 
 From a clone of this authoring repo you can point at the local tree (giget uses `git:`, not `file:`):
 

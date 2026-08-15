@@ -1,6 +1,6 @@
 # Playbook: database and Better Auth schema
 
-Drizzle ORM / Kit are pinned to `1.0.0-rc.*`. App queries use `drizzle-orm/effect-postgres`.
+Drizzle ORM / Kit are pinned to `1.0.0-rc.5-ab785fc` (Alchemy 72 peer). App queries use `drizzle-orm/effect-postgres`.
 
 Postgres schema changes go through drizzle-kit only (`pnpm db:generate` then `pnpm db:migrate`). Do not add Alchemy `migrationsDir` — it expects flat numeric-prefixed `.sql`, not Drizzle 1.0 folders.
 
