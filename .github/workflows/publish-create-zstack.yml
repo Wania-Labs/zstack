@@ -152,6 +152,4 @@ jobs:
           fi
           gh release create "${TAG}" \
             --title "@wanialabs/create-zstack ${VERSION}" \
-            --notes "npm: https://www.npmjs.com/package/@wanialabs/create-zstack/v/${VERSION}
-
-The CLI still clones gh:Wania-Labs/zstack at runtime (usually main). This tag is the published CLI, not a frozen template snapshot."
+            --notes "npm: https://www.npmjs.com/package/@wanialabs/create-zstack/v/${VERSION}. The CLI still clones gh:Wania-Labs/zstack at runtime (usually main). This tag is the published CLI, not a frozen template snapshot."
