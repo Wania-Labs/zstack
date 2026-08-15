@@ -24,6 +24,7 @@
     "@effect/sql-pg": "4.0.0-rc.108",
     "@orpc/client": "1.15.0",
     "@orpc/server": "1.15.0",
+    "@polar-sh/sdk": "1.0.0-alpha.16",
     "@sentry/cloudflare": "10.69.0",
     "@sentry/hono": "10.69.0",
     "@zstack/auth-access": "workspace:*",

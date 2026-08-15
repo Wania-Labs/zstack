@@ -1,0 +1,66 @@
+---
+title: Turn on billing
+description: Wire Polar checkout and customer portal when credentials and product catalog are bound.
+---
+
+Billing is `configured` in `product.config.ts`. `BillingService` always exists. Checkout and portal are unconfigured until Polar credentials and product catalog are set.
+
+## Steps
+
+1. Create a Polar organization and access token (sandbox or production).
+2. Create products in your Polar dashboard and copy their product IDs.
+3. Set in the API Worker env (`.dev.vars` locally, Alchemy secrets on deploy):
+
+```bash
+POLAR_ACCESS_TOKEN=pol_your_token_here
+POLAR_SERVER=sandbox  # or "production"
+
+# Product catalog: POLAR_PRODUCT_<SLUG>=<product_id>
+POLAR_PRODUCT_PRO=prod_abc123xyz
+POLAR_PRODUCT_ENTERPRISE=prod_def456uvw
+```
+
+4. Restart `alchemy:dev` or redeploy so the Worker sees the env.
+5. Call the billing oRPC endpoints from your app:
+   - `billing.createCheckout({ customerId, productSlug })` → checkout URL
+   - `billing.customerPortal({ customerId })` → portal URL
+
+## What you should see
+
+With credentials and catalog bound:
+
+- `createCheckout` returns `{ kind: "url", url: "https://buy.polar.sh/..." }`
+- `customerPortal` returns `{ kind: "url", url: "https://polar.sh/.../portal/..." }`
+
+Without credentials:
+
+- Both return `{ kind: "unconfigured" }`
+
+## Product catalog
+
+The server maps product slugs to Polar product IDs. Clients request a slug (e.g., `"pro"`); the server verifies it against the catalog before calling Polar. This keeps Polar product IDs out of client code and product logic.
+
+Slugs are normalized to lowercase. For example:
+
+- `POLAR_PRODUCT_PRO=prod_abc123` → slug `"pro"`
+- `POLAR_PRODUCT_STARTER=prod_def456` → slug `"starter"`
+
+## Customer identity
+
+The billable customer is the Better Auth organization ID. Pass it as `customerId` in checkout and portal calls. Polar tracks this via `external_customer_id` to keep identity reconciliation simple.
+
+## Out of scope
+
+This guide covers checkout and portal URLs only. Not yet wired:
+
+- Webhook ingestion and event ledger
+- Entitlement projection (canUse / limit stay fail-closed)
+- Usage event outbox and credits enforcement
+- Better Auth Polar plugin (do not register it while the token can be empty)
+
+## Related
+
+- Service and Layers live in `apps/api/src/platform/billing/billing-service.ts`
+- Contracts live in `packages/contracts/src/billing.ts`
+- Module handlers live in `apps/api/src/modules/billing/service.ts`
+- Architecture guide: `tech-stack-architecture-guide/13-billing.md`

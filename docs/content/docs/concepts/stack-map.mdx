@@ -42,10 +42,10 @@ Local Postgres is Compose (`compose.yaml`). Deploy uses PlanetScale Postgres thr
 
 ## Inside the API
 
-| Area      | Path                     | Role                                                      |
-| --------- | ------------------------ | --------------------------------------------------------- |
-| HTTP edge | `apps/api/src/http/`     | Session, mount auth/oRPC/health                           |
-| Modules   | `apps/api/src/modules/`  | Product verticals (auth, ai, staff, health)               |
+| Area      | Path                     | Role                                                               |
+| --------- | ------------------------ | ------------------------------------------------------------------ |
+| HTTP edge | `apps/api/src/http/`     | Session, mount auth/oRPC/health                                    |
+| Modules   | `apps/api/src/modules/`  | Product verticals (auth, ai, staff, health)                        |
 | Platform  | `apps/api/src/platform/` | Ports and adapters (email, ai, db, billing, observability, effect) |
 
 ## Not in consumer clones

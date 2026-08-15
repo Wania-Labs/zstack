@@ -88,19 +88,19 @@ This repo is a **starter template**, not a product under the author's SaaS accou
    - `configured` — code + Alchemy bindings exist; behavior stays off/no-op until secrets or flags are set (Bento, Sentry).
 5. Prefer **empty env defaults** over dummy cloud accounts. Prefer **console / Compose / local workerd** over hitting a vendor during template authoring.
 
-| Capability                       | State today | Live default                                                             |
-| -------------------------------- | ----------- | ------------------------------------------------------------------------ |
-| Postgres                         | core        | Compose locally; PlanetScale only on `alchemy:deploy` (consumer chooses) |
-| Auth / orgs / staff              | core        | Better Auth + Compose                                                    |
-| i18n                             | core        | Always-on Paraglide in `packages/i18n`. No vendor secret                 |
-| Email                            | configured  | Console until `EMAIL_FROM` + `BENTO_*`                                   |
-| Observability                    | configured  | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`                              |
-| Object storage (R2)              | configured  | In-memory fake until Worker binding `OBJECTS` is present. Alchemy local R2 under `alchemy:dev`; cloud bucket only on deploy |
-| Feature flags                    | configured  | In-memory map. Missing keys return the call-site default. No PostHog     |
-| Billing                          | configured  | Fake until `POLAR_ACCESS_TOKEN`. Checkout and portal return unconfigured. Entitlements deny. Polar HTTP is not connected yet |
-| Workflows / queues               | absent      | Not scaffolded as live infra yet                                         |
-| Analytics                        | not started | Must follow this policy when added                                       |
-| AI                               | configured  | Fake models until `AI_GATEWAY_API_KEY`                                   |
+| Capability          | State today | Live default                                                                                                                 |
+| ------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Postgres            | core        | Compose locally; PlanetScale only on `alchemy:deploy` (consumer chooses)                                                     |
+| Auth / orgs / staff | core        | Better Auth + Compose                                                                                                        |
+| i18n                | core        | Always-on Paraglide in `packages/i18n`. No vendor secret                                                                     |
+| Email               | configured  | Console until `EMAIL_FROM` + `BENTO_*`                                                                                       |
+| Observability       | configured  | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`                                                                                  |
+| Object storage (R2) | configured  | In-memory fake until Worker binding `OBJECTS` is present. Alchemy local R2 under `alchemy:dev`; cloud bucket only on deploy  |
+| Feature flags       | configured  | In-memory map. Missing keys return the call-site default. No PostHog                                                         |
+| Billing             | configured  | Fake until `POLAR_ACCESS_TOKEN`. Checkout and portal return unconfigured. Entitlements deny. Polar HTTP is not connected yet |
+| Workflows / queues  | absent      | Not scaffolded as live infra yet                                                                                             |
+| Analytics           | not started | Must follow this policy when added                                                                                           |
+| AI                  | configured  | Fake models until `AI_GATEWAY_API_KEY`                                                                                       |
 
 ## Deploy authority
 
@@ -205,7 +205,7 @@ Capability registry + Effect `AiService` in `apps/api/src/platform/ai/`. Product
 `BillingService` in `apps/api/src/platform/billing/` is the Effect boundary. The billable customer is the Better Auth organization id. Callers ask `canUse(capability)` and `limit(name)`, not Polar subscription status. The client may pass a product slug, never a Polar product id.
 
 - Default: `FakeBillingLive` when `POLAR_ACCESS_TOKEN` is empty. Checkout and portal return `{ kind: "unconfigured" }`. Entitlements deny (`canUse` false, `limit` 0). Empty Polar env does not throw.
-- Live: `PolarBillingLive` when `POLAR_ACCESS_TOKEN` is non-empty. Checkout and portal fail closed with `BillingError` until Polar HTTP and a server-owned catalog are connected. Entitlements still deny.
+- Live: `PolarBillingLive` when `POLAR_ACCESS_TOKEN` is non-empty. Checkout and portal call Polar HTTP and return `{ kind: "url", url }` when successful. Requires product catalog via `POLAR_PRODUCT_<SLUG>=<product_id>` env vars. Entitlements deny until webhook projection exists.
 - Do not register the Better Auth Polar plugin while credentials can be empty. Empty-token customer creation breaks sign-up.
 - Clones bind their own Polar token. No Polar org or product ids in source.
 
@@ -216,11 +216,3 @@ Pinned to `drizzle-orm` / `drizzle-kit` `1.0.0-rc.*`. App queries use `drizzle-o
 After `pnpm --filter @zstack/api auth:generate`, strip any RQBv1 `relations(...)` helpers from `auth-schema.ts` (tables only). RQB lives in `src/platform/db/relations.ts` via `defineRelations`.
 
 When drizzle-kit says the migrations folder format is outdated, run `pnpm --filter @zstack/api db:up` once, then generate/migrate as usual.
-
-`drizzle-orm@1.0.0-rc.1` still calls `Schema.TaggedErrorClass`, which Effect `4.0.0-beta.106` renamed to `Schema.TaggedError`. Keep:
-
-- `patches/effect@4.0.0-beta.106.patch` — restores `Schema.TaggedErrorClass` and `Command.withHidden` (Alchemy still uses both names; Effect renamed the latter to `unlisted`)
-- `patches/drizzle-orm@1.0.0-rc.1.patch` — drizzle → `TaggedError`
-- `patches/alchemy@2.0.0-beta.70.patch` — alchemy → `TaggedError` (redundant with the Effect alias, kept until Alchemy catches up)
-
-Without the Effect/Alchemy patches the CLI dies at import with `(void 0) is not a function` / missing `withHidden`. Without the drizzle patch the Worker fails the same way at startup.

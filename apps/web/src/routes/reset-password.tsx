@@ -1,4 +1,5 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import * as m from "@zstack/i18n/messages";
 import { useState } from "react";
 
 import AuthPageShell from "@/components/AuthPageShell";
@@ -27,7 +28,7 @@ function ResetPasswordPage() {
     setError(null);
 
     if (!search.token) {
-      setError("This reset link is missing a token.");
+      setError(m["auth.resetPassword.errorMissingToken"]());
       return;
     }
 
@@ -38,7 +39,7 @@ function ResetPasswordPage() {
         token: search.token,
       });
       if (result.error) {
-        setError(result.error.message ?? "Could not reset password");
+        setError(result.error.message ?? m["auth.resetPassword.errorFallback"]());
         return;
       }
       await navigate({ to: "/login" });
@@ -49,15 +50,18 @@ function ResetPasswordPage() {
 
   if (!search.token) {
     return (
-      <AuthPageShell title="Reset password" description="This link is invalid or incomplete.">
+      <AuthPageShell
+        title={m["auth.resetPassword.title"]()}
+        description={m["auth.resetPassword.descriptionInvalid"]()}
+      >
         <Alert variant="destructive">
-          <AlertTitle>Missing token</AlertTitle>
+          <AlertTitle>{m["auth.resetPassword.missingTokenTitle"]()}</AlertTitle>
           <AlertDescription>
-            Request a new reset link from the{" "}
+            {m["auth.resetPassword.missingTokenDescription"]()}{" "}
             <Link to="/forgot-password" className="underline underline-offset-4">
-              forgot password
+              {m["auth.resetPassword.forgotPasswordLink"]()}
             </Link>{" "}
-            page.
+            {m["auth.resetPassword.page"]()}
           </AlertDescription>
         </Alert>
       </AuthPageShell>
@@ -65,11 +69,14 @@ function ResetPasswordPage() {
   }
 
   return (
-    <AuthPageShell title="Reset password" description="Choose a new password for your account.">
+    <AuthPageShell
+      title={m["auth.resetPassword.title"]()}
+      description={m["auth.resetPassword.descriptionValid"]()}
+    >
       <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)}>
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="password">New password</FieldLabel>
+            <FieldLabel htmlFor="password">{m["auth.resetPassword.newPassword"]()}</FieldLabel>
             <Input
               id="password"
               type="password"
@@ -79,18 +86,18 @@ function ResetPasswordPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <FieldDescription>At least 8 characters.</FieldDescription>
+            <FieldDescription>{m["auth.resetPassword.passwordHint"]()}</FieldDescription>
           </Field>
           {error ? (
             <Alert variant="destructive">
-              <AlertTitle>Reset failed</AlertTitle>
+              <AlertTitle>{m["auth.resetPassword.errorTitle"]()}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
         </FieldGroup>
         <Button type="submit" disabled={pending} className="w-full">
           {pending ? <Spinner data-icon="inline-start" /> : null}
-          {pending ? "Saving…" : "Update password"}
+          {pending ? m["auth.resetPassword.submitPending"]() : m["auth.resetPassword.submit"]()}
         </Button>
       </form>
     </AuthPageShell>

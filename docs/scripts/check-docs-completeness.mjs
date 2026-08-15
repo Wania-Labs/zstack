@@ -20,6 +20,7 @@ const REQUIRED = [
   "guides/turn-on-email",
   "guides/turn-on-ai",
   "guides/turn-on-observability",
+  "guides/turn-on-billing",
   "guides/swap-email-transport",
   "guides/swap-ai-provider",
   "guides/deploy",

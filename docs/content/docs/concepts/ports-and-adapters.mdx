@@ -22,8 +22,8 @@ Feature modules call the port. They do not import Bento, the AI Gateway SDK, Pol
 
 A Layer provides a concrete implementation of a port at the edge.
 
-| Port           | Default adapter                         | Live adapter          | Flip                              |
-| -------------- | --------------------------------------- | --------------------- | --------------------------------- |
+| Port             | Default adapter                         | Live adapter          | Flip                              |
+| ---------------- | --------------------------------------- | --------------------- | --------------------------------- |
 | `EmailService`   | `ConsoleEmailLive`                      | `BentoEmailLive`      | `EMAIL_FROM` + `BENTO_*`          |
 | `AiService`      | Fake models                             | Vercel AI Gateway     | `AI_GATEWAY_API_KEY`              |
 | `ObjectStore`    | `FakeObjectStoreLive`                   | R2 Worker binding     | `OBJECTS` present on the Worker   |

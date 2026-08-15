@@ -5,7 +5,10 @@ import {
   BillingError,
   BillingService,
   FakeBillingLive,
+  PolarBillingLive,
   billingLiveFromEnv,
+  readPolarCredentials,
+  readProductCatalog,
   runBillingEffect,
 } from "../../src/platform/billing/billing-service";
 
@@ -50,6 +53,87 @@ describe("FakeBillingLive", () => {
   });
 });
 
+describe("readProductCatalog", () => {
+  it("reads product mappings from env vars", () => {
+    const catalog = readProductCatalog({
+      POLAR_PRODUCT_PRO: "prod_abc123",
+      POLAR_PRODUCT_ENTERPRISE: "prod_xyz789",
+      OTHER_VAR: "ignored",
+    });
+
+    expect(catalog.get("pro")).toBe("prod_abc123");
+    expect(catalog.get("enterprise")).toBe("prod_xyz789");
+    expect(catalog.has("other_var")).toBe(false);
+  });
+
+  it("normalizes slugs to lowercase", () => {
+    const catalog = readProductCatalog({
+      POLAR_PRODUCT_PRO: "prod_abc",
+      POLAR_PRODUCT_STARTER: "prod_def",
+    });
+
+    expect(catalog.get("pro")).toBe("prod_abc");
+    expect(catalog.get("starter")).toBe("prod_def");
+  });
+
+  it("ignores empty values", () => {
+    const catalog = readProductCatalog({
+      POLAR_PRODUCT_PRO: "prod_abc",
+      POLAR_PRODUCT_EMPTY: "",
+      POLAR_PRODUCT_WHITESPACE: "   ",
+    });
+
+    expect(catalog.get("pro")).toBe("prod_abc");
+    expect(catalog.has("empty")).toBe(false);
+    expect(catalog.has("whitespace")).toBe(false);
+  });
+
+  it("returns empty map when no product vars present", () => {
+    const catalog = readProductCatalog({
+      SOME_OTHER_VAR: "value",
+    });
+
+    expect(catalog.size).toBe(0);
+  });
+});
+
+describe("readPolarCredentials", () => {
+  it("reads sandbox credentials by default", () => {
+    const credentials = readPolarCredentials({
+      POLAR_ACCESS_TOKEN: "pol_test123",
+    });
+
+    expect(credentials).toEqual({
+      accessToken: "pol_test123",
+      server: "sandbox",
+    });
+  });
+
+  it("reads production credentials when specified", () => {
+    const credentials = readPolarCredentials({
+      POLAR_ACCESS_TOKEN: "pol_test123",
+      POLAR_SERVER: "production",
+    });
+
+    expect(credentials).toEqual({
+      accessToken: "pol_test123",
+      server: "production",
+    });
+  });
+
+  it("returns undefined when token is missing", () => {
+    const credentials = readPolarCredentials({});
+    expect(credentials).toBeUndefined();
+  });
+
+  it("returns undefined when token is empty", () => {
+    const credentials = readPolarCredentials({
+      POLAR_ACCESS_TOKEN: "   ",
+    });
+    expect(credentials).toBeUndefined();
+  });
+});
+
 describe("billingLiveFromEnv", () => {
   it("uses the fake when Polar secrets are empty", async () => {
     const live = billingLiveFromEnv({});
@@ -80,27 +164,42 @@ describe("billingLiveFromEnv", () => {
     );
   });
 
-  it("uses Polar live when POLAR_ACCESS_TOKEN is set", async () => {
-    const live = billingLiveFromEnv({ POLAR_ACCESS_TOKEN: "pol_placeholder" });
+  it("uses Polar live when POLAR_ACCESS_TOKEN is set", () => {
+    const live = billingLiveFromEnv({
+      POLAR_ACCESS_TOKEN: "pol_placeholder",
+      POLAR_PRODUCT_PRO: "prod_test123",
+    });
     expect(live).not.toBe(FakeBillingLive);
+  });
+});
 
-    const checkout = await runBillingEffect(
-      Effect.gen(function* () {
-        const billing = yield* BillingService;
-        return yield* billing
-          .createCheckout({
+describe("PolarBillingLive", () => {
+  it("fails with BillingError when product slug not in catalog", async () => {
+    const catalog = new Map([["pro", "prod_abc123"]]);
+    const live = PolarBillingLive({ accessToken: "pol_test", server: "sandbox" }, catalog);
+
+    try {
+      await runBillingEffect(
+        Effect.gen(function* () {
+          const billing = yield* BillingService;
+          return yield* billing.createCheckout({
             customerId: orgId,
-            productSlug: "pro",
-          })
-          .pipe(Effect.result);
-      }),
-      live,
-    );
-    expect(checkout._tag).toBe("Failure");
-    if (checkout._tag === "Failure") {
-      expect(checkout.failure).toBeInstanceOf(BillingError);
-      expect(checkout.failure.message).toContain("not wired");
+            productSlug: "enterprise",
+          });
+        }),
+        live,
+      );
+      // Should not reach here
+      expect.fail("Expected BillingError to be thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BillingError);
+      expect((error as BillingError).message).toContain("not found in catalog");
     }
+  });
+
+  it("denies entitlements until projection exists", async () => {
+    const catalog = new Map([["pro", "prod_abc123"]]);
+    const live = PolarBillingLive({ accessToken: "pol_test", server: "sandbox" }, catalog);
 
     await runBillingEffect(
       Effect.gen(function* () {

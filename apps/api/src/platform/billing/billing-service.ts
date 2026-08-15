@@ -1,4 +1,5 @@
 import { Context, Effect, Layer, Schema } from "effect";
+import { createPolar } from "@polar-sh/sdk/2026-04";
 
 export class BillingError extends Schema.TaggedError<BillingError>()("BillingError", {
   message: Schema.String,
@@ -10,6 +11,13 @@ export type PolarCredentials = {
   accessToken: string;
   server: PolarServer;
 };
+
+/**
+ * Product catalog mapping product slugs to Polar product IDs.
+ * Configure via environment variables (e.g., POLAR_PRODUCT_PRO=<product_id>).
+ * Empty map when credentials are absent.
+ */
+export type ProductCatalog = Map<string, string>;
 
 export type CreateCheckoutInput = {
   customerId: string;
@@ -107,21 +115,76 @@ function makeFakeBackend(): BillingService["Service"] {
  */
 export const FakeBillingLive = Layer.succeed(BillingService, makeBillingService(makeFakeBackend()));
 
-function makePolarBackend(credentials: PolarCredentials): BillingService["Service"] {
-  const message = `polar ${credentials.server} adapter is not wired`;
+function makePolarBackend(
+  credentials: PolarCredentials,
+  catalog: ProductCatalog,
+  successUrl?: string,
+): BillingService["Service"] {
+  const polar = createPolar({
+    accessToken: credentials.accessToken,
+    environment: credentials.server,
+  });
+
   return {
-    createCheckout: () =>
-      Effect.fail(
-        new BillingError({
-          message,
-        }),
-      ),
-    customerPortal: () =>
-      Effect.fail(
-        new BillingError({
-          message,
-        }),
-      ),
+    createCheckout: (input) =>
+      Effect.gen(function* () {
+        const productId = catalog.get(input.productSlug);
+        if (!productId) {
+          return yield* Effect.fail(
+            new BillingError({
+              message: `product slug "${input.productSlug}" not found in catalog`,
+            }),
+          );
+        }
+
+        const checkout = yield* Effect.tryPromise({
+          try: () =>
+            polar.checkouts.create({
+              products: [productId],
+              external_customer_id: input.customerId,
+              success_url: successUrl ?? null,
+            }),
+          catch: (error) =>
+            new BillingError({
+              message: `polar checkout failed: ${error instanceof Error ? error.message : String(error)}`,
+            }),
+        });
+
+        if (!checkout.url) {
+          return yield* Effect.fail(
+            new BillingError({
+              message: "polar checkout session returned no url",
+            }),
+          );
+        }
+
+        return { kind: "url", url: checkout.url };
+      }),
+
+    customerPortal: (input) =>
+      Effect.gen(function* () {
+        const session = yield* Effect.tryPromise({
+          try: () =>
+            polar.customerSessions.create({
+              external_customer_id: input.customerId,
+            }),
+          catch: (error) =>
+            new BillingError({
+              message: `polar customer portal failed: ${error instanceof Error ? error.message : String(error)}`,
+            }),
+        });
+
+        if (!session.customer_portal_url) {
+          return yield* Effect.fail(
+            new BillingError({
+              message: "polar customer session returned no portal url",
+            }),
+          );
+        }
+
+        return { kind: "url", url: session.customer_portal_url };
+      }),
+
     canUse: () => Effect.succeed(false),
     limit: () => Effect.succeed(0),
   };
@@ -129,10 +192,17 @@ function makePolarBackend(credentials: PolarCredentials): BillingService["Servic
 
 /**
  * Polar transport. Selected only when POLAR_ACCESS_TOKEN is non-empty.
- * Checkout and portal fail closed until the Polar HTTP adapter is connected.
+ * Requires product catalog (env: POLAR_PRODUCT_<SLUG>=<product_id>).
  */
-export function PolarBillingLive(credentials: PolarCredentials): Layer.Layer<BillingService> {
-  return Layer.succeed(BillingService, makeBillingService(makePolarBackend(credentials)));
+export function PolarBillingLive(
+  credentials: PolarCredentials,
+  catalog: ProductCatalog,
+  successUrl?: string,
+): Layer.Layer<BillingService> {
+  return Layer.succeed(
+    BillingService,
+    makeBillingService(makePolarBackend(credentials, catalog, successUrl)),
+  );
 }
 
 export function readPolarCredentials(env: {
@@ -150,12 +220,52 @@ export function readPolarCredentials(env: {
   };
 }
 
+/**
+ * Read product catalog from environment variables.
+ * Format: POLAR_PRODUCT_<SLUG_UPPERCASE>=<product_id>
+ * Example: POLAR_PRODUCT_PRO=prod_abc123 → slug "pro" maps to "prod_abc123"
+ */
+export function readProductCatalog(env: Record<string, string | undefined>): ProductCatalog {
+  const catalog = new Map<string, string>();
+  const prefix = "POLAR_PRODUCT_";
+
+  for (const [key, value] of Object.entries(env)) {
+    if (key.startsWith(prefix) && value?.trim()) {
+      const slug = key.slice(prefix.length).toLowerCase();
+      catalog.set(slug, value.trim());
+    }
+  }
+
+  return catalog;
+}
+
 export function billingLiveFromEnv(env: {
   POLAR_ACCESS_TOKEN?: string;
   POLAR_SERVER?: string;
+  POLAR_CHECKOUT_SUCCESS_URL?: string;
+  [key: string]: string | undefined;
 }): Layer.Layer<BillingService> {
   const credentials = readPolarCredentials(env);
-  return credentials ? PolarBillingLive(credentials) : FakeBillingLive;
+  if (!credentials) {
+    return FakeBillingLive;
+  }
+
+  const catalog = readProductCatalog(env);
+  const successUrl = env.POLAR_CHECKOUT_SUCCESS_URL?.trim();
+  return PolarBillingLive(credentials, catalog, successUrl);
+}
+
+/**
+ * Select billing layer from Worker env bindings (like AiLive).
+ * Use this at the Worker edge to wire the adapter.
+ */
+export function BillingLive(env: {
+  POLAR_ACCESS_TOKEN?: string;
+  POLAR_SERVER?: string;
+  POLAR_CHECKOUT_SUCCESS_URL?: string;
+  [key: string]: unknown;
+}): Layer.Layer<BillingService> {
+  return billingLiveFromEnv(env as Record<string, string | undefined>);
 }
 
 export async function runBillingEffect<A, E>(

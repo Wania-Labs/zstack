@@ -21,4 +21,6 @@ export type ApiBindings = {
   POLAR_ACCESS_TOKEN?: string;
   /** Optional. `sandbox` (default) or `production` when the token is set. */
   POLAR_SERVER?: string;
+  /** Optional. Server-owned redirect after checkout success. */
+  POLAR_CHECKOUT_SUCCESS_URL?: string;
 };
