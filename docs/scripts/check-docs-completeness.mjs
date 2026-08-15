@@ -22,6 +22,8 @@ const REQUIRED = [
   "guides/turn-on-observability",
   "guides/turn-on-analytics",
   "guides/turn-on-billing",
+  "guides/turn-on-object-storage",
+  "guides/feature-flags",
   "guides/swap-email-transport",
   "guides/swap-ai-provider",
   "guides/deploy",
@@ -53,6 +55,11 @@ const MUST_MENTION = {
   "guides/turn-on-observability": ["VITE_SENTRY_DSN_WEB", "VITE_SENTRY_DSN_ADMIN"],
   "guides/turn-on-analytics": ["POSTHOG_API_KEY", "VITE_PUBLIC_POSTHOG_KEY"],
   "guides/turn-on-billing": ["POLAR_WEBHOOK_SECRET", "/api/webhooks/polar", "billing.snapshot"],
+  "guides/turn-on-object-storage": ["ObjectStore", "OBJECTS", "R2_ACCESS_KEY_ID", "/api/objects"],
+  "guides/feature-flags": ["FeatureFlags", "FEATURE_FLAG_", "example.ready"],
+  "getting-started": ["create-zstack", "--name", "--scope"],
+  authoring: ["Workers Builds", "wrangler.jsonc", "@cloudflare/vite-plugin"],
+  "reference/apps-and-packages": ["packages/i18n", "packages/auth-access"],
   "reference/create-zstack": [".audit/**", "agent-transcripts/**"],
 };
 

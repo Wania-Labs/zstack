@@ -21,6 +21,8 @@ AI_GATEWAY_API_KEY=…
 
 Empty key → deterministic fake models, no spend. Key bound → gateway models from the capability registry.
 
+When Polar is configured, `ai.complete` also checks `canUse("ai.<capability>")` and reports `ai.generation` usage after success. Empty Polar does not block the fake path. See [Turn on billing](/docs/guides/turn-on-billing).
+
 ## Capability IDs today
 
 | ID                   | Role                  |

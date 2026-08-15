@@ -16,6 +16,8 @@ Optional vendors (Sentry, Bento, …) are scaffolded and **off until a clone bin
 - AI capability registry + Effect AiService (fake until `AI_GATEWAY_API_KEY`)
 - Effect BillingService (fake until `POLAR_ACCESS_TOKEN`; Polar HTTP + webhook ledger when keyed)
 - `@zstack/analytics` typed events (no-op until PostHog keys; PostHog flags stay off)
+- `@zstack/i18n` Paraglide catalogs (`en`; always-on, no vendor)
+- `@zstack/auth-access` Better Auth admin role AC
 - R2 ObjectStore (Worker paths, or S3 presign when R2 API tokens are set)
 - Vitest + vitest-evals (deterministic) in CI; workerd pool optional
 - `create-zstack` / `@wanialabs/create-zstack` scaffold CLI (excluded from clones)
@@ -80,8 +82,10 @@ apps/web/                  # TanStack Start customer shell
 apps/admin/                # TanStack Start staff console
 packages/contracts/        # Zod + oRPC contracts
 packages/analytics/        # typed product events (PostHog when keyed)
+packages/auth-access/      # Better Auth admin role AC
 packages/email/            # React Email templates
 packages/i18n/             # Paraglide catalogs (always-on)
+packages/typescript-config/ # shared TS configs
 create-zstack/             # authoring-only scaffold CLI (not in clones)
 docs/                      # authoring-only docs site (own lockfile/CI; not in clones)
 compose.yaml               # local Postgres 18

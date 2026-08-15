@@ -18,6 +18,9 @@ pnpm create @wanialabs/zstack my-product --yes --agent-tools=cursor,claude --ski
 
 # pick install tool explicitly (default with --yes is pnpm):
 pnpm create @wanialabs/zstack my-product --yes --package-manager=npm
+
+# name the product (default: title-cased directory + @<slug> packages):
+pnpm create @wanialabs/zstack acme --name Acme --scope acme --yes
 ```
 
 From a clone of this authoring repo you can point at the local tree (giget uses `git:`, not `file:`):
@@ -28,7 +31,7 @@ pnpm create-zstack my-product --template git:./ --yes
 ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
 ```
 
-`@wanialabs/create-zstack` downloads the template with giget, strips authoring-only paths, optionally writes coding-agent packs (`--agent-tools` / `--mcp` / `--skills`), and installs with nypm. Default remote: `gh:Wania-Labs/zstack`. Requires Node.js `>=22.5`. The clone always includes `AGENTS.md`, `.agent/playbooks/`, and `.agent/skills/`. See [Coding agents](/docs/guides/coding-agents) (includes a paste-ready agent setup prompt).
+`@wanialabs/create-zstack` downloads the template with giget, strips authoring-only paths, personalizes identity from the target directory (or `--name` / `--scope`; `--keep-identity` keeps `zstack` / `@zstack`), optionally writes coding-agent packs (`--agent-tools` / `--mcp` / `--skills`), and installs with nypm. Default remote: `gh:Wania-Labs/zstack`. Requires Node.js `>=22.5`. The clone always includes `AGENTS.md`, `.agent/playbooks/`, and `.agent/skills/`. See [create-zstack](/docs/reference/create-zstack) and [Coding agents](/docs/guides/coding-agents) (includes a paste-ready agent setup prompt).
 
 ## First run in the clone
 
@@ -46,7 +49,7 @@ pnpm alchemy:dev
 | Staff console | http://localhost:3001 |
 | API Worker    | http://localhost:8787 |
 
-Sign up on the customer app (`/sign-up`), name a Team when prompted, then open the appshell under `/t/<slug>`. Members (`/t/<slug>/members`) is the example team feature to copy.
+Sign up on the customer app (`/sign-up`), name a Team when prompted, then open the appshell under `/t/<slug>`. Members (`/t/<slug>/members`) is the example team feature to copy. Auth screens read copy from `@zstack/i18n` (Paraglide, `en` only).
 
 Promote yourself to staff with:
 

@@ -1,0 +1,58 @@
+---
+title: Feature flags
+description: Overlay FEATURE_FLAG_* on the in-memory FeatureFlags map. No flag SaaS.
+---
+
+Feature flags are `configured` in `product.config.ts`. `FeatureFlags` always exists. There is no PostHog, OpenFeature package, KV snapshot, or admin authoring. Product flags stay on the in-memory map.
+
+Callers pass the safe default at the call site. Missing keys do not throw.
+
+## Defaults
+
+`FakeFeatureFlagsLive` ships one static override:
+
+| Key             | Value  |
+| --------------- | ------ |
+| `example.ready` | `true` |
+
+Everything else returns the caller default with reason `default`.
+
+## Overlay from env
+
+`featureFlagsLiveFromEnv` reads `FEATURE_FLAG_*` bindings and merges them over that map.
+
+```bash
+# FEATURE_FLAG_<KEY>=value → key with dots
+FEATURE_FLAG_EXAMPLE_READY=false
+FEATURE_FLAG_EXAMPLE_LIMIT=3
+```
+
+Rules:
+
+- Name after the prefix is lowercased and `_` becomes `.` (`EXAMPLE_READY` → `example.ready`)
+- `true` / `false` become booleans
+- A finite number stays a number
+- Any other non-empty string stays a string
+- Empty values are ignored
+- A stored value of the wrong type returns the caller default with reason `error`
+
+Set overlays in `.dev.vars` locally or as Alchemy secrets on deploy. Restart the Worker so env reloads.
+
+## What you should see
+
+```
+flags.boolean({ key: "example.ready", defaultValue: false })
+# default map → { value: true, reason: "static" }
+# FEATURE_FLAG_EXAMPLE_READY=false → { value: false, reason: "static" }
+
+flags.boolean({ key: "missing.flag", defaultValue: false })
+# → { value: false, reason: "default" }
+```
+
+Do not turn on PostHog feature flags. Capture analytics is a separate capability. See [Turn on analytics](/docs/guides/turn-on-analytics).
+
+## Related
+
+- Port and env overlay live in `apps/api/src/platform/flags/feature-flags.ts`
+- [Capabilities](/docs/concepts/capabilities)
+- [Ports and adapters](/docs/concepts/ports-and-adapters)

@@ -1,0 +1,50 @@
+---
+title: Turn on object storage
+description: Bind R2 for ObjectStore. Sign through the Worker until S3 API tokens are set.
+---
+
+Object storage is `configured` in `product.config.ts`. `ObjectStore` always exists. Keys are opaque strings, not filenames. Feature code calls the port. It does not import the R2 SDK.
+
+## Defaults
+
+| Binding / env                                                     | Missing                                         | Present                      |
+| ----------------------------------------------------------------- | ----------------------------------------------- | ---------------------------- |
+| Worker `OBJECTS`                                                  | In-memory fake                                  | R2 bucket bytes              |
+| `R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY` + account id + bucket | Sign intents return Worker `/api/objects/<key>` | aws4fetch presigns an S3 URL |
+
+`alchemy:dev` binds Alchemy local R2. That is not a cloud bucket on the author's account. `alchemy:deploy` provisions a real bucket named from the stack. The Worker binding cannot presign. Tokens are required for that.
+
+## Steps
+
+1. Prefer `pnpm alchemy:dev` so `OBJECTS` is bound. The wrangler escape hatch without an R2 binding stays on the in-memory fake.
+2. Call `signUpload` / `signDownload` from product code. Use the returned intent:
+
+   - `{ kind: "worker", path, method }` → `PUT` / `GET` `/api/objects/<key>` on this Worker. Sign-in required.
+   - `{ kind: "presigned", url, method }` → the client talks to R2 directly.
+
+3. Optional. Create R2 S3 API tokens and set them on the API Worker (`.dev.vars` locally, Alchemy secrets on deploy):
+
+```bash
+R2_ACCESS_KEY_ID=…
+R2_SECRET_ACCESS_KEY=…
+# CLOUDFLARE_ACCOUNT_ID is also bound from the Alchemy R2 bucket on deploy.
+```
+
+4. Restart `alchemy:dev` or redeploy so the Worker sees the env.
+
+## What you should see
+
+- Empty key → `ObjectStoreError` ("object key must be a non-empty opaque string")
+- Anonymous `PUT` / `GET` / `DELETE` `/api/objects/*` → `401`
+- Missing object → `404`
+- Successful Worker upload → `204`
+- Default sign TTL is 3600 seconds
+
+Do not inherit an author-account bucket in a clone. Physical names come from the personalized Alchemy stack.
+
+## Related
+
+- Port and Layers live in `apps/api/src/platform/object-store/object-store-service.ts`
+- Worker HTTP lives in `apps/api/src/http/objects.ts`
+- Alchemy bucket lives in `infra/storage.ts`
+- [Capabilities](/docs/concepts/capabilities)

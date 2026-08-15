@@ -92,7 +92,7 @@ async function resolvePackageManager(options: {
 const main = defineCommand({
   meta: {
     name: "create-zstack",
-    version: "0.1.0",
+    version: "0.1.1",
     description: "Scaffold a product from the zstack template (giget + nypm).",
   },
   args: {

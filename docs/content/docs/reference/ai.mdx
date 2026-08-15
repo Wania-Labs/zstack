@@ -10,6 +10,7 @@ Product code asks for **capability IDs** (`chat.fast`, `chat.smart`, `extract.st
 - Empty `AI_GATEWAY_API_KEY` → deterministic **fake** models (no spend)
 - Key bound → Vercel AI Gateway via `@ai-sdk/gateway`
 - oRPC: `ai.capabilities` (public), `ai.complete` (signed-in)
+- Polar configured → `ai.complete` checks `canUse("ai.<capability>")` and reports `ai.generation` usage. Empty Polar does not block fakes.
 
 ## Policy table
 

@@ -3,7 +3,9 @@ title: Deploy with Alchemy
 description: Alchemy owns provision and deploy; wrangler stays a local escape.
 ---
 
-Alchemy v2 is the sole owner of provisioned Cloudflare resources, secret bindings, and production deploys. Entry points: `alchemy.run.ts` and `infra/*`.
+Alchemy v2 is the sole owner of provisioned Cloudflare resources, secret bindings, and production deploys for a **product clone**. Entry points: `alchemy.run.ts` and `infra/*`.
+
+The authoring docs site is a separate Cloudflare Worker (`zstack`) via Workers Builds. That path is not a product deploy. See [Authoring this repo](/docs/authoring).
 
 ## Local full stack
 

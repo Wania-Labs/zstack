@@ -3,7 +3,7 @@ title: What is zstack
 description: TypeScript product starter built to launch lean and graduate without compromise.
 ---
 
-**zstack** is a cloneable TypeScript product starter for solo founders and small teams shipping SaaS on Cloudflare. Built to launch lean and graduate without compromise — the serious pieces are in place, but still replaceable.
+**zstack** is a cloneable TypeScript product starter for solo founders and small teams shipping SaaS on Cloudflare. Built to launch lean and graduate without compromise. The serious pieces are in place, but still replaceable.
 
 You clone one repository with create-zstack. That repo **is** the product: customer web app, staff admin console, and one Effect-backed Hono Worker. Optional vendors stay quiet until you bind credentials. Day-to-day work runs on Compose Postgres and `alchemy:dev`, not a paid cloud account.
 
@@ -11,14 +11,17 @@ Unlike Next.js starters or thin Cloudflare demos, zstack gives you Workers with 
 
 ## What you get
 
-- `apps/web` — customer TanStack Start app with Better Auth
+- `apps/web` — customer TanStack Start app with Better Auth and Paraglide
 - `apps/admin` — staff console TanStack Start app with role access
 - `apps/api` — Hono Worker with Effect, oRPC, Drizzle, workflows, queues
 - `packages/contracts` — Zod + oRPC contracts safe to import from frontends
 - `packages/analytics` — typed product events; no-op until PostHog keys
+- `packages/auth-access` — shared Better Auth admin role AC
 - `packages/email` — React Email templates with console/Bento transport
+- `packages/i18n` — Paraglide catalogs (`en` only). No vendor secret
 - Alchemy IaC for Cloudflare Workers, PlanetScale Postgres, Hyperdrive, secrets
 - AI capability registry with AiService and gateway for fake/live model swap
+- Configured ports for Polar billing, R2 objects, and in-memory feature flags
 
 ## How swap works
 

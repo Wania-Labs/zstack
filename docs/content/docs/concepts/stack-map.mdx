@@ -28,13 +28,14 @@ Frontends import `@zstack/contracts`, `@zstack/i18n`, and `@zstack/analytics` on
 
 ## Packages
 
-| Path                   | Package               | Role                                             |
-| ---------------------- | --------------------- | ------------------------------------------------ |
-| `packages/contracts`   | `@zstack/contracts`   | Zod + oRPC contracts (client-safe)               |
-| `packages/analytics`   | `@zstack/analytics`   | Typed product events; PostHog Capture when keyed |
-| `packages/auth-access` | `@zstack/auth-access` | Shared Better Auth admin role AC                 |
-| `packages/email`       | `@zstack/email`       | React Email templates                            |
-| `packages/i18n`        | `@zstack/i18n`        | Paraglide catalogs and runtime                   |
+| Path                         | Package                     | Role                                             |
+| ---------------------------- | --------------------------- | ------------------------------------------------ |
+| `packages/contracts`         | `@zstack/contracts`         | Zod + oRPC contracts (client-safe)               |
+| `packages/analytics`         | `@zstack/analytics`         | Typed product events; PostHog Capture when keyed |
+| `packages/auth-access`       | `@zstack/auth-access`       | Shared Better Auth admin role AC                 |
+| `packages/email`             | `@zstack/email`             | React Email templates                            |
+| `packages/i18n`              | `@zstack/i18n`              | Paraglide catalogs and runtime (`en` only)       |
+| `packages/typescript-config` | `@zstack/typescript-config` | Shared TS configs                                |
 
 ## Infrastructure
 
@@ -54,11 +55,14 @@ Local Postgres is Compose (`compose.yaml`). Deploy uses PlanetScale Postgres thr
 
 ## Not in consumer clones
 
-| Path                             | Why                      |
-| -------------------------------- | ------------------------ |
-| `docs/`                          | This documentation site  |
-| `create-zstack/`                 | Scaffold CLI             |
-| `tech-stack-architecture-guide/` | Internal design ledger   |
-| `AUTHORING.md`                   | Maintainer wiring policy |
+| Path                             | Why                                         |
+| -------------------------------- | ------------------------------------------- |
+| `docs/`                          | This documentation site                     |
+| `create-zstack/`                 | Scaffold CLI                                |
+| `tech-stack-architecture-guide/` | Internal design ledger                      |
+| `AUTHORING.md`                   | Maintainer wiring policy                    |
+| `.cursor/`                       | Authoring editor packs (clones get written) |
+| `agent-transcripts/` / `.audit/` | Local agent trails                          |
+| `repos/`                         | Optional Effect vendor checkout             |
 
-See [create-zstack](/docs/reference/create-zstack) for the ignore list.
+See [create-zstack](/docs/reference/create-zstack) for the full ignore list.

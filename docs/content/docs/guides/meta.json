@@ -9,6 +9,8 @@
     "turn-on-observability",
     "turn-on-analytics",
     "turn-on-billing",
+    "turn-on-object-storage",
+    "feature-flags",
     "swap-email-transport",
     "swap-ai-provider",
     "deploy",

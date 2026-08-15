@@ -27,6 +27,9 @@ pnpm create @wanialabs/zstack my-product --yes --agent-tools=all --mcp=all --ski
 
 | Flag                       | Values                                                    | Notes                                                         |
 | -------------------------- | --------------------------------------------------------- | ------------------------------------------------------------- |
+| `--name`                   | display name                                              | Default: title-cased directory basename                       |
+| `--scope`                  | npm scope (`@acme` or `acme`)                             | Default: `@<slug>`                                            |
+| `--keep-identity`          | boolean                                                   | Leave template `zstack` / `@zstack` names alone               |
 | `--package-manager` / `-p` | `pnpm`, `npm`, `yarn`, `bun`                              | TTY prompts when omitted; `--yes` → `pnpm`                    |
 | `--agent-tools`            | `none`, `all`, or `claude,cursor,opencode,codex`          | Omit to prompt on a TTY. Non-TTY / `--yes` → none             |
 | `--mcp`                    | `none`, `defaults`/`docs`, `account`, `all`, or comma ids | Docs group is the default when tools are selected             |

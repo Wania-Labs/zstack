@@ -1,7 +1,10 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
 import { baseOptions } from "@/lib/layout.shared";
+import { gitConfig } from "@/lib/shared";
 import { Rocket, TrendingUp, Boxes } from "lucide-react";
+
+const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -22,7 +25,7 @@ function Home() {
               Built to launch lean and graduate without compromise.
             </h1>
             <p className="max-w-xl text-lg text-fd-muted-foreground text-pretty">
-              The serious product pieces are already in place — and still replaceable. Launch on a
+              The serious product pieces are already in place, and still replaceable. Launch on a
               low-cost path, then adapt and optimize each layer without painting yourself into a
               corner.
             </p>
@@ -42,7 +45,7 @@ function Home() {
                 For agents
               </Link>
               <a
-                href="https://github.com/wanialabs/zstack"
+                href={githubUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-md border border-fd-border bg-fd-background px-4 py-2.5 text-sm font-medium text-fd-foreground transition-colors hover:bg-fd-muted"
@@ -148,7 +151,8 @@ function Home() {
                   Capability ports pattern
                 </strong>
                 <p className="text-sm text-fd-muted-foreground">
-                  EmailService, AiService, product.config. Optional vendors quiet until configured.
+                  EmailService, AiService, BillingService, product.config. Optional vendors quiet
+                  until configured.
                 </p>
               </li>
               <li className="flex flex-col gap-1.5">
@@ -179,8 +183,8 @@ function Home() {
             </h2>
             <div className="mt-6 max-w-2xl space-y-4 text-fd-muted-foreground">
               <p>
-                Start on a simple, low-ops path and ship. When you need AWS — or any other home for
-                a piece of the stack — move that layer without rewriting the product.
+                Start on a simple, low-ops path and ship. When you need AWS, or any other home for a
+                piece of the stack, move that layer without rewriting the product.
               </p>
               <p>
                 Portable Postgres and swappable ports keep the door open; you don't have to design
@@ -304,13 +308,13 @@ function Home() {
               <div className="rounded-lg border border-fd-border bg-fd-card p-4">
                 <h3 className="font-medium text-fd-foreground">apps/web</h3>
                 <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Customer TanStack Start app with Better Auth
+                  Customer TanStack Start app with Better Auth and Paraglide
                 </p>
               </div>
               <div className="rounded-lg border border-fd-border bg-fd-card p-4">
                 <h3 className="font-medium text-fd-foreground">apps/admin</h3>
                 <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Staff console TanStack Start app with role access
+                  Staff console with shared Better Auth admin role AC
                 </p>
               </div>
               <div className="rounded-lg border border-fd-border bg-fd-card p-4">
@@ -326,9 +330,21 @@ function Home() {
                 </p>
               </div>
               <div className="rounded-lg border border-fd-border bg-fd-card p-4">
-                <h3 className="font-medium text-fd-foreground">packages/email</h3>
+                <h3 className="font-medium text-fd-foreground">packages/i18n</h3>
                 <p className="mt-2 text-sm text-fd-muted-foreground">
-                  React Email templates with console/Bento transport
+                  Paraglide catalogs. English only, no localization SaaS
+                </p>
+              </div>
+              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
+                <h3 className="font-medium text-fd-foreground">packages/analytics</h3>
+                <p className="mt-2 text-sm text-fd-muted-foreground">
+                  Typed events. No-op until PostHog keys. Flags stay off
+                </p>
+              </div>
+              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
+                <h3 className="font-medium text-fd-foreground">Configured ports</h3>
+                <p className="mt-2 text-sm text-fd-muted-foreground">
+                  Polar billing, R2 objects, in-memory flags, console email, fake AI
                 </p>
               </div>
               <div className="rounded-lg border border-fd-border bg-fd-card p-4">
@@ -346,7 +362,7 @@ function Home() {
               <div className="rounded-lg border border-fd-border bg-fd-card p-4">
                 <h3 className="font-medium text-fd-foreground">create-zstack CLI</h3>
                 <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Scaffold with agent tools, MCP configs, skills
+                  Scaffold with identity, agent tools, MCP configs, skills
                 </p>
               </div>
             </div>
@@ -375,12 +391,12 @@ function Home() {
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Honest risks</h2>
             <div className="mt-6 max-w-2xl space-y-4 text-fd-muted-foreground">
               <p>
-                zstack bets on a young surface: Effect v4 (beta), Drizzle 1 (RC), Alchemy (beta),
-                and TanStack Start. Hono, oRPC, and Better Auth are stable.
+                zstack bets on a young surface: Effect v4 (RC), Drizzle 1 (RC), Alchemy (beta), and
+                TanStack Start. Hono, oRPC, and Better Auth are stable.
               </p>
               <p>
                 Fine if you're willing to ride that. The main bounce risk for a public starter isn't
-                the stable pieces — it's beta density.
+                the stable pieces. It's pre-1.0 density.
               </p>
               <p>
                 These boundaries are intentional and replaceable. You can swap adapters without
@@ -421,7 +437,7 @@ function Home() {
                   For agents
                 </Link>
                 <a
-                  href="https://github.com/wanialabs/zstack"
+                  href={githubUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="rounded-md border border-fd-border bg-fd-background px-4 py-2.5 text-sm font-medium text-fd-foreground transition-colors hover:bg-fd-muted"
