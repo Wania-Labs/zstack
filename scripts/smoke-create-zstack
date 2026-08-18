@@ -19,7 +19,7 @@ fi
 echo "DEST=$DEST"
 
 cd "$ROOT"
-ZSTACK_TEMPLATE="git:$(pwd)" pnpm create-zstack "$DEST" --name "Acme Cloud" --scope @acme --force --yes --no-install
+ZSTACK_TEMPLATE="git:$(pwd)" pnpm run create-zstack "$DEST" --name "Acme Cloud" --scope @acme --force --yes --no-install
 
 if [[ -e "$DEST/create-zstack" ]]; then
   echo "clone still contains create-zstack/" >&2
