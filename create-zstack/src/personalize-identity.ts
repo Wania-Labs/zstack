@@ -518,6 +518,12 @@ async function buildRewritePlan(root: string, identity: ProjectIdentity): Promis
       occurrences: "exactly-one",
     },
     {
+      path: "apps/web/src/lib/analytics.ts",
+      source: `"zstack.analytics.distinct_id"`,
+      target: `"${slug}.analytics.distinct_id"`,
+      occurrences: "exactly-one",
+    },
+    {
       path: "apps/admin/src/router.tsx",
       source: `"zstack-admin"`,
       target: `"${workers.admin}"`,
