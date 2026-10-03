@@ -167,11 +167,11 @@ Suggested project split: one Sentry project each for api, web, and admin.
 
 ## CI
 
-Product gate: `.github/workflows/ci.yml` — typecheck / test / lint / format for the monorepo. **Ignores `docs/**`.**
+Product gate: `.github/workflows/ci.yml` — one job: install (compiles Paraglide via `@zstack/i18n` `prepare`), typecheck (includes `apps/api/tsconfig.test.json` for tests / scripts / configs), lint, format, `pnpm test`, `pnpm test:workers`, `pnpm build` (api wrangler dry-run + web/admin Vite builds), `drizzle-kit check`, and a guard that `drizzle-kit generate` writes nothing new under `apps/api/drizzle`. **Ignores `docs/**`.**
 
 Docs gate: `.github/workflows/docs.yml` — install/typecheck/lint/format/Worker build **inside `docs/` only** (separate lockfile). Never fold docs into the product job. Production deploy is Workers Builds in the Cloudflare dashboard (root `docs`), not this workflow.
 
-`pnpm test` runs API unit tests plus deterministic `vitest-evals` (fake models). Workerd pool tests (`pnpm test:workers`) stay local/optional. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
+`pnpm test` runs API unit tests, deterministic `vitest-evals` (fake models), and `apps/web` unit tests. `pnpm test:workers` boots the workerd pool from `wrangler.jsonc` bindings and needs no live Postgres (Hyperdrive only exposes a connection string). The drizzle steps read `DATABASE_URL` from the committed `.env.development` but never connect. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
 
 ## Docs site (authoring only)
 
@@ -187,7 +187,7 @@ Product `pnpm lint` uses `--disable-nested-config` so the isolated `docs/.oxlint
 
 - **Unit:** Vitest (node) in `apps/api` — `pnpm --filter @zstack/api test:unit`
 - **Evals:** `vitest-evals` + `@vitest-evals/harness-ai-sdk` — `test/evals/*.eval.ts`, fake by default
-- **Workers:** `@cloudflare/vitest-pool-workers` — `pnpm test:workers` (needs wrangler/bindings; not CI yet)
+- **Workers:** `@cloudflare/vitest-pool-workers` — `pnpm test:workers` (wrangler bindings in workerd; runs in CI without a DB)
 
 ## AI
 

@@ -19,7 +19,7 @@ Optional vendors (Sentry, Bento, …) are scaffolded and **off until a clone bin
 - `@zstack/i18n` Paraglide catalogs (`en`; always-on, no vendor)
 - `@zstack/auth-access` Better Auth admin role AC
 - R2 ObjectStore (Worker paths, or S3 presign when R2 API tokens are set)
-- Vitest + vitest-evals (deterministic) in CI; workerd pool optional
+- Vitest + vitest-evals (deterministic) + workerd pool smoke in CI
 - `create-zstack` / `@wanialabs/create-zstack` scaffold CLI (excluded from clones)
 
 Workflows and queues live **inside** `apps/api` — same Hono Worker, not separate apps.
@@ -63,7 +63,7 @@ Product PRs run `.github/workflows/ci.yml` (ignores `docs/**`). Docs changes run
 
 ```bash
 pnpm test              # api unit + vitest-evals (fake)
-pnpm test:workers      # optional workerd pool
+pnpm test:workers      # workerd pool smoke (no DB needed)
 npm create @wanialabs/zstack@latest my-app
 pnpm create @wanialabs/zstack@latest my-app
 cd docs && pnpm install && pnpm dev   # authoring docs :4000

@@ -3,8 +3,8 @@ import { defineConfig } from "vitest/config";
 
 /**
  * Workerd integration via @cloudflare/vitest-pool-workers.
- * Needs Compose Hyperdrive origin for handlers that touch Postgres —
- * not part of the default `pnpm test` CI gate.
+ * Handlers that query Postgres need the Compose Hyperdrive origin; the binding
+ * smoke does not. Runs as its own CI step (`pnpm test:workers`), not in `pnpm test`.
  */
 export default defineConfig({
   plugins: [
