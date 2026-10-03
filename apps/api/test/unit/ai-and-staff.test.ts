@@ -1,7 +1,12 @@
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { completeAi, listAiCapabilities } from "../../src/modules/ai/service";
+import {
+  AI_ORGANIZATION_REQUIRED,
+  authorizeAiUsage,
+  completeAi,
+  listAiCapabilities,
+} from "../../src/modules/ai/service";
 import { isStaff, staffCapabilitiesForRole } from "../../src/modules/auth/staff";
 import type { RequestContext } from "../../src/http/context";
 import { AiLive, runAiEffect } from "../../src/platform/ai/ai-service";
@@ -97,8 +102,10 @@ describe("AiService fake complete", () => {
       completeAi({ capability: "chat.fast", prompt: "ping" }),
       completeAiLayer(guestRequest),
     );
-    expect(result.text).toBe("pong");
-    expect(result.route).toBe("fake");
+    expect(result.completion.text).toBe("pong");
+    expect(result.completion.route).toBe("fake");
+    // Billing unconfigured: open and unmetered.
+    expect(result.billedOrganizationId).toBeUndefined();
   });
 
   it("denies AI when Polar is live and the org lacks the entitlement", async () => {
@@ -126,4 +133,57 @@ describe("AiService fake complete", () => {
       ),
     ).rejects.toBeInstanceOf(BillingError);
   });
+
+  it("requires an active organization when billing is configured", async () => {
+    const billing = polarBilling(async () => ({
+      grantedBenefits: [{ feature: "ai.chat.fast" }],
+      meters: [],
+    }));
+
+    const failure = await runCompleteAi(
+      completeAi({ capability: "chat.fast", prompt: "ping" }),
+      completeAiLayer(guestRequest, billing),
+    ).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(BillingError);
+    expect((failure as BillingError).message).toBe(AI_ORGANIZATION_REQUIRED);
+  });
+
+  it("meters against the organization when billing is configured and entitled", async () => {
+    const billing = polarBilling(async () => ({
+      grantedBenefits: [{ feature: "ai.chat.fast" }],
+      meters: [],
+    }));
+    const request: RequestContext = { ...guestRequest, organizationId: "org_paid" };
+
+    const result = await runCompleteAi(
+      completeAi({ capability: "chat.fast", prompt: "ping" }),
+      completeAiLayer(request, billing),
+    );
+    expect(result.completion.text).toBe("pong");
+    expect(result.billedOrganizationId).toBe("org_paid");
+  });
+
+  it("does not meter when billing is unconfigured, even with an organization", async () => {
+    const request: RequestContext = { ...guestRequest, organizationId: "org_free" };
+    const billed = await runCompleteAi(
+      authorizeAiUsage("chat.fast"),
+      Layer.mergeAll(FakeBillingLive, Layer.succeed(CurrentRequestContext, request)),
+    );
+    expect(billed).toBeUndefined();
+  });
 });
+
+function polarBilling(getCustomerState: PolarTransport["getCustomerState"]) {
+  const transport: PolarTransport = {
+    createCheckout: async () => ({ url: "https://example.com/checkout" }),
+    createCustomerSession: async () => ({ customer_portal_url: "https://example.com/portal" }),
+    getCustomerState,
+    ingestUsage: async () => ({}),
+  };
+  return PolarBillingLive(
+    { accessToken: "pol_test", server: "sandbox" },
+    new Map([["pro", "prod_abc123"]]),
+    undefined,
+    transport,
+  );
+}
