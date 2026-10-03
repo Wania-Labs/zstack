@@ -27,7 +27,7 @@ Nested `AGENTS.md` files add package-local rules. Read the nearest one when edit
 
 1. **Alchemy owns deploy.** Entry is `alchemy.run.ts` + `infra/*`. `wrangler` in `apps/api` is local/dry-run only. Do not add a parallel Wrangler deploy path.
 2. **Modules call ports.** Feature code under `apps/api/src/modules/` uses Effect services from `apps/api/src/platform/`. Do not import Bento, AI Gateway, Sentry, R2 SDK, Polar SDK, or console email adapters directly from modules.
-3. **Frontends import contracts, i18n, and analytics only.** `apps/web` and `apps/admin` may import `@zstack/contracts`, `@zstack/i18n`, and `@zstack/analytics`. They must not import `apps/api` source.
+3. **Frontends import client-safe packages only.** `apps/web` and `apps/admin` may import `@zstack/contracts`, `@zstack/i18n`, `@zstack/analytics`, and `@zstack/auth-access` (Better Auth admin roles for the client plugin). They must not import `apps/api` source.
 4. **Pin Effect / Drizzle / Alchemy.** Versions live in root and workspace `package.json`. There is no `patches/` directory; do not add pnpm patches unless a future pin actually needs one.
 5. **No `@cloudflare/vite-plugin` on web/admin.** Alchemy injects its own under `alchemy dev` / deploy.
 6. **Secrets stay out of `product.config.ts`.** Flip optional vendors with empty vs set env (see `.dev.vars.example`).
