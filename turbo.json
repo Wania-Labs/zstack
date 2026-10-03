@@ -15,9 +15,6 @@
     "typecheck": {
       "dependsOn": ["^typecheck"]
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
     "test": {
       "dependsOn": ["^typecheck"],
       "inputs": ["$TURBO_DEFAULT$", "vitest*.config.ts"],
