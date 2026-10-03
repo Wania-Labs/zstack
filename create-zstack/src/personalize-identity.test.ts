@@ -146,10 +146,6 @@ async function writeMinimalFixture(root: string): Promise<void> {
       ].join("\n"),
     );
   }
-  await writeFile(join(root, ".github/workflows/publish-create-zstack.yml"), "name: publish\n");
-  await writeFile(join(root, ".github/workflows/generate-clone.yml"), "name: generate\n");
-  await mkdir(join(root, "scripts"), { recursive: true });
-  await writeFile(join(root, "scripts/smoke-create-zstack"), "#!/usr/bin/env bash\n");
 }
 
 function identityFor(displayName: string, scope?: string) {
@@ -169,7 +165,7 @@ void test("FRAMEWORK_REFERENCE_ALLOWLIST is path + exactText only", () => {
   }
 });
 
-void test("personalizeClone rewrites minimal fixture and deletes publish workflow", async () => {
+void test("personalizeClone rewrites the minimal fixture", async () => {
   const root = await mkdtemp(join(tmpdir(), "zstack-personalize-"));
   try {
     await writeMinimalFixture(root);
@@ -177,9 +173,6 @@ void test("personalizeClone rewrites minimal fixture and deletes publish workflo
     const report = await personalizeClone({ root, identity });
 
     assert.ok(report.rewrittenPaths.includes("package.json"));
-    assert.ok(report.deletedPaths.includes(".github/workflows/publish-create-zstack.yml"));
-    assert.ok(report.deletedPaths.includes(".github/workflows/generate-clone.yml"));
-    assert.ok(report.deletedPaths.includes("scripts/smoke-create-zstack"));
 
     const rootPkg = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as {
       name: string;
@@ -304,6 +297,20 @@ void test("FRAMEWORK_REFERENCE_ALLOWLIST permits create-zstack only where listed
     await assertNoUnapprovedSourceIdentity(root);
     await writeFile(join(root, "README.md"), "run create-zstack\n");
     await assert.rejects(() => assertNoUnapprovedSourceIdentity(root), /README\.md:1/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+void test("personalizeClone leaves preserved (pre-existing) paths alone", async () => {
+  const root = await mkdtemp(join(tmpdir(), "zstack-preserve-"));
+  try {
+    await writeMinimalFixture(root);
+    await mkdir(join(root, "docs"), { recursive: true });
+    const userDoc = "We migrated off zstack; see `@zstack/contracts` history.\n";
+    await writeFile(join(root, "docs/design.md"), userDoc);
+    await personalizeClone({ root, identity: acmeIdentity(), preserve: new Set(["docs"]) });
+    assert.equal(await readFile(join(root, "docs/design.md"), "utf8"), userDoc);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

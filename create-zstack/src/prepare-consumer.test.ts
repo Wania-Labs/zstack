@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -7,8 +7,10 @@ import { test } from "node:test";
 import {
   AUTHORING_DIRECTORIES,
   CONSUMER_IGNORE,
+  claimTargetDirectory,
   isConsumerIgnored,
   parsePackageManager,
+  snapshotPreexistingSweepTargets,
   stripAuthoringManifest,
   stripCreateZstackLockfileImporter,
 } from "./prepare-consumer.js";
@@ -257,5 +259,104 @@ void test("parsePackageManager only accepts pnpm", () => {
   assert.equal(parsePackageManager(" PNPM "), "pnpm");
   for (const other of ["npm", "yarn", "bun", "deno"]) {
     assert.throws(() => parsePackageManager(other), /only pnpm is supported/);
+  }
+});
+
+void test("stripAuthoringManifest never deletes paths that existed before download (--force)", async () => {
+  const root = await mkdtemp(join(tmpdir(), "zstack-strip-force-"));
+  try {
+    // The user's existing repo, before `create-zstack . --force`.
+    await mkdir(join(root, "docs"), { recursive: true });
+    await writeFile(join(root, "docs/design.md"), "# Design\n");
+    await mkdir(join(root, ".cursor/rules"), { recursive: true });
+    await writeFile(join(root, ".cursor/rules/mine.mdc"), "mine\n");
+    await mkdir(join(root, "repos/mylib"), { recursive: true });
+    await writeFile(join(root, "repos/mylib/a.txt"), "a\n");
+    await writeFile(join(root, "AUTHORING.md"), "# mine\n");
+
+    const preserve = await snapshotPreexistingSweepTargets(root);
+    assert.deepEqual([...preserve].sort(), [".cursor", "AUTHORING.md", "docs", "repos"]);
+
+    // The template download adds its own files, including authoring leftovers.
+    await writeFile(join(root, "pnpm-workspace.yaml"), `packages:\n  - "apps/*"\n`);
+    await writeFile(join(root, "package.json"), `${JSON.stringify({ name: "zstack" }, null, 2)}\n`);
+    await mkdir(join(root, "create-zstack"), { recursive: true });
+    await writeFile(join(root, "create-zstack/package.json"), "{}\n");
+    await mkdir(join(root, "apps/web"), { recursive: true });
+    await writeFile(join(root, "apps/web/.cta.json"), "{}\n");
+
+    await stripAuthoringManifest(root, { preserve });
+
+    assert.equal(await readFile(join(root, "docs/design.md"), "utf8"), "# Design\n");
+    assert.equal(await readFile(join(root, ".cursor/rules/mine.mdc"), "utf8"), "mine\n");
+    assert.equal(await readFile(join(root, "repos/mylib/a.txt"), "utf8"), "a\n");
+    assert.equal(await readFile(join(root, "AUTHORING.md"), "utf8"), "# mine\n");
+    await assert.rejects(stat(join(root, "create-zstack")));
+    await assert.rejects(stat(join(root, "apps/web/.cta.json")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+void test("snapshotPreexistingSweepTargets is empty for a fresh directory", async () => {
+  const root = await mkdtemp(join(tmpdir(), "zstack-strip-fresh-"));
+  try {
+    assert.equal((await snapshotPreexistingSweepTargets(root)).size, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+void test("claimTargetDirectory creates and owns a missing directory", async () => {
+  const base = await mkdtemp(join(tmpdir(), "zstack-claim-"));
+  try {
+    const claim = await claimTargetDirectory(join(base, "nested/app"), { force: false });
+    assert.equal(claim.created, true);
+    assert.equal(claim.preserve.size, 0);
+    assert.ok((await stat(join(base, "nested/app"))).isDirectory());
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+void test("claimTargetDirectory accepts an existing empty dir without owning it", async () => {
+  const base = await mkdtemp(join(tmpdir(), "zstack-claim-empty-"));
+  try {
+    const claim = await claimTargetDirectory(base, { force: false });
+    assert.equal(claim.created, false);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+void test("claimTargetDirectory refuses non-empty dirs without --force and snapshots with it", async () => {
+  const base = await mkdtemp(join(tmpdir(), "zstack-claim-full-"));
+  try {
+    await mkdir(join(base, "docs"));
+    await assert.rejects(claimTargetDirectory(base, { force: false }), /not empty/);
+    const claim = await claimTargetDirectory(base, { force: true });
+    assert.equal(claim.created, false);
+    assert.deepEqual([...claim.preserve], ["docs"]);
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+void test("claimTargetDirectory rejects files and dangling symlinks and leaves them alone", async () => {
+  const base = await mkdtemp(join(tmpdir(), "zstack-claim-bad-"));
+  try {
+    await writeFile(join(base, "file"), "x");
+    await assert.rejects(
+      claimTargetDirectory(join(base, "file"), { force: true }),
+      /not a directory/,
+    );
+    await symlink(join(base, "missing"), join(base, "dangling"));
+    await assert.rejects(
+      claimTargetDirectory(join(base, "dangling"), { force: true }),
+      /symlink that does not point to a directory/,
+    );
+    assert.ok((await lstat(join(base, "dangling"))).isSymbolicLink());
+  } finally {
+    await rm(base, { recursive: true, force: true });
   }
 });

@@ -3,7 +3,7 @@ import { downloadTemplate } from "giget";
 import { installDependencies } from "nypm";
 import * as p from "@clack/prompts";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { lstatSync, readdirSync, statSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
@@ -17,9 +17,11 @@ import {
 } from "./project-identity.js";
 import { personalizeClone } from "./personalize-identity.js";
 import {
+  claimTargetDirectory,
   isConsumerIgnored,
   parsePackageManager,
   stripAuthoringManifest,
+  type TargetClaim,
 } from "./prepare-consumer.js";
 
 /** Override with ZSTACK_TEMPLATE (e.g. `git:$(pwd)` or `gh:org/zstack`). */
@@ -34,8 +36,10 @@ function fail(error: unknown): never {
   process.exit(1);
 }
 
-function isPnpmAvailable(): boolean {
+/** Run in the clone so corepack (strict mode) sees its `packageManager` field. */
+function isPnpmAvailable(cwd: string): boolean {
   const result = spawnSync("pnpm", ["--version"], {
+    cwd,
     stdio: "ignore",
     shell: process.platform === "win32",
   });
@@ -127,9 +131,14 @@ const main = defineCommand({
     const dir = resolve(process.cwd(), args.dir);
     const isTTY = Boolean(process.stdin.isTTY && process.stdout.isTTY);
 
-    const dirExisted = existsSync(dir);
-    if (dirExisted) {
-      if (!statSync(dir).isDirectory()) {
+    // Early, friendly check before any prompts. The authoritative claim happens
+    // right before download (claimTargetDirectory), since the path can change meanwhile.
+    const existing = lstatSync(dir, { throwIfNoEntry: false });
+    if (existing) {
+      const isDir = existing.isSymbolicLink()
+        ? statSync(dir, { throwIfNoEntry: false })?.isDirectory() === true
+        : existing.isDirectory();
+      if (!isDir) {
         fail(`Target exists and is not a directory: ${dir}`);
       }
       if (readdirSync(dir).length > 0 && !args.force) {
@@ -217,7 +226,9 @@ const main = defineCommand({
     // Everything up to the agent packs is template preparation. If any of it fails,
     // do not leave a half-personalized tree behind in a directory we created.
     let cloneDir = dir;
+    let claim: TargetClaim | undefined;
     try {
+      claim = await claimTargetDirectory(dir, { force: args.force });
       console.log(`Downloading ${args.template} → ${dir}`);
       const result = await downloadTemplate(args.template, {
         dir,
@@ -229,10 +240,10 @@ const main = defineCommand({
       cloneDir = result.dir;
 
       console.log(`Template ready at ${cloneDir}`);
-      await stripAuthoringManifest(cloneDir);
+      await stripAuthoringManifest(cloneDir, { preserve: claim.preserve });
 
       if (identity) {
-        await personalizeClone({ root: cloneDir, identity });
+        await personalizeClone({ root: cloneDir, identity, preserve: claim.preserve });
         console.log(formatIdentitySummary(identity));
       } else {
         console.log("Keeping template identity (--keep-identity).");
@@ -260,10 +271,10 @@ const main = defineCommand({
       }
     } catch (error) {
       console.error(error instanceof Error ? error.message : error);
-      if (!dirExisted) {
+      if (claim?.created) {
         await rm(dir, { recursive: true, force: true });
         console.error(`Removed partially created ${dir}.`);
-      } else {
+      } else if (claim) {
         console.error(
           `${dir} existed before create-zstack ran, so it was left in place and may contain a partial clone.`,
         );
@@ -273,7 +284,7 @@ const main = defineCommand({
 
     let installed = false;
     if (args.install) {
-      if (isPnpmAvailable()) {
+      if (isPnpmAvailable(cloneDir)) {
         // nypm's installDependencies does not take env. Inherit into the child install.
         process.env.SHARP_IGNORE_GLOBAL_LIBVIPS ??= "1";
         console.log(`Installing dependencies with ${packageManager}…`);

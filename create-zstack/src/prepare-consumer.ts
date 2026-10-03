@@ -1,5 +1,5 @@
-import { readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { lstat, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 import { formatJson } from "./format-json.js";
 
@@ -86,7 +86,100 @@ const AUTHORING_IGNORE_PATTERNS = new Set(["docs/**", "tech-stack-architecture-g
 
 const CREATE_ZSTACK_IMPORTER_RE = /\n {2}create-zstack:\n(?: {4}.*\n)*/;
 
-export async function stripAuthoringManifest(root: string): Promise<void> {
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await lstat(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function listCtaJsonPaths(root: string): Promise<string[]> {
+  let apps: string[];
+  try {
+    apps = await readdir(join(root, "apps"));
+  } catch {
+    return [];
+  }
+  return apps.map((app) => `apps/${app}/.cta.json`);
+}
+
+/**
+ * Relative paths the authoring sweep would delete that already exist in the
+ * target *before* download. `create-zstack . --force` into an existing repo
+ * must never delete the user's own `docs/`, `.cursor/`, `repos/`, …
+ */
+export async function snapshotPreexistingSweepTargets(root: string): Promise<Set<string>> {
+  const preexisting = new Set<string>();
+  const candidates = [
+    ...AUTHORING_DIRECTORIES,
+    ...AUTHORING_FILES,
+    ...(await listCtaJsonPaths(root)),
+  ];
+  for (const rel of candidates) {
+    if (await pathExists(join(root, rel))) {
+      preexisting.add(rel);
+    }
+  }
+  return preexisting;
+}
+
+export type TargetClaim = Readonly<{
+  /** True only when this call created the directory; only then may cleanup remove it. */
+  created: boolean;
+  /** Sweep targets that already existed (empty when `created`). */
+  preserve: ReadonlySet<string>;
+}>;
+
+/**
+ * Claim the target right before download. A non-recursive `mkdir` either
+ * creates the directory (so we own it and may remove it on failure) or fails
+ * with EEXIST, in which case the existing entry is validated with `lstat`
+ * semantics and is never removed by cleanup — including a dangling symlink, or
+ * a directory that appeared while prompts were open.
+ */
+export async function claimTargetDirectory(
+  dir: string,
+  options: Readonly<{ force: boolean }>,
+): Promise<TargetClaim> {
+  await mkdir(dirname(dir), { recursive: true });
+  try {
+    await mkdir(dir);
+    return { created: true, preserve: new Set() };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+      throw error;
+    }
+  }
+
+  const info = await lstat(dir);
+  if (info.isSymbolicLink()) {
+    const target = await stat(dir).catch(() => undefined);
+    if (!target?.isDirectory()) {
+      throw new Error(`Target is a symlink that does not point to a directory: ${dir}`);
+    }
+  } else if (!info.isDirectory()) {
+    throw new Error(`Target exists and is not a directory: ${dir}`);
+  }
+  if ((await readdir(dir)).length > 0 && !options.force) {
+    throw new Error(
+      `Directory is not empty: ${dir}\nPass --force to write into it, or choose another path.`,
+    );
+  }
+  return { created: false, preserve: await snapshotPreexistingSweepTargets(dir) };
+}
+
+export type StripAuthoringOptions = Readonly<{
+  /** Paths from `snapshotPreexistingSweepTargets`; never deleted. */
+  preserve?: ReadonlySet<string>;
+}>;
+
+export async function stripAuthoringManifest(
+  root: string,
+  options: StripAuthoringOptions = {},
+): Promise<void> {
+  const preserve = options.preserve ?? new Set<string>();
   const workspacePath = join(root, "pnpm-workspace.yaml");
   const workspace = await readFile(workspacePath, "utf8");
   const nextWorkspace = workspace
@@ -117,12 +210,15 @@ export async function stripAuthoringManifest(root: string): Promise<void> {
   await stripCreateZstackLockfileImporter(root);
 
   for (const dir of AUTHORING_DIRECTORIES) {
-    await rm(join(root, dir), { recursive: true, force: true });
+    if (!preserve.has(dir)) {
+      await rm(join(root, dir), { recursive: true, force: true });
+    }
   }
-  for (const file of AUTHORING_FILES) {
-    await rm(join(root, file), { force: true });
+  for (const file of [...AUTHORING_FILES, ...(await listCtaJsonPaths(root))]) {
+    if (!preserve.has(file)) {
+      await rm(join(root, file), { force: true });
+    }
   }
-  await removeCtaJson(root);
 
   for (const config of [".oxlintrc.json", ".oxfmtrc.json"] as const) {
     await stripAuthoringIgnorePatterns(join(root, config));
@@ -180,18 +276,6 @@ async function rewriteIfPresent(path: string, rewrite: (text: string) => string)
   const next = rewrite(text);
   if (next !== text) {
     await writeFile(path, next);
-  }
-}
-
-async function removeCtaJson(root: string): Promise<void> {
-  let apps: string[];
-  try {
-    apps = await readdir(join(root, "apps"));
-  } catch {
-    return;
-  }
-  for (const app of apps) {
-    await rm(join(root, "apps", app, ".cta.json"), { force: true });
   }
 }
 

@@ -114,6 +114,12 @@ export const FRAMEWORK_REFERENCE_ALLOWLIST: readonly FrameworkReferenceAllowance
 export type PersonalizeCloneOptions = Readonly<{
   root: string;
   identity: ProjectIdentity;
+  /**
+   * Paths that existed in the target before download (see
+   * `snapshotPreexistingSweepTargets`). They belong to the user, so they are
+   * neither rewritten nor audited.
+   */
+  preserve?: ReadonlySet<string>;
 }>;
 
 export async function personalizeClone(
@@ -121,9 +127,10 @@ export async function personalizeClone(
 ): Promise<PersonalizeReport> {
   const root = options.root;
   const identity = options.identity;
-  const plan = await buildRewritePlan(root, identity);
+  const exclude = preservedPathFilter(options.preserve);
+  const plan = await buildRewritePlan(root, identity, exclude);
   const staged = await stageRewritePlan(root, plan);
-  const residuals = await auditFullTree(root, staged, ownIdentityTokens(identity));
+  const residuals = await auditFullTree(root, staged, ownIdentityTokens(identity), exclude);
   if (residuals.length > 0) {
     const sample = residuals
       .slice(0, 12)
@@ -243,7 +250,18 @@ export async function assertConsumerIdentity(
   await assertNoUnapprovedSourceIdentity(root, expected);
 }
 
-async function buildRewritePlan(root: string, identity: ProjectIdentity): Promise<RewritePlan> {
+type PathFilter = (rel: string) => boolean;
+
+function preservedPathFilter(preserve: ReadonlySet<string> | undefined): PathFilter {
+  const roots = [...(preserve ?? [])];
+  return (rel) => roots.some((root) => rel === root || rel.startsWith(`${root}/`));
+}
+
+async function buildRewritePlan(
+  root: string,
+  identity: ProjectIdentity,
+  exclude: PathFilter,
+): Promise<RewritePlan> {
   const plan: RewritePlan = new Map();
   const scope = identity.npm.scope;
   const slug = identity.slug;
@@ -296,7 +314,7 @@ async function buildRewritePlan(root: string, identity: ProjectIdentity): Promis
     ],
   });
 
-  const namespaceFiles = await listTextFilesContaining(root, `${SOURCE_SCOPE}/`);
+  const namespaceFiles = await listTextFilesContaining(root, `${SOURCE_SCOPE}/`, exclude);
   for (const rel of namespaceFiles) {
     if (rel.endsWith("package.json") || rel === "pnpm-lock.yaml") {
       continue;
@@ -545,19 +563,8 @@ async function buildRewritePlan(root: string, identity: ProjectIdentity): Promis
     });
   }
 
-  plan.set(asPath(".github/workflows/publish-create-zstack.yml"), {
-    kind: "delete",
-    reason: "authoring-only",
-  });
-  plan.set(asPath(".github/workflows/generate-clone.yml"), {
-    kind: "delete",
-    reason: "authoring-only",
-  });
-  plan.set(asPath("scripts/smoke-create-zstack"), {
-    kind: "delete",
-    reason: "authoring-only",
-  });
-
+  // Authoring-only files are removed by stripAuthoringManifest, which knows
+  // which paths pre-existed in the target and must survive.
   return plan;
 }
 
@@ -615,8 +622,12 @@ async function discoverWorkspacePackageJsons(root: string): Promise<string[]> {
   return out;
 }
 
-async function listTextFilesContaining(root: string, needle: string): Promise<string[]> {
-  const files = await listProjectFiles(root);
+async function listTextFilesContaining(
+  root: string,
+  needle: string,
+  exclude: PathFilter,
+): Promise<string[]> {
+  const files = await listProjectFiles(root, exclude);
   const hits: string[] = [];
   for (const rel of files) {
     if (isProbablyBinary(rel)) {
@@ -632,7 +643,7 @@ async function listTextFilesContaining(root: string, needle: string): Promise<st
   return hits;
 }
 
-async function listProjectFiles(root: string): Promise<string[]> {
+async function listProjectFiles(root: string, exclude: PathFilter): Promise<string[]> {
   const out: string[] = [];
 
   async function walk(abs: string): Promise<void> {
@@ -647,6 +658,9 @@ async function listProjectFiles(root: string): Promise<string[]> {
         continue;
       }
       const child = join(abs, entry.name);
+      if (exclude(relative(root, child).split(sep).join("/"))) {
+        continue;
+      }
       if (entry.isDirectory()) {
         await walk(child);
         continue;
@@ -891,8 +905,9 @@ async function auditFullTree(
   root: string,
   staged: StagedCloneRewrite,
   ownTokens: readonly string[],
+  exclude: PathFilter = () => false,
 ): Promise<ResidualHit[]> {
-  const files = await listProjectFiles(root);
+  const files = await listProjectFiles(root, exclude);
   const stagedOnly = [...staged.keys()].filter((path) => !files.includes(path));
   const all = [...new Set([...files, ...stagedOnly])];
   const hits: ResidualHit[] = [];
