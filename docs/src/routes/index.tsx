@@ -1,8 +1,10 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
+import { ArrowRight } from "lucide-react";
+import { CodePanel } from "@/components/code-panel";
+import { CopyPromptButton, GetStarted } from "@/components/get-started";
 import { baseOptions } from "@/lib/layout.shared";
-import { gitConfig } from "@/lib/shared";
-import { Rocket, TrendingUp, Boxes } from "lucide-react";
+import { appName, gitConfig } from "@/lib/shared";
 
 const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
 
@@ -10,444 +12,492 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
+const stack = [
+  "Cloudflare Workers",
+  "Hono",
+  "Effect 4",
+  "oRPC",
+  "Zod",
+  "Drizzle",
+  "Postgres",
+  "Better Auth",
+  "TanStack Start",
+  "shadcn/ui",
+  "Alchemy",
+];
+
+const capabilities: ReadonlyArray<{ name: string; local: string; on: string; href: string }> = [
+  {
+    name: "Email",
+    local: "Logged to the console",
+    on: "EMAIL_FROM + BENTO_*",
+    href: "guides/turn-on-email",
+  },
+  {
+    name: "AI",
+    local: "Deterministic fake model",
+    on: "AI_GATEWAY_API_KEY",
+    href: "guides/turn-on-ai",
+  },
+  {
+    name: "Billing",
+    local: "Fake checkout and entitlements",
+    on: "POLAR_ACCESS_TOKEN + POLAR_WEBHOOK_SECRET",
+    href: "guides/turn-on-billing",
+  },
+  {
+    name: "Analytics",
+    local: "Typed events, no-op sink",
+    on: "POSTHOG_API_KEY",
+    href: "guides/turn-on-analytics",
+  },
+  {
+    name: "Errors and traces",
+    local: "Off",
+    on: "SENTRY_DSN",
+    href: "guides/turn-on-observability",
+  },
+  {
+    name: "Object storage",
+    local: "In-memory store, local R2 under alchemy:dev",
+    on: "R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY",
+    href: "guides/turn-on-object-storage",
+  },
+];
+
+const bets = [
+  {
+    title: "Zod at the edge, Effect inside",
+    body: "oRPC contracts validate every request. Domain code is plain Effect with typed errors and injected services.",
+  },
+  {
+    title: "One Worker runs the backend",
+    body: "HTTP, queue consumers, and workflows live in the same Hono Worker. No fleet of tiny services to deploy.",
+  },
+  {
+    title: "Ports, not vendor SDKs",
+    body: "Modules ask for EmailService or BillingService. The edge picks a Layer from env, so a swap never touches product code.",
+  },
+  {
+    title: "Customer app and staff console",
+    body: "Two TanStack Start apps share one contract package and Better Auth roles. Neither imports API source.",
+  },
+];
+
+const aiSnippet = `export const completeAi = Effect.fn("completeAi")(function* (input) {
+  const { organizationId } = yield* CurrentRequestContext;
+
+  // Billing is a port: a fake locally, Polar once a token is set.
+  const billing = yield* BillingService;
+  if (organizationId && (yield* billing.isConfigured())) {
+    const allowed = yield* billing.canUse({
+      customerId: organizationId,
+      capability: aiCapabilityEntitlement(input.capability),
+    });
+    if (!allowed) {
+      return yield* Effect.fail(
+        new BillingError({ message: "entitlement denied" }),
+      );
+    }
+  }
+
+  // AI is a port too: a deterministic fake until AI_GATEWAY_API_KEY is set.
+  const ai = yield* AiService;
+  return yield* ai.complete(input);
+});`;
+
+const agentTree = `AGENTS.md                 // hard rules, commands, env split
+apps/api/AGENTS.md        // module and port rules for the Worker
+.agent/
+  playbooks/
+    add-capability.md
+    swap-adapter.md
+    database-migrations.md
+    deploy-alchemy.md
+  skills/
+    effect-ts/SKILL.md    // points at node_modules/effect/AGENTS.md
+CLAUDE.md                 // written by --agent-tools
+.mcp.json                 // docs MCPs by default`;
+
+const agentFeatures = [
+  {
+    title: "Rules that ship with the code",
+    body: "Root and nested AGENTS.md files tell agents where code goes and which imports are off limits.",
+  },
+  {
+    title: "Playbooks for multi-step work",
+    body: "Adding a capability, swapping an adapter, migrating the database, and deploying are written down step by step.",
+  },
+  {
+    title: "Docs MCPs on day one",
+    body: "Cloudflare docs, Context7, and the shadcn registry are wired into Claude Code, Cursor, or OpenCode at scaffold time.",
+  },
+  {
+    title: "Docs agents can read",
+    body: "Every page has a markdown twin, and llms.txt indexes the site for one-shot ingest.",
+  },
+];
+
+const path = [
+  {
+    step: "01",
+    title: "Launch lean",
+    body: "Compose Postgres, local Workers, fake vendors. Ship the first version without a cloud bill.",
+  },
+  {
+    step: "02",
+    title: "Turn things on",
+    body: "Add a key and the matching adapter takes over. Alchemy provisions PlanetScale, Hyperdrive, R2, and queues.",
+  },
+  {
+    step: "03",
+    title: "Move when you outgrow it",
+    body: "Postgres is portable and every vendor sits behind a port. Rehome a layer without rewriting the product.",
+  },
+];
+
+const maturity = [
+  { name: "Effect 4", status: "Stable" },
+  { name: "Drizzle 1.0", status: "Release candidate" },
+  { name: "Alchemy 2", status: "Beta" },
+  { name: "TanStack Start", status: "Fast moving" },
+];
+
+const textLink =
+  "inline-flex items-center gap-1.5 text-base/6 font-medium text-fd-foreground hover:text-fd-primary sm:text-sm/6";
+
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div>
+      <p className="font-mono text-sm/6 font-medium tracking-wide text-fd-primary uppercase">
+        {eyebrow}
+      </p>
+      <h2 className="mt-3 max-w-[40ch] text-3xl font-semibold tracking-tight text-balance text-fd-foreground sm:text-4xl">
+        {title}
+      </h2>
+      <p className="mt-4 max-w-[48ch] text-lg text-pretty text-fd-muted-foreground">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+function FeatureList({ items }: { items: ReadonlyArray<{ title: string; body: string }> }) {
+  return (
+    <dl className="grid gap-8 sm:grid-cols-2">
+      {items.map((item) => (
+        <div key={item.title} className="flex flex-col gap-1.5">
+          <dt className="text-base/7 font-medium text-fd-foreground sm:text-sm/6">{item.title}</dt>
+          <dd className="text-base/7 text-pretty text-fd-muted-foreground sm:text-sm/6">
+            {item.body}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+const sectionBorder = "border-t border-fd-foreground/5 dark:border-fd-border";
+const splitGrid =
+  "mx-auto grid max-w-6xl items-start gap-x-16 gap-y-12 px-6 lg:grid-cols-[minmax(0,10fr)_minmax(0,11fr)] lg:px-8";
+
 function Home() {
   return (
     <HomeLayout {...baseOptions()}>
-      <main className="relative flex flex-1 flex-col">
+      <main className="isolate flex flex-1 flex-col">
         {/* Hero */}
-        <section className="relative overflow-hidden border-b border-fd-border">
-          <div aria-hidden className="zstack-hero-grid pointer-events-none absolute inset-0" />
-          <div className="relative mx-auto flex max-w-3xl flex-col gap-6 px-6 py-24 sm:py-32">
-            <p className="text-sm font-medium tracking-[0.18em] text-fd-primary uppercase">
-              zstack
-            </p>
-            <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-              Built to launch lean and graduate without compromise.
-            </h1>
-            <p className="max-w-xl text-lg text-fd-muted-foreground text-pretty">
-              The serious product pieces are already in place, and still replaceable. Launch on a
-              low-cost path, then adapt and optimize each layer without painting yourself into a
-              corner.
-            </p>
-            <div className="flex flex-wrap gap-3 pt-2">
-              <Link
-                to="/docs/$"
-                params={{ _splat: "" }}
-                className="rounded-md bg-fd-primary px-4 py-2.5 text-sm font-medium text-fd-primary-foreground transition-opacity hover:opacity-90"
-              >
-                Get started
-              </Link>
-              <Link
-                to="/docs/$"
-                params={{ _splat: "for-agents" }}
-                className="rounded-md border border-fd-border bg-fd-background px-4 py-2.5 text-sm font-medium text-fd-foreground transition-colors hover:bg-fd-muted"
-              >
-                For agents
-              </Link>
+        <section className="relative overflow-hidden">
+          <div
+            aria-hidden="true"
+            className="zstack-hero-grid pointer-events-none absolute inset-0"
+          />
+          <div
+            aria-hidden="true"
+            className="zstack-hero-glow pointer-events-none absolute inset-x-0 -top-40 h-[36rem]"
+          />
+          <div className={`relative ${splitGrid} pt-16 pb-20 sm:pt-24 sm:pb-28 lg:pt-28`}>
+            <div className="lg:pt-6">
               <a
                 href={githubUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-md border border-fd-border bg-fd-background px-4 py-2.5 text-sm font-medium text-fd-foreground transition-colors hover:bg-fd-muted"
+                className="inline-flex items-center gap-2 rounded-full bg-fd-background/70 py-1 pr-1 pl-3 font-mono text-sm/6 font-medium tracking-wide text-fd-muted-foreground uppercase ring-1 ring-fd-foreground/10 backdrop-blur-sm hover:text-fd-foreground sm:text-xs/6"
               >
-                GitHub
+                Open source · MIT
+                <span className="inline-flex items-center gap-1 rounded-full bg-fd-accent pr-1.5 pl-2 text-fd-accent-foreground">
+                  GitHub
+                  <ArrowRight aria-hidden="true" className="size-3 shrink-0" />
+                </span>
               </a>
-            </div>
-            <div className="pt-3">
-              <code className="inline-block rounded-md border border-fd-border bg-fd-muted px-4 py-2 text-sm font-mono text-fd-foreground shadow-sm">
-                pnpm create @wanialabs/zstack
-              </code>
-            </div>
-          </div>
-        </section>
-
-        {/* Who it's for */}
-        <section className="border-b border-fd-border bg-fd-card">
-          <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Who it's for</h2>
-            <div className="mt-6 max-w-2xl space-y-4 text-fd-muted-foreground">
-              <p>
-                Solo founders and small teams shipping an AI-capable SaaS who want Cloudflare
-                Workers without maintaining a second Nest or Next.js API silo.
+              <h1 className="mt-6 max-w-[16ch] text-5xl font-semibold tracking-tight text-balance text-fd-foreground sm:text-6xl">
+                Launch lean. Graduate without a rewrite.
+              </h1>
+              <p className="mt-6 max-w-[44ch] text-lg text-pretty text-fd-muted-foreground sm:text-xl">
+                {appName} is a Cloudflare-first TypeScript starter with auth, billing, a staff
+                console, email, AI, and infrastructure already wired. Every vendor stays off until
+                you add a key, and every layer is replaceable.
               </p>
-              <p>
-                You want coding agents productive on day one. zstack ships with{" "}
-                <code className="rounded border border-fd-border bg-fd-background px-1.5 py-0.5 text-sm font-mono">
-                  AGENTS.md
-                </code>
-                , playbooks, skills, and MCP defaults out of the box.
-              </p>
-              <p className="text-sm">
-                <strong className="font-medium text-fd-foreground">Not for:</strong> dropping this
-                framework into an existing repo, plugin marketplaces, or Vercel-only stacks.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Familiar, but a different axis */}
-        <section className="border-b border-fd-border">
-          <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Familiar job, different axis
-            </h2>
-            <div className="mt-6 max-w-2xl space-y-4 text-fd-muted-foreground">
-              <p>
-                Same job as T3, create-t3-turbo, Makerkit, or ShipFast: opinionated product starter
-                so you don't re-decide auth, billing shell, admin console, and email every time.
-              </p>
-              <p>
-                Different axis:{" "}
-                <strong className="font-medium text-fd-foreground">
-                  Cloudflare-first + portable Postgres + Effect as the backend execution model +
-                  agent-native authoring and docs.
-                </strong>
-              </p>
-              <p>
-                Most peers are Next.js on Vercel or thin Cloudflare demos. zstack fills the gap for
-                teams who want Workers, real product boundaries, and agents that land productive day
-                one.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Why the idea is good */}
-        <section className="border-b border-fd-border bg-fd-card">
-          <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Why the idea is good
-            </h2>
-            <p className="mt-4 max-w-2xl text-fd-muted-foreground">
-              Boundaries, not a logo board. The architectural bets that make it coherent:
-            </p>
-            <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-              <li className="flex flex-col gap-1.5">
-                <strong className="text-sm font-medium text-fd-foreground">
-                  Zod at the edge, Effect inside
-                </strong>
-                <p className="text-sm text-fd-muted-foreground">
-                  Type-safe contracts with oRPC. Effect services for domain use cases.
-                </p>
-              </li>
-              <li className="flex flex-col gap-1.5">
-                <strong className="text-sm font-medium text-fd-foreground">
-                  One Hono Worker for everything
-                </strong>
-                <p className="text-sm text-fd-muted-foreground">
-                  API, workflows, queues, cron all in one Worker app, not separate deploys.
-                </p>
-              </li>
-              <li className="flex flex-col gap-1.5">
-                <strong className="text-sm font-medium text-fd-foreground">
-                  Better Auth org/admin model
-                </strong>
-                <p className="text-sm text-fd-muted-foreground">
-                  Customer web vs staff admin console as separate TanStack Start apps.
-                </p>
-              </li>
-              <li className="flex flex-col gap-1.5">
-                <strong className="text-sm font-medium text-fd-foreground">
-                  Capability ports pattern
-                </strong>
-                <p className="text-sm text-fd-muted-foreground">
-                  EmailService, AiService, BillingService, product.config. Optional vendors quiet
-                  until configured.
-                </p>
-              </li>
-              <li className="flex flex-col gap-1.5">
-                <strong className="text-sm font-medium text-fd-foreground">
-                  Alchemy owns deploy
-                </strong>
-                <p className="text-sm text-fd-muted-foreground">
-                  Provision Cloudflare and PlanetScale with one IaC tool. No parallel deploy paths.
-                </p>
-              </li>
-              <li className="flex flex-col gap-1.5">
-                <strong className="text-sm font-medium text-fd-foreground">
-                  Portable Postgres
-                </strong>
-                <p className="text-sm text-fd-muted-foreground">
-                  PlanetScale + Hyperdrive in prod. Compose locally. No cloud DB required to start.
-                </p>
-              </li>
-            </ul>
-          </div>
-        </section>
-
-        {/* Don't overcomplicate the launch */}
-        <section className="border-b border-fd-border">
-          <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Don't overcomplicate the launch
-            </h2>
-            <div className="mt-6 max-w-2xl space-y-4 text-fd-muted-foreground">
-              <p>
-                Start on a simple, low-ops path and ship. When you need AWS, or any other home for a
-                piece of the stack, move that layer without rewriting the product.
-              </p>
-              <p>
-                Portable Postgres and swappable ports keep the door open; you don't have to design
-                for day-1000 on day one.
-              </p>
-            </div>
-
-            {/* Progression diagram */}
-            <div className="relative mt-16 flex flex-col items-center gap-12 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-              {/* Step 1 */}
-              <div className="flex w-full max-w-xs flex-col items-center gap-4 text-center sm:w-auto">
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-xl border-2 border-fd-border bg-gradient-to-br from-fd-card to-fd-muted shadow-sm">
-                  <Rocket className="h-9 w-9 text-fd-primary" strokeWidth={2} />
-                </div>
-                <div className="space-y-1.5">
-                  <p className="font-semibold text-fd-foreground">Launch lean</p>
-                  <p className="text-sm leading-snug text-fd-muted-foreground">
-                    Compose, low-ops, ship
-                  </p>
-                </div>
-              </div>
-
-              {/* Arrow 1 */}
-              <div className="flex shrink-0 items-center justify-center sm:mt-8">
-                <svg
-                  className="hidden h-6 w-12 text-fd-border sm:block"
-                  fill="none"
-                  viewBox="0 0 48 24"
-                  xmlns="http://www.w3.org/2000/svg"
+              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+                <Link to="/docs/$" params={{ _splat: "getting-started" }} className={textLink}>
+                  Read the guide
+                  <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+                </Link>
+                <Link
+                  to="/docs/$"
+                  params={{ _splat: "concepts/stack-map" }}
+                  className="text-base/6 font-medium text-fd-muted-foreground hover:text-fd-foreground sm:text-sm/6"
                 >
-                  <path
-                    d="M0 12h44m0 0l-6-6m6 6l-6 6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <svg
-                  className="block h-12 w-6 text-fd-border sm:hidden"
-                  fill="none"
-                  viewBox="0 0 24 48"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 0v44m0 0l-6-6m6 6l6-6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                  See the stack map
+                </Link>
               </div>
+            </div>
+            <GetStarted />
+          </div>
 
-              {/* Step 2 */}
-              <div className="flex w-full max-w-xs flex-col items-center gap-4 text-center sm:w-auto">
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-xl border-2 border-fd-border bg-gradient-to-br from-fd-card to-fd-muted shadow-sm">
-                  <TrendingUp className="h-9 w-9 text-fd-primary" strokeWidth={2} />
-                </div>
-                <div className="space-y-1.5">
-                  <p className="font-semibold text-fd-foreground">Grow</p>
-                  <p className="text-sm leading-snug text-fd-muted-foreground">
-                    Adapt, optimize, swap ports
-                  </p>
-                </div>
-              </div>
-
-              {/* Arrow 2 */}
-              <div className="flex shrink-0 items-center justify-center sm:mt-8">
-                <svg
-                  className="hidden h-6 w-12 text-fd-border sm:block"
-                  fill="none"
-                  viewBox="0 0 48 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M0 12h44m0 0l-6-6m6 6l-6 6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <svg
-                  className="block h-12 w-6 text-fd-border sm:hidden"
-                  fill="none"
-                  viewBox="0 0 24 48"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 0v44m0 0l-6-6m6 6l6-6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-
-              {/* Step 3 */}
-              <div className="flex w-full max-w-xs flex-col items-center gap-4 text-center sm:w-auto">
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-xl border-2 border-fd-border bg-gradient-to-br from-fd-card to-fd-muted shadow-sm">
-                  <Boxes className="h-9 w-9 text-fd-primary" strokeWidth={2} />
-                </div>
-                <div className="space-y-1.5">
-                  <p className="font-semibold text-fd-foreground">Move when ready</p>
-                  <p className="text-sm leading-snug text-fd-muted-foreground">
-                    AWS or any layer, no rewrite
-                  </p>
-                </div>
-              </div>
+          <div className={`relative ${sectionBorder}`}>
+            <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-6 sm:flex-row sm:items-baseline sm:gap-6 lg:px-8">
+              <p className="shrink-0 font-mono text-sm/6 font-medium tracking-wide text-fd-muted-foreground uppercase sm:text-xs/6">
+                Built on
+              </p>
+              <ul role="list" className="flex flex-wrap gap-x-5 gap-y-1">
+                {stack.map((item) => (
+                  <li key={item} className="text-base/6 text-fd-foreground/80 sm:text-sm/6">
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>
 
-        {/* What's in the box */}
-        <section className="border-b border-fd-border">
-          <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">What's in the box</h2>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
-                <h3 className="font-medium text-fd-foreground">apps/web</h3>
-                <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Customer TanStack Start app with Better Auth and Paraglide
-                </p>
-              </div>
-              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
-                <h3 className="font-medium text-fd-foreground">apps/admin</h3>
-                <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Staff console with shared Better Auth admin role AC
-                </p>
-              </div>
-              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
-                <h3 className="font-medium text-fd-foreground">apps/api</h3>
-                <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Hono Worker with Effect, oRPC, Drizzle, workflows, queues
-                </p>
-              </div>
-              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
-                <h3 className="font-medium text-fd-foreground">packages/contracts</h3>
-                <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Zod + oRPC contracts safe to import from frontends
-                </p>
-              </div>
-              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
-                <h3 className="font-medium text-fd-foreground">packages/i18n</h3>
-                <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Paraglide catalogs. English only, no localization SaaS
-                </p>
-              </div>
-              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
-                <h3 className="font-medium text-fd-foreground">packages/analytics</h3>
-                <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Typed events. No-op until PostHog keys. Flags stay off
-                </p>
-              </div>
-              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
-                <h3 className="font-medium text-fd-foreground">Configured ports</h3>
-                <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Polar billing, R2 objects, in-memory flags, console email, fake AI
-                </p>
-              </div>
-              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
-                <h3 className="font-medium text-fd-foreground">Alchemy IaC</h3>
-                <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Cloudflare Workers, PlanetScale Postgres, Hyperdrive, secrets
-                </p>
-              </div>
-              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
-                <h3 className="font-medium text-fd-foreground">AI capability registry</h3>
-                <p className="mt-2 text-sm text-fd-muted-foreground">
-                  AiService + gateway + oRPC with fake/live model swap
-                </p>
-              </div>
-              <div className="rounded-lg border border-fd-border bg-fd-card p-4">
-                <h3 className="font-medium text-fd-foreground">create-zstack CLI</h3>
-                <p className="mt-2 text-sm text-fd-muted-foreground">
-                  Scaffold with identity, agent tools, MCP configs, skills
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                to="/docs/$"
-                params={{ _splat: "concepts/stack-map" }}
-                className="text-sm text-fd-primary hover:underline"
-              >
-                Stack map →
-              </Link>
+        {/* Vendors off until keyed */}
+        <section className={`${sectionBorder} bg-fd-card py-24 sm:py-32`}>
+          <div className={splitGrid}>
+            <div className="flex flex-col gap-8">
+              <SectionHeading
+                eyebrow="Configured, not connected"
+                title="Every vendor is off until you add a key."
+                description="Clone it and the whole product runs on your laptop: Postgres in Compose, Workers in workerd, and local stand-ins for everything that costs money."
+              />
+              <p className="max-w-[56ch] text-base/7 text-pretty text-fd-muted-foreground">
+                Auth, organizations, staff roles, and i18n are always on. Everything else is a port
+                with a fake, console, or in-memory adapter, so you can build the product before you
+                pick a single vendor.
+              </p>
               <Link
                 to="/docs/$"
                 params={{ _splat: "concepts/capabilities" }}
-                className="text-sm text-fd-primary hover:underline"
+                className={`${textLink} self-start`}
               >
-                Capabilities →
+                How capabilities work
+                <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
               </Link>
+            </div>
+            <div className="-mx-6 -my-2 overflow-x-auto whitespace-nowrap lg:mx-0">
+              <div className="inline-block min-w-full px-6 py-2 align-middle lg:px-0">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-fd-foreground/10">
+                      <th className="py-3 pr-4 text-sm/6 font-medium whitespace-nowrap text-fd-foreground">
+                        Capability
+                      </th>
+                      <th className="px-4 py-3 text-sm/6 font-medium whitespace-nowrap text-fd-foreground">
+                        Runs locally as
+                      </th>
+                      <th className="py-3 pl-4 text-sm/6 font-medium whitespace-nowrap text-fd-foreground">
+                        Turns on with
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-fd-foreground/5">
+                    {capabilities.map((row) => (
+                      <tr key={row.name}>
+                        <td className="py-3 pr-4 align-top text-sm/6 font-medium">
+                          <Link
+                            to="/docs/$"
+                            params={{ _splat: row.href }}
+                            className="text-fd-foreground hover:text-fd-primary"
+                          >
+                            {row.name}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 align-top text-sm/6 text-fd-muted-foreground">
+                          {row.local}
+                        </td>
+                        <td className="py-3 pl-4 align-top font-mono text-[0.8125rem]/6 text-fd-foreground/80">
+                          {row.on.split(" + ").map((envVar) => (
+                            <div key={envVar}>{envVar}</div>
+                          ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Honesty / risks */}
-        <section className="border-b border-fd-border bg-fd-card">
-          <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Honest risks</h2>
-            <div className="mt-6 max-w-2xl space-y-4 text-fd-muted-foreground">
-              <p>
-                zstack bets on a young surface: Effect v4 (RC), Drizzle 1 (RC), Alchemy (beta), and
-                TanStack Start. Hono, oRPC, and Better Auth are stable.
-              </p>
-              <p>
-                Fine if you're willing to ride that. The main bounce risk for a public starter isn't
-                the stable pieces. It's pre-1.0 density.
-              </p>
-              <p>
-                These boundaries are intentional and replaceable. You can swap adapters without
-                rewriting domain code. That's the whole ports idea. But understand what you're
-                signing up for before cloning.
-              </p>
+        {/* Architecture */}
+        <section className={`${sectionBorder} py-24 sm:py-32`}>
+          <div className={splitGrid}>
+            <div className="flex flex-col gap-12">
+              <SectionHeading
+                eyebrow="Boundaries"
+                title="Typed at the edge, Effect inside."
+                description="A handful of architectural bets keep the starter coherent as it grows, and keep each piece swappable when it stops fitting."
+              />
+              <FeatureList items={bets} />
             </div>
+            <CodePanel filename="apps/api/src/modules/ai/service.ts (excerpt)" code={aiSnippet} />
+          </div>
+        </section>
+
+        {/* Agents */}
+        <section className={`${sectionBorder} bg-fd-card py-24 sm:py-32`}>
+          <div className={splitGrid}>
+            <div className="flex flex-col gap-12">
+              <SectionHeading
+                eyebrow="Agent native"
+                title="Your coding agent knows the rules before it writes a line."
+                description="The repo carries its own instructions, so Claude Code, Cursor, Codex, and OpenCode start productive instead of guessing at conventions."
+              />
+              <FeatureList items={agentFeatures} />
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+                <CopyPromptButton />
+                <Link to="/docs/$" params={{ _splat: "guides/coding-agents" }} className={textLink}>
+                  Coding agents guide
+                  <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+                </Link>
+              </div>
+            </div>
+            <CodePanel filename="my-product/" code={agentTree} />
+          </div>
+        </section>
+
+        {/* Path */}
+        <section className={`${sectionBorder} py-24 sm:py-32`}>
+          <div className="mx-auto max-w-6xl px-6 lg:px-8">
+            <SectionHeading
+              eyebrow="The path"
+              title="Start small without designing for day one thousand."
+              description="The cheap path and the serious path share the same code. You only change adapters and infrastructure."
+            />
+            <ol role="list" className="mt-16 grid gap-x-16 gap-y-10 md:grid-cols-3">
+              {path.map((item) => (
+                <li
+                  key={item.step}
+                  className="flex flex-col gap-2 border-t border-fd-foreground/10 pt-6"
+                >
+                  <p className="font-mono text-sm/6 text-fd-primary tabular-nums">{item.step}</p>
+                  <h3 className="text-lg font-semibold text-fd-foreground">{item.title}</h3>
+                  <p className="text-base/7 text-pretty text-fd-muted-foreground sm:text-sm/6">
+                    {item.body}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* Honest risks */}
+        <section className={`${sectionBorder} bg-fd-card py-24 sm:py-32`}>
+          <div className={`${splitGrid} lg:items-end`}>
+            <SectionHeading
+              eyebrow="Honest risks"
+              title="Some of this stack is young. We say so."
+              description="Hono, oRPC, Better Auth, and Effect are stable. A few pieces are still moving, so versions are pinned and upgrades happen on purpose."
+            />
+            <dl className="grid grid-cols-2 gap-x-16 gap-y-8 sm:grid-cols-4 lg:grid-cols-2">
+              {maturity.map((item) => (
+                <div
+                  key={item.name}
+                  className="flex flex-col gap-1 border-t border-fd-foreground/10 pt-4"
+                >
+                  <dt className="text-base/7 font-medium text-fd-foreground sm:text-sm/6">
+                    {item.name}
+                  </dt>
+                  <dd className="text-base/7 text-fd-muted-foreground sm:text-sm/6">
+                    {item.status}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </section>
 
         {/* Closing CTA */}
-        <section className="border-b border-fd-border">
-          <div className="mx-auto max-w-3xl px-6 py-16 text-center sm:py-20">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Ready to start building?
+        <section className={`${sectionBorder} py-24 sm:py-32`}>
+          <div className="mx-auto flex max-w-6xl flex-col items-center px-6 text-center lg:px-8">
+            <h2 className="max-w-[30ch] text-4xl font-semibold tracking-tight text-balance text-fd-foreground sm:text-5xl">
+              Hand it to your agent.
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-fd-muted-foreground">
-              Clone the monorepo, run locally on Compose, and deploy to Cloudflare when you're
-              ready.
+            <p className="mt-6 max-w-[48ch] text-lg text-pretty text-fd-muted-foreground">
+              One prompt scaffolds the repo, writes agent rules for your tool, starts Postgres, and
+              brings up the API, customer app, and staff console.
             </p>
-            <div className="mt-8 flex flex-col items-center gap-6">
-              <code className="inline-block rounded-md border border-fd-border bg-fd-muted px-4 py-2 text-sm font-mono text-fd-foreground shadow-sm">
-                pnpm create @wanialabs/zstack
-              </code>
-              <div className="flex flex-wrap justify-center gap-3">
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-4">
+              <CopyPromptButton />
+              <Link to="/docs/$" params={{ _splat: "" }} className={textLink}>
+                Read the docs
+                <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <footer className={sectionBorder}>
+          <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10 sm:flex-row sm:items-center sm:justify-between lg:px-8">
+            <p className="text-base/6 text-fd-muted-foreground sm:text-sm/6">
+              <span className="font-semibold text-fd-foreground">{appName}</span> by Wania Labs. MIT
+              licensed.
+            </p>
+            <ul role="list" className="flex flex-wrap gap-x-6 gap-y-2">
+              <li className="text-base/6 sm:text-sm/6">
                 <Link
                   to="/docs/$"
                   params={{ _splat: "" }}
-                  className="rounded-md bg-fd-primary px-4 py-2.5 text-sm font-medium text-fd-primary-foreground transition-opacity hover:opacity-90"
+                  className="text-fd-muted-foreground hover:text-fd-foreground"
                 >
-                  Get started
+                  Docs
                 </Link>
-                <Link
-                  to="/docs/$"
-                  params={{ _splat: "for-agents" }}
-                  className="rounded-md border border-fd-border bg-fd-background px-4 py-2.5 text-sm font-medium text-fd-foreground transition-colors hover:bg-fd-muted"
-                >
-                  For agents
-                </Link>
+              </li>
+              <li className="text-base/6 sm:text-sm/6">
+                <a href="/llms.txt" className="text-fd-muted-foreground hover:text-fd-foreground">
+                  llms.txt
+                </a>
+              </li>
+              <li className="text-base/6 sm:text-sm/6">
                 <a
                   href={githubUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-md border border-fd-border bg-fd-background px-4 py-2.5 text-sm font-medium text-fd-foreground transition-colors hover:bg-fd-muted"
+                  className="text-fd-muted-foreground hover:text-fd-foreground"
                 >
                   GitHub
                 </a>
-              </div>
-            </div>
+              </li>
+              <li className="text-base/6 sm:text-sm/6">
+                <a
+                  href="https://www.npmjs.com/package/@wanialabs/create-zstack"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-fd-muted-foreground hover:text-fd-foreground"
+                >
+                  npm
+                </a>
+              </li>
+            </ul>
           </div>
-        </section>
+        </footer>
       </main>
     </HomeLayout>
   );

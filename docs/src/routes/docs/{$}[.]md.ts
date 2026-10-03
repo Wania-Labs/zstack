@@ -10,14 +10,16 @@ const MD_HEADERS = {
 export const Route = createFileRoute("/docs/{$}.md")({
   server: {
     handlers: {
-      GET: async ({ params }) => {
+      GET: async ({ params, request }) => {
         const slugs = decodeMarkdownUrl(params._splat?.split("/") ?? []);
         const page = source.getPage(slugs);
         if (!page) {
           return new Response("Not found", { status: 404 });
         }
 
-        return new Response(await getLLMText(page), { headers: MD_HEADERS });
+        return new Response(await getLLMText(page, new URL(request.url).origin), {
+          headers: MD_HEADERS,
+        });
       },
       HEAD({ params }) {
         const slugs = decodeMarkdownUrl(params._splat?.split("/") ?? []);

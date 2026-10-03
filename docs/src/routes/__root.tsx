@@ -10,9 +10,16 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "TypeScript product starter built to launch lean and graduate without compromise. Serious pieces in place, still replaceable.",
+          "Cloudflare-first TypeScript product starter. Auth, billing, staff console, email, AI, and infrastructure wired, every vendor off until you add a key.",
       },
-      { title: "zstack docs" },
+      { title: "zstack — launch lean, graduate without a rewrite" },
+      { property: "og:title", content: "zstack" },
+      {
+        property: "og:description",
+        content:
+          "Cloudflare-first TypeScript product starter your coding agent already understands.",
+      },
+      { property: "og:type", content: "website" },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
@@ -24,6 +31,9 @@ function RootComponent() {
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* TanStack dedupes meta by name, so the light/dark pair is rendered directly. */}
+        <meta name="theme-color" content="#f9f8f6" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#111719" media="(prefers-color-scheme: dark)" />
       </head>
       <body className="flex min-h-screen flex-col font-sans antialiased">
         <RootProvider>

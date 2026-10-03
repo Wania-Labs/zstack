@@ -91,7 +91,22 @@ function buildFull(pages) {
   return `# zstack docs (full)\n\nPrefer /llms.txt for an index. This file concatenates every page for offline ingest.\n\n---\n\n${chunks.join("\n\n---\n\n")}\n`;
 }
 
-const pages = loadPages();
+// Node >= 22.18 strips TypeScript types natively; older runtimes get a pointer instead.
+let inlineWidgets = (markdown) =>
+  markdown.replace(
+    /^<(GetStarted|CopyPromptButton)\s*\/>$/gm,
+    "Interactive agent prompt: open this page in a browser, or see /docs/guides/coding-agents.",
+  );
+try {
+  const mod = await import("../src/lib/get-started.ts");
+  inlineWidgets = (markdown) => mod.inlineWidgetsForMarkdown(markdown, "");
+} catch (error) {
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  if (major > 22 || (major === 22 && minor >= 18)) throw error;
+  console.warn(`write-llms-assets: inlining a pointer instead of the prompt (${error.message})`);
+}
+
+const pages = loadPages().map((page) => ({ ...page, body: inlineWidgets(page.body) }));
 if (pages.length === 0) {
   console.error("write-llms-assets: no MDX pages under content/docs");
   process.exit(1);

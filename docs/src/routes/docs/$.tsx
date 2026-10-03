@@ -24,6 +24,20 @@ export const Route = createFileRoute("/docs/$")({
     await docs.getPage(data.path)?.preload();
     return data;
   },
+  head: ({ loaderData }) => ({
+    meta: loaderData
+      ? [
+          { title: `${loaderData.title} · zstack docs` },
+          { property: "og:title", content: `${loaderData.title} · zstack docs` },
+          ...(loaderData.description
+            ? [
+                { name: "description", content: loaderData.description },
+                { property: "og:description", content: loaderData.description },
+              ]
+            : []),
+        ]
+      : [],
+  }),
 });
 
 const serverLoader = createServerFn({
@@ -35,6 +49,8 @@ const serverLoader = createServerFn({
     if (!page) throw notFound();
 
     return {
+      title: page.data.title,
+      description: page.data.description ?? "",
       path: page.path,
       markdownUrl: encodeMarkdownUrl(page.slugs, page.locale),
       pageTree: await source.serializePageTree(source.getPageTree()),
