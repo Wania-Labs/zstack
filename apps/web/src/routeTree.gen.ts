@@ -19,6 +19,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
+import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as TOrganizationSlugRouteImport } from './routes/t.$organizationSlug'
 import { Route as TOrganizationSlugIndexRouteImport } from './routes/t.$organizationSlug.index'
 import { Route as TOrganizationSlugMembersRouteImport } from './routes/t.$organizationSlug.members'
@@ -74,6 +75,11 @@ const AcceptInvitationInvitationIdRoute =
     path: '/accept-invitation/$invitationId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: '/api/$',
+  path: '/api/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TOrganizationSlugRoute = TOrganizationSlugRouteImport.update({
   id: '/t/$organizationSlug',
   path: '/t/$organizationSlug',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof SignUpRoute
   '/verify-email': typeof VerifyEmailRoute
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
+  '/api/$': typeof ApiSplatRoute
   '/t/$organizationSlug': typeof TOrganizationSlugRouteWithChildren
   '/t/$organizationSlug/members': typeof TOrganizationSlugMembersRoute
   '/t/$organizationSlug/': typeof TOrganizationSlugIndexRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/sign-up': typeof SignUpRoute
   '/verify-email': typeof VerifyEmailRoute
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
+  '/api/$': typeof ApiSplatRoute
   '/t/$organizationSlug/members': typeof TOrganizationSlugMembersRoute
   '/t/$organizationSlug': typeof TOrganizationSlugIndexRoute
 }
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/sign-up': typeof SignUpRoute
   '/verify-email': typeof VerifyEmailRoute
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
+  '/api/$': typeof ApiSplatRoute
   '/t/$organizationSlug': typeof TOrganizationSlugRouteWithChildren
   '/t/$organizationSlug/members': typeof TOrganizationSlugMembersRoute
   '/t/$organizationSlug/': typeof TOrganizationSlugIndexRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/verify-email'
     | '/accept-invitation/$invitationId'
+    | '/api/$'
     | '/t/$organizationSlug'
     | '/t/$organizationSlug/members'
     | '/t/$organizationSlug/'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/verify-email'
     | '/accept-invitation/$invitationId'
+    | '/api/$'
     | '/t/$organizationSlug/members'
     | '/t/$organizationSlug'
   id:
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/verify-email'
     | '/accept-invitation/$invitationId'
+    | '/api/$'
     | '/t/$organizationSlug'
     | '/t/$organizationSlug/members'
     | '/t/$organizationSlug/'
@@ -194,6 +206,7 @@ export interface RootRouteChildren {
   SignUpRoute: typeof SignUpRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   AcceptInvitationInvitationIdRoute: typeof AcceptInvitationInvitationIdRoute
+  ApiSplatRoute: typeof ApiSplatRoute
   TOrganizationSlugRoute: typeof TOrganizationSlugRouteWithChildren
 }
 
@@ -269,6 +282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcceptInvitationInvitationIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/$': {
+      id: '/api/$'
+      path: '/api/$'
+      fullPath: '/api/$'
+      preLoaderRoute: typeof ApiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/t/$organizationSlug': {
       id: '/t/$organizationSlug'
       path: '/t/$organizationSlug'
@@ -317,6 +337,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignUpRoute: SignUpRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   AcceptInvitationInvitationIdRoute: AcceptInvitationInvitationIdRoute,
+  ApiSplatRoute: ApiSplatRoute,
   TOrganizationSlugRoute: TOrganizationSlugRouteWithChildren,
 }
 export const routeTree = rootRouteImport

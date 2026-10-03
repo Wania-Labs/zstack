@@ -13,6 +13,7 @@ import { Route as ConsoleRouteImport } from './routes/_console'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ConsoleIndexRouteImport } from './routes/_console/index'
 import { Route as ConsoleUsersRouteImport } from './routes/_console/users'
+import { Route as ApiSplatRouteImport } from './routes/api/$'
 
 const ConsoleRoute = ConsoleRouteImport.update({
   id: '/_console',
@@ -33,15 +34,22 @@ const ConsoleUsersRoute = ConsoleUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: '/api/$',
+  path: '/api/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ConsoleIndexRoute
   '/login': typeof LoginRoute
   '/users': typeof ConsoleUsersRoute
+  '/api/$': typeof ApiSplatRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/users': typeof ConsoleUsersRoute
+  '/api/$': typeof ApiSplatRoute
   '/': typeof ConsoleIndexRoute
 }
 export interface FileRoutesById {
@@ -49,19 +57,27 @@ export interface FileRoutesById {
   '/_console': typeof ConsoleRouteWithChildren
   '/login': typeof LoginRoute
   '/_console/users': typeof ConsoleUsersRoute
+  '/api/$': typeof ApiSplatRoute
   '/_console/': typeof ConsoleIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/users'
+  fullPaths: '/' | '/login' | '/users' | '/api/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/users' | '/'
-  id: '__root__' | '/_console' | '/login' | '/_console/users' | '/_console/'
+  to: '/login' | '/users' | '/api/$' | '/'
+  id:
+    | '__root__'
+    | '/_console'
+    | '/login'
+    | '/_console/users'
+    | '/api/$'
+    | '/_console/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   ConsoleRoute: typeof ConsoleRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiSplatRoute: typeof ApiSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -94,6 +110,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleUsersRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/api/$': {
+      id: '/api/$'
+      path: '/api/$'
+      fullPath: '/api/$'
+      preLoaderRoute: typeof ApiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -113,6 +136,7 @@ const ConsoleRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   ConsoleRoute: ConsoleRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiSplatRoute: ApiSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
