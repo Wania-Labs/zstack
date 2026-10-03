@@ -2,9 +2,20 @@ import * as Sentry from "@sentry/tanstackstart-react";
 import type { AnyRouter } from "@tanstack/react-router";
 
 /**
+ * Sentry `service` tag per browser app. One name per line so renamed clones
+ * stay inside the formatter's print width.
+ */
+export const sentryServices = {
+  web: "zstack-web",
+  admin: "zstack-admin",
+} as const;
+
+export type SentryService = (typeof sentryServices)[keyof typeof sentryServices];
+
+/**
  * Browser Sentry init. No-op when `VITE_SENTRY_DSN` is unset (template default).
  */
-export function initBrowserSentry(router: AnyRouter, service: "zstack-web" | "zstack-admin") {
+export function initBrowserSentry(router: AnyRouter, service: SentryService) {
   const dsn = import.meta.env.VITE_SENTRY_DSN?.trim();
   if (!dsn || router.isServer) {
     return;

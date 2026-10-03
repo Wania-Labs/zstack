@@ -105,6 +105,10 @@ export const FRAMEWORK_REFERENCE_ALLOWLIST: readonly FrameworkReferenceAllowance
     path: asPath("AGENTS.md"),
     exactText: "create-zstack",
   },
+  {
+    path: asPath(".npmrc"),
+    exactText: "create-zstack",
+  },
 ];
 
 export type PersonalizeCloneOptions = Readonly<{
@@ -119,7 +123,7 @@ export async function personalizeClone(
   const identity = options.identity;
   const plan = await buildRewritePlan(root, identity);
   const staged = await stageRewritePlan(root, plan);
-  const residuals = await auditFullTree(root, staged);
+  const residuals = await auditFullTree(root, staged, ownIdentityTokens(identity));
   if (residuals.length > 0) {
     const sample = residuals
       .slice(0, 12)
@@ -142,8 +146,15 @@ export async function personalizeClone(
   return { rewrittenPaths, deletedPaths, residuals };
 }
 
-export async function assertNoUnapprovedSourceIdentity(root: string): Promise<void> {
-  const residuals = await auditFullTree(root, new Map());
+export async function assertNoUnapprovedSourceIdentity(
+  root: string,
+  identity?: ProjectIdentity,
+): Promise<void> {
+  const residuals = await auditFullTree(
+    root,
+    new Map(),
+    identity ? ownIdentityTokens(identity) : [],
+  );
   if (residuals.length > 0) {
     const sample = residuals
       .slice(0, 12)
@@ -229,7 +240,7 @@ export async function assertConsumerIdentity(
     }
   }
 
-  await assertNoUnapprovedSourceIdentity(root);
+  await assertNoUnapprovedSourceIdentity(root, expected);
 }
 
 async function buildRewritePlan(root: string, identity: ProjectIdentity): Promise<RewritePlan> {
@@ -325,6 +336,16 @@ async function buildRewritePlan(root: string, identity: ProjectIdentity): Promis
     target: postgresUrl,
     occurrences: "exactly-one",
   });
+  await mergeTextPlanIfPresent(root, plan, asPath("apps/api/wrangler.jsonc"), {
+    source: `"queue": "zstack-jobs"`,
+    target: `"queue": "${slug}-jobs"`,
+    occurrences: "one-or-more",
+  });
+  await mergeTextPlanIfPresent(root, plan, asPath("apps/api/wrangler.jsonc"), {
+    source: `"name": "zstack-example"`,
+    target: `"name": "${slug}-example"`,
+    occurrences: "exactly-one",
+  });
 
   await mergeTextPlanIfPresent(root, plan, asPath("apps/web/wrangler.jsonc"), {
     source: `"name": "zstack-web"`,
@@ -362,11 +383,6 @@ async function buildRewritePlan(root: string, identity: ProjectIdentity): Promis
     target: `POSTGRES_DB: ${local.postgresDatabase}`,
     occurrences: "exactly-one",
   });
-  await mergeTextPlanIfPresent(root, plan, asPath("compose.yaml"), {
-    source: "pg_isready -U zstack -d zstack",
-    target: `pg_isready -U ${pgIdent} -d ${local.postgresDatabase}`,
-    occurrences: "exactly-one",
-  });
 
   await mergeTextPlanIfPresent(root, plan, asPath("infra/database.ts"), {
     source: `database: "zstack"`,
@@ -397,8 +413,8 @@ async function buildRewritePlan(root: string, identity: ProjectIdentity): Promis
   });
 
   await mergeTextPlanIfPresent(root, plan, asPath("apps/api/scripts/orpc-call-health.ts"), {
-    source: sourceUrl,
-    target: postgresUrl,
+    source: `const localPostgres = "zstack";`,
+    target: `const localPostgres = "${local.postgresDatabase}";`,
     occurrences: "exactly-one",
   });
 
@@ -499,34 +515,24 @@ async function buildRewritePlan(root: string, identity: ProjectIdentity): Promis
       target: `provider: "${slug}-fake"`,
       occurrences: "exactly-one",
     },
-    {
-      path: "apps/web/src/lib/sentry.ts",
-      source: `"zstack-web" | "zstack-admin"`,
-      target: `"${workers.web}" | "${workers.admin}"`,
-      occurrences: "exactly-one",
-    },
-    {
-      path: "apps/admin/src/lib/sentry.ts",
-      source: `"zstack-web" | "zstack-admin"`,
-      target: `"${workers.web}" | "${workers.admin}"`,
-      occurrences: "exactly-one",
-    },
-    {
-      path: "apps/web/src/router.tsx",
-      source: `"zstack-web"`,
-      target: `"${workers.web}"`,
-      occurrences: "exactly-one",
-    },
+    ...(["apps/web/src/lib/sentry.ts", "apps/admin/src/lib/sentry.ts"] as const).flatMap((path) => [
+      {
+        path,
+        source: `web: "zstack-web"`,
+        target: `web: "${identity.telemetry.web}"`,
+        occurrences: "exactly-one" as const,
+      },
+      {
+        path,
+        source: `admin: "zstack-admin"`,
+        target: `admin: "${identity.telemetry.admin}"`,
+        occurrences: "exactly-one" as const,
+      },
+    ]),
     {
       path: "apps/web/src/lib/analytics.ts",
       source: `"zstack.analytics.distinct_id"`,
       target: `"${slug}.analytics.distinct_id"`,
-      occurrences: "exactly-one",
-    },
-    {
-      path: "apps/admin/src/router.tsx",
-      source: `"zstack-admin"`,
-      target: `"${workers.admin}"`,
       occurrences: "exactly-one",
     },
   ];
@@ -814,15 +820,13 @@ function rewriteDepMaps(obj: Record<string, unknown>, fromScope: string, toScope
       continue;
     }
     const deps = map as Record<string, unknown>;
-    const next: Record<string, unknown> = {};
-    for (const [name, version] of Object.entries(deps)) {
-      if (name.startsWith(`${fromScope}/`)) {
-        next[`${toScope}/${name.slice(fromScope.length + 1)}`] = version;
-      } else {
-        next[name] = version;
-      }
-    }
-    obj[field] = next;
+    const renamed: Array<[string, unknown]> = Object.entries(deps).map(([name, version]) => [
+      name.startsWith(`${fromScope}/`) ? `${toScope}/${name.slice(fromScope.length + 1)}` : name,
+      version,
+    ]);
+    // oxfmt sorts dependency maps by UTF-16 code unit; renaming the scope moves keys.
+    renamed.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    obj[field] = Object.fromEntries(renamed);
   }
 }
 
@@ -849,7 +853,45 @@ async function readEffectiveText(
   }
 }
 
-async function auditFullTree(root: string, staged: StagedCloneRewrite): Promise<ResidualHit[]> {
+/**
+ * Strings that belong to the *new* identity. A product named "Zstack Demo"
+ * (slug `zstack-demo`, scope `@zstack-demo`) legitimately contains "zstack";
+ * those spans are masked before the residual scan.
+ */
+function ownIdentityTokens(identity: ProjectIdentity): string[] {
+  const tokens = new Set<string>([
+    identity.displayName,
+    identity.slug,
+    identity.npm.root,
+    identity.npm.scope,
+    identity.local.postgresDatabase,
+    identity.local.postgresUser,
+    identity.local.postgresVolume,
+    identity.local.postgresUrl,
+    identity.deploy.alchemyStack,
+    ...Object.values(identity.deploy.workers),
+    ...Object.values(identity.telemetry),
+  ]);
+  return [...tokens].filter(Boolean).sort((a, b) => b.length - a.length);
+}
+
+const MASK_CHAR = "\u0001";
+
+function maskOwnIdentity(line: string, ownTokens: readonly string[]): string {
+  let masked = line;
+  for (const token of ownTokens) {
+    if (masked.includes(token)) {
+      masked = masked.split(token).join(MASK_CHAR.repeat(token.length));
+    }
+  }
+  return masked;
+}
+
+async function auditFullTree(
+  root: string,
+  staged: StagedCloneRewrite,
+  ownTokens: readonly string[],
+): Promise<ResidualHit[]> {
   const files = await listProjectFiles(root);
   const stagedOnly = [...staged.keys()].filter((path) => !files.includes(path));
   const all = [...new Set([...files, ...stagedOnly])];
@@ -863,7 +905,7 @@ async function auditFullTree(root: string, staged: StagedCloneRewrite): Promise<
     const lines = text.split("\n");
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i] ?? "";
-      for (const match of findSourceIdentityTokens(line)) {
+      for (const match of findSourceIdentityTokens(line, ownTokens)) {
         if (isAllowlisted(rel, line, match)) {
           continue;
         }
@@ -877,25 +919,29 @@ async function auditFullTree(root: string, staged: StagedCloneRewrite): Promise<
 
 type SourceTokenHit = Readonly<{ text: string; start: number; end: number }>;
 
-function findSourceIdentityTokens(line: string): SourceTokenHit[] {
+/**
+ * Finds `zstack` (any case) as a whole name segment. Only ASCII letters and
+ * digits continue a name, so `zstack-jobs`, `zstack_pg_data`, `@zstack/api`,
+ * and `create-zstack` are all hits; `zstacks` or `myzstack` are not.
+ */
+export function findSourceIdentityTokens(
+  line: string,
+  ownTokens: readonly string[] = [],
+): SourceTokenHit[] {
+  const scan = ownTokens.length > 0 ? maskOwnIdentity(line, ownTokens) : line;
   const found: SourceTokenHit[] = [];
-  if (line.includes("@zstack")) {
-    const start = line.indexOf("@zstack");
-    found.push({ text: "@zstack", start, end: start + "@zstack".length });
-  }
-
   const re = /zstack/gi;
   let match: RegExpExecArray | null;
-  while ((match = re.exec(line)) !== null) {
+  while ((match = re.exec(scan)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
-    const before = start === 0 ? "" : line[start - 1];
-    const after = end >= line.length ? "" : line[end];
-    const boundaryBefore = !before || /[^A-Za-z0-9_-]/.test(before);
-    const boundaryAfter = !after || /[^A-Za-z0-9_-]/.test(after);
-    if (boundaryBefore && boundaryAfter) {
-      found.push({ text: match[0], start, end });
+    const before = start === 0 ? "" : (scan[start - 1] ?? "");
+    const after = end >= scan.length ? "" : (scan[end] ?? "");
+    if (/[A-Za-z0-9]/.test(before) || /[A-Za-z0-9]/.test(after)) {
+      continue;
     }
+    const tokenStart = before === "@" ? start - 1 : start;
+    found.push({ text: line.slice(tokenStart, end), start: tokenStart, end });
   }
   return found;
 }
