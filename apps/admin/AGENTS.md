@@ -8,6 +8,8 @@ Staff TanStack Start console. Same UI stack as web.
 - `staff.me` rejects non-staff; UI gates are UX only
 - Promote: `STAFF_EMAIL=you@example.com pnpm db:seed` after customer sign-up
 - Local: http://localhost:3001 with API on `:8787`
+- API access mirrors web: `/api/$` server route → `API` binding when deployed; SSR guards forward cookies via `apiFetch`
+- Deployed admin origin must be set as `ADMIN_URL` on the API (Better Auth `trustedOrigins`)
 
 ## Do / do not
 

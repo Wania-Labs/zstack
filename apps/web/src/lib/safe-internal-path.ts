@@ -27,7 +27,19 @@ export function safeInternalPath(value: unknown): string | undefined {
   }
 
   try {
-    if (isUnsafe(value) || isUnsafe(decodeURIComponent(value))) {
+    // Decode until stable so layered encodings (`%252F%252F`) can't hide `//`.
+    let current = value;
+    for (let depth = 0; depth < 5; depth++) {
+      if (isUnsafe(current)) {
+        return undefined;
+      }
+      const decoded = decodeURIComponent(current);
+      if (decoded === current) {
+        break;
+      }
+      current = decoded;
+    }
+    if (isUnsafe(current)) {
       return undefined;
     }
   } catch {

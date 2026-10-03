@@ -29,6 +29,7 @@ describe("safeInternalPath", () => {
     ["encoded newline", "/%0a/evil.com"],
     ["encoded CR", "/%0D/evil.com"],
     ["encoded slash", "/%2F/evil.com"],
+    ["double-encoded slashes", "/%252F%252Fevil.com"],
     ["encoded backslash", "/%5C/evil.com"],
     ["malformed encoding", "/%E0%A4%A"],
   ])("rejects %s", (_label, value) => {

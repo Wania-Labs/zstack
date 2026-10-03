@@ -120,6 +120,8 @@ function currentRequest(): Request | undefined {
  * so Better Auth sees the browser session, routes through {@link sendToApi},
  * and relays any `Set-Cookie` (session refresh / clear) onto the SSR response.
  */
+const FORWARDED_CLIENT_HEADERS = ["cf-connecting-ip", "x-forwarded-for", "user-agent"] as const;
+
 export async function fetchApiDuringSsr(
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -134,6 +136,14 @@ export async function fetchApiDuringSsr(
     const cookie = incoming.headers.get("cookie");
     if (cookie && !headers.has("cookie")) {
       headers.set("cookie", cookie);
+    }
+    // Keep the caller's identity for Better Auth's per-IP rate limits and
+    // session metadata; otherwise every SSR call shares one bucket.
+    for (const name of FORWARDED_CLIENT_HEADERS) {
+      const value = incoming.headers.get(name);
+      if (value && !headers.has(name)) {
+        headers.set(name, value);
+      }
     }
     // Better Auth rejects cookie-bearing mutations without a trusted Origin.
     // The SSR call acts for a request that already landed on this origin.
