@@ -66,7 +66,8 @@ export function createBetterAuthOptions(input: BetterAuthOptionsInput) {
                 const analytics = yield* Analytics;
                 yield* analytics.capture(
                   { name: "account_signed_up", properties: { source: "web" } },
-                  { distinctId: user.id, environment: "development" },
+                  // Environment comes from the analytics layer (deployment env).
+                  { distinctId: user.id },
                 );
               }),
               analyticsLive,

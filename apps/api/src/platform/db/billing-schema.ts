@@ -1,7 +1,8 @@
 import { jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 /**
- * Polar webhook inbox. Primary key is Polar's event id so retries are no-ops.
+ * Polar webhook inbox. Primary key is the Standard Webhooks `webhook-id` header
+ * (unique per event, stable across retries) so redeliveries are no-ops.
  */
 export const billingWebhookEvent = pgTable("billing_webhook_event", {
   id: text("id").primaryKey(),

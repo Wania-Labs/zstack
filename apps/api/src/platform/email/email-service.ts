@@ -105,13 +105,28 @@ function makeEmailService(
   });
 }
 
-function deliverConsole(message: EmailMessage): Effect.Effect<void, EmailError> {
+const URL_PATTERN = /https?:\/\/\S+/g;
+
+/** Strip links (which carry reset/verification tokens) from console output. */
+export function redactEmailLinks(text: string): string {
+  return text.replace(URL_PATTERN, "[link redacted]");
+}
+
+export type ConsoleEmailOptions = {
+  /** Redact links in logged bodies. On whenever the app runs on HTTPS. */
+  redactLinks?: boolean;
+};
+
+function deliverConsole(
+  message: EmailMessage,
+  options: ConsoleEmailOptions,
+): Effect.Effect<void, EmailError> {
   return Effect.try({
     try: () => {
       console.info("[email:console]", {
         to: message.to,
         subject: message.rendered.subject,
-        text: message.rendered.text,
+        text: options.redactLinks ? redactEmailLinks(message.rendered.text) : message.rendered.text,
       });
     },
     catch: () =>
@@ -121,10 +136,17 @@ function deliverConsole(message: EmailMessage): Effect.Effect<void, EmailError> 
   });
 }
 
+export function makeConsoleEmailLive(options: ConsoleEmailOptions = {}): Layer.Layer<EmailService> {
+  return Layer.succeed(
+    EmailService,
+    makeEmailService((message) => deliverConsole(message, options)),
+  );
+}
+
 /**
  * Local/dev transport when Bento credentials are absent.
  */
-export const ConsoleEmailLive = Layer.succeed(EmailService, makeEmailService(deliverConsole));
+export const ConsoleEmailLive = makeConsoleEmailLive();
 
 function deliverBento(
   credentials: BentoCredentials,
@@ -182,32 +204,81 @@ export function BentoEmailLive(credentials: BentoCredentials) {
   );
 }
 
-export function readBentoCredentials(env: {
+type BentoEnv = {
   BENTO_SITE_UUID?: string;
   BENTO_PUBLISHABLE_KEY?: string;
   BENTO_SECRET_KEY?: string;
   EMAIL_FROM?: string;
-}): BentoCredentials | undefined {
-  const siteUuid = env.BENTO_SITE_UUID?.trim();
-  const publishableKey = env.BENTO_PUBLISHABLE_KEY?.trim();
-  const secretKey = env.BENTO_SECRET_KEY?.trim();
-  const from = env.EMAIL_FROM?.trim();
+};
 
-  if (!siteUuid || !publishableKey || !secretKey || !from) {
-    return undefined;
+const BENTO_ENV_KEYS = [
+  "EMAIL_FROM",
+  "BENTO_SITE_UUID",
+  "BENTO_PUBLISHABLE_KEY",
+  "BENTO_SECRET_KEY",
+] as const satisfies ReadonlyArray<keyof BentoEnv>;
+
+export type BentoConfig =
+  | { kind: "unset" }
+  | { kind: "partial"; missing: ReadonlyArray<keyof BentoEnv> }
+  | { kind: "complete"; credentials: BentoCredentials };
+
+export function readBentoConfig(env: BentoEnv): BentoConfig {
+  const missing = BENTO_ENV_KEYS.filter((key) => !env[key]?.trim());
+  if (missing.length === BENTO_ENV_KEYS.length) {
+    return { kind: "unset" };
   }
-
-  return { siteUuid, publishableKey, secretKey, from };
+  if (missing.length > 0) {
+    return { kind: "partial", missing };
+  }
+  const value = (key: keyof BentoEnv) => env[key]?.trim() ?? "";
+  return {
+    kind: "complete",
+    credentials: {
+      siteUuid: value("BENTO_SITE_UUID"),
+      publishableKey: value("BENTO_PUBLISHABLE_KEY"),
+      secretKey: value("BENTO_SECRET_KEY"),
+      from: value("EMAIL_FROM"),
+    },
+  };
 }
 
-export function emailLiveFromEnv(env: {
-  BENTO_SITE_UUID?: string;
-  BENTO_PUBLISHABLE_KEY?: string;
-  BENTO_SECRET_KEY?: string;
-  EMAIL_FROM?: string;
-}): Layer.Layer<EmailService> {
-  const credentials = readBentoCredentials(env);
-  return credentials ? BentoEmailLive(credentials) : ConsoleEmailLive;
+export function readBentoCredentials(env: BentoEnv): BentoCredentials | undefined {
+  const config = readBentoConfig(env);
+  return config.kind === "complete" ? config.credentials : undefined;
+}
+
+/** HTTPS app URL means a deployed (production-like) stage. */
+function isHttpsUrl(url: string | undefined): boolean {
+  return url?.trim().toLowerCase().startsWith("https://") ?? false;
+}
+
+const warnedPartialBento = new Set<string>();
+
+function warnPartialBento(missing: ReadonlyArray<string>): void {
+  const signature = missing.join(",");
+  if (warnedPartialBento.has(signature)) {
+    return;
+  }
+  warnedPartialBento.add(signature);
+  console.warn(
+    `[email] Bento is partially configured (missing: ${signature}). ` +
+      "Falling back to the console transport: transactional email will NOT be delivered.",
+  );
+}
+
+export function emailLiveFromEnv(
+  env: BentoEnv & { BETTER_AUTH_URL?: string },
+): Layer.Layer<EmailService> {
+  const config = readBentoConfig(env);
+  if (config.kind === "complete") {
+    return BentoEmailLive(config.credentials);
+  }
+  if (config.kind === "partial") {
+    warnPartialBento(config.missing);
+  }
+  const redactLinks = isHttpsUrl(env.BETTER_AUTH_URL);
+  return redactLinks ? makeConsoleEmailLive({ redactLinks }) : ConsoleEmailLive;
 }
 
 export async function runEmailEffect<A>(

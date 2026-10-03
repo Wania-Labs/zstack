@@ -1,7 +1,6 @@
 import type { Context, Next } from "hono";
 
-import type { ApiBindings } from "../platform/cloudflare/bindings";
-import type { ApiVariables } from "./context";
+import type { ApiEnv } from "./context";
 import { rpcHandler } from "./orpc";
 
 /**
@@ -12,16 +11,15 @@ import { rpcHandler } from "./orpc";
  * If a future middleware does, use the Proxy pattern from oRPC Hono docs
  * (and bind Request methods so Workers don't throw Illegal invocation).
  */
-export async function mountOrpc(
-  c: Context<{ Bindings: ApiBindings; Variables: ApiVariables }>,
-  next: Next,
-) {
+export async function mountOrpc(c: Context<ApiEnv>, next: Next) {
   const { matched, response } = await rpcHandler.handle(c.req.raw, {
     prefix: "/api/rpc",
     context: {
       requestContext: c.get("requestContext"),
       env: c.env,
       user: c.get("user"),
+      runEffect: c.get("runEffect"),
+      log: c.get("log"),
     },
   });
 

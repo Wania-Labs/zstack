@@ -17,7 +17,6 @@ import {
   upsertEntitlement,
 } from "../../platform/billing/ledger";
 import type { PolarWebhookEvent } from "../../platform/billing/webhook";
-import { CurrentRequestContext } from "../../platform/effect/request-context";
 import { BILLING_USAGE_JOB, JobQueue } from "../../platform/queue/job-queue";
 
 export function createCheckout(
@@ -115,15 +114,30 @@ export const reportUsage = Effect.fn("billing.reportUsage")(function* (input: {
     name: input.name,
   });
   // Flush in-process so wrangler without a JOBS binding still delivers.
-  // The queue consumer retries when Polar ingest fails here.
-  yield* flushUsage(input.operationId).pipe(Effect.catch(() => Effect.void));
+  // The queue consumer retries when Polar ingest fails here, so a failed
+  // flush is logged rather than failing the caller.
+  yield* flushUsage(input.operationId).pipe(
+    Effect.catch((error) =>
+      Effect.logWarning("billing usage flush failed; queue will retry", error).pipe(
+        Effect.annotateLogs({ operationId: input.operationId }),
+      ),
+    ),
+  );
   const queue = yield* JobQueue;
   yield* queue
     .publish({
       name: BILLING_USAGE_JOB,
       payload: { operationId: input.operationId },
     })
-    .pipe(Effect.catch(() => Effect.void));
+    .pipe(
+      // The outbox row stays `pending`; a failed publish needs attention but
+      // must not fail the product request that already succeeded.
+      Effect.catch((error) =>
+        Effect.logError("billing usage job publish failed", error).pipe(
+          Effect.annotateLogs({ operationId: input.operationId }),
+        ),
+      ),
+    );
 });
 
 export const flushUsage = Effect.fn("billing.flushUsage")(function* (operationId: string) {
@@ -169,7 +183,6 @@ export const ingestPolarWebhook = Effect.fn("billing.ingestPolarWebhook")(functi
   }
 
   const analytics = yield* Analytics;
-  const request = yield* CurrentRequestContext;
   const kind = billingAnalyticsKind(event.type);
   if (kind === "checkout") {
     yield* analytics.capture(
@@ -183,7 +196,6 @@ export const ingestPolarWebhook = Effect.fn("billing.ingestPolarWebhook")(functi
       {
         distinctId: event.organizationId,
         organizationId: event.organizationId,
-        environment: request.releaseId === "local" ? "development" : request.releaseId,
       },
     );
   } else if (kind === "subscription") {
@@ -198,7 +210,6 @@ export const ingestPolarWebhook = Effect.fn("billing.ingestPolarWebhook")(functi
       {
         distinctId: event.organizationId,
         organizationId: event.organizationId,
-        environment: request.releaseId === "local" ? "development" : request.releaseId,
       },
     );
   }

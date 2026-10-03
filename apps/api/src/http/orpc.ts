@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+import type { RequestLogger } from "evlog";
 import { ORPCError, implement, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { appContract } from "@zstack/contracts/router";
@@ -15,9 +16,9 @@ import { getStaffMe } from "../modules/staff/service";
 import { Analytics } from "../platform/analytics/analytics-service";
 import type { ApiBindings } from "../platform/cloudflare/bindings";
 import { CurrentRequestContext } from "../platform/effect/request-context";
-import { runRequestEffect } from "../platform/effect/runtime";
-import type { RequestContext } from "./context";
+import type { BoundRequestRunner, RequestContext } from "./context";
 import { captureOrpcError, orpcFailure } from "./orpc-errors";
+import { reportError } from "./report-error";
 
 export type OrpcContext = {
   requestContext: RequestContext;
@@ -28,12 +29,59 @@ export type OrpcContext = {
     name: string;
     role?: string | null | undefined;
   } | null;
+  runEffect: BoundRequestRunner;
+  log?: Pick<RequestLogger, "error">;
 };
+
+/** Organization roles allowed to start checkout or open the billing portal. */
+export const BILLING_MANAGER_ROLES: ReadonlySet<string> = new Set(["owner", "admin"]);
+
+export function canManageBilling(requestContext: RequestContext): boolean {
+  const roles = requestContext.organizationRoles;
+  if (!roles) {
+    return false;
+  }
+  for (const role of roles) {
+    if (BILLING_MANAGER_ROLES.has(role)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function requireBillingManager(context: OrpcContext, action: string): string {
+  if (!context.user) {
+    throw new ORPCError("UNAUTHORIZED", {
+      message: `Sign in to ${action}.`,
+    });
+  }
+
+  const organizationId = context.requestContext.organizationId;
+  if (!organizationId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Select a Team to continue.",
+    });
+  }
+
+  if (!canManageBilling(context.requestContext)) {
+    throw new ORPCError("FORBIDDEN", {
+      message: "Only Team owners and admins can manage billing.",
+    });
+  }
+
+  return organizationId;
+}
 
 const os = implement(appContract).$context<OrpcContext>();
 
 const health = os.health.handler(async ({ context }) => {
-  return runRequestEffect(getHealth(), context.requestContext, context.env);
+  // Building the request layer connects to Postgres, so an unreachable database
+  // can throw before the ping runs. Both cases are "unavailable", not a 500.
+  const status = await context.runEffect(getHealth()).catch(() => ({ ok: false as const }));
+  if (!status.ok) {
+    throw new ORPCError("SERVICE_UNAVAILABLE", { message: "Database unavailable." });
+  }
+  return status;
 });
 
 const staffMe = os.staff.me.handler(async ({ context }) => {
@@ -41,7 +89,7 @@ const staffMe = os.staff.me.handler(async ({ context }) => {
 });
 
 const aiCapabilities = os.ai.capabilities.handler(async ({ context }) => {
-  return runRequestEffect(listAiCapabilities(), context.requestContext, context.env);
+  return context.runEffect(listAiCapabilities());
 });
 
 const aiComplete = os.ai.complete.handler(async ({ input, context }) => {
@@ -52,24 +100,30 @@ const aiComplete = os.ai.complete.handler(async ({ input, context }) => {
   }
 
   try {
-    return await runRequestEffect(
+    return await context.runEffect(
       Effect.gen(function* () {
-        const result = yield* completeAi(input);
+        const { completion, billedOrganizationId } = yield* completeAi(input);
         const analytics = yield* Analytics;
         const request = yield* CurrentRequestContext;
-        if (request.organizationId) {
+        if (billedOrganizationId) {
           yield* reportUsage({
-            organizationId: request.organizationId,
+            organizationId: billedOrganizationId,
             name: AI_USAGE_EVENT,
             operationId: request.idempotencyKey ?? crypto.randomUUID(),
-          }).pipe(Effect.catch(() => Effect.void));
+          }).pipe(
+            // The completion already happened; record the metering failure
+            // instead of failing the response.
+            Effect.catch((error) =>
+              Effect.sync(() => reportError(context.log, error, "billing.reportUsage")),
+            ),
+          );
         }
         yield* analytics.capture(
           {
             name: "ai_generation_completed",
             properties: {
               capability: input.capability,
-              route: result.route,
+              route: completion.route,
             },
           },
           {
@@ -78,13 +132,10 @@ const aiComplete = os.ai.complete.handler(async ({ input, context }) => {
             ...(request.staffCapabilities && request.staffCapabilities.size > 0
               ? { isStaff: true }
               : {}),
-            environment: context.env.SENTRY_ENVIRONMENT?.trim() || "development",
           },
         );
-        return result;
+        return completion;
       }),
-      context.requestContext,
-      context.env,
     );
   } catch (error) {
     orpcFailure(error, "AI completion failed.");
@@ -92,48 +143,20 @@ const aiComplete = os.ai.complete.handler(async ({ input, context }) => {
 });
 
 const billingCreateCheckout = os.billing.createCheckout.handler(async ({ input, context }) => {
-  if (!context.user) {
-    throw new ORPCError("UNAUTHORIZED", {
-      message: "Sign in to create checkout.",
-    });
-  }
-
-  if (!context.requestContext.organizationId) {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Select a Team to continue.",
-    });
-  }
+  const organizationId = requireBillingManager(context, "create checkout");
 
   try {
-    return await runRequestEffect(
-      createCheckout(input, context.requestContext.organizationId),
-      context.requestContext,
-      context.env,
-    );
+    return await context.runEffect(createCheckout(input, organizationId));
   } catch (error) {
     orpcFailure(error, "Checkout failed.");
   }
 });
 
 const billingCustomerPortal = os.billing.customerPortal.handler(async ({ input, context }) => {
-  if (!context.user) {
-    throw new ORPCError("UNAUTHORIZED", {
-      message: "Sign in to access customer portal.",
-    });
-  }
-
-  if (!context.requestContext.organizationId) {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Select a Team to continue.",
-    });
-  }
+  const organizationId = requireBillingManager(context, "access customer portal");
 
   try {
-    return await runRequestEffect(
-      customerPortal(input, context.requestContext.organizationId),
-      context.requestContext,
-      context.env,
-    );
+    return await context.runEffect(customerPortal(input, organizationId));
   } catch (error) {
     orpcFailure(error, "Customer portal failed.");
   }
@@ -153,11 +176,7 @@ const billingSnapshot = os.billing.snapshot.handler(async ({ context }) => {
   }
 
   try {
-    return await runRequestEffect(
-      customerSnapshot(context.requestContext.organizationId),
-      context.requestContext,
-      context.env,
-    );
+    return await context.runEffect(customerSnapshot(context.requestContext.organizationId));
   } catch (error) {
     orpcFailure(error, "Billing snapshot failed.");
   }
@@ -186,7 +205,8 @@ export const rpcHandler = new RPCHandler(router, {
     onError((error) => {
       if (error instanceof ORPCError) {
         const status = typeof error.status === "number" ? error.status : 500;
-        if (status < 500) {
+        // 503 is an expected outage signal (health polling); don't page on it.
+        if (status < 500 || status === 503) {
           return;
         }
       }

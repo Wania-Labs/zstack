@@ -48,6 +48,11 @@ export function objectWorkerPath(key: string): string {
 /**
  * Application object-storage boundary. Domain code uses opaque keys;
  * adapters own R2 vs in-memory bytes.
+ *
+ * The store does not authorize keys. Callers exposing it to users must check
+ * the key against the caller's scope first (`modules/objects/access`), and
+ * that includes `signUpload` / `signDownload`: presigned R2 URLs bypass the
+ * Worker entirely.
  */
 export class ObjectStore extends Context.Service<
   ObjectStore,

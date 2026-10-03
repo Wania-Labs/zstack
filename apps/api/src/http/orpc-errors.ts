@@ -1,6 +1,7 @@
 import { ORPCError } from "@orpc/server";
 import * as Sentry from "@sentry/cloudflare";
 
+import { AI_ORGANIZATION_REQUIRED } from "../modules/ai/service";
 import { AiError } from "../platform/ai/ai-service";
 import { BillingError } from "../platform/billing/billing-service";
 import { DurableWorkflowError } from "../platform/workflow/durable-workflow";
@@ -40,6 +41,12 @@ export function orpcFailure(error: unknown, fallbackMessage: string): never {
 
   if (tag === "BillingError" && message.includes("not found in catalog")) {
     throw new ORPCError("BAD_REQUEST", { message: "Unknown product." });
+  }
+
+  if (tag === "BillingError" && message === AI_ORGANIZATION_REQUIRED) {
+    throw new ORPCError("FORBIDDEN", {
+      message: "Select a Team to continue.",
+    });
   }
 
   if (tag === "BillingError" && message.includes("entitlement denied")) {

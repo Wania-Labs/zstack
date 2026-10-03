@@ -39,7 +39,7 @@ export const Api = (
       ),
       SENTRY_RELEASE: Config.String("SENTRY_RELEASE").pipe(Config.withDefault("")),
       SENTRY_TRACES_SAMPLE_RATE: Config.String("SENTRY_TRACES_SAMPLE_RATE").pipe(
-        Config.withDefault("1"),
+        Config.withDefault("0.1"),
       ),
       // Empty → fake AI registry (no Vercel AI Gateway spend).
       AI_GATEWAY_API_KEY: Config.Redacted("AI_GATEWAY_API_KEY").pipe(Config.withDefault("")),

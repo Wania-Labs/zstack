@@ -1,14 +1,14 @@
 import { initLogger } from "evlog";
-import { evlog, type EvlogVariables } from "evlog/hono";
+import { evlog } from "evlog/hono";
 import { sentry } from "@sentry/hono/cloudflare";
 import { Hono } from "hono";
 
-import type { ApiBindings } from "../platform/cloudflare/bindings";
+import { runRequestEffect, type RequestRunner } from "../platform/effect/runtime";
 import { createRequestDrain } from "../platform/observability/evlog-drain";
 import { getRequestEnv, withRequestEnv } from "../platform/observability/request-env";
 import { sentryOptions } from "../platform/observability/sentry";
-import { attachAuthSession, mountAuthRoutes } from "./auth";
-import { attachRequestContext, type ApiVariables } from "./context";
+import { attachAuthSession, mountAuthRoutes, type SessionResolver } from "./auth";
+import { attachRequestContext, bindRequestRunner, type ApiEnv } from "./context";
 import { healthHandler } from "./health";
 import { deleteObjectHandler, getObjectHandler, putObjectHandler } from "./objects";
 import { mountOrpc } from "./orpc-mount";
@@ -18,13 +18,19 @@ initLogger({
   env: { service: "zstack-api" },
 });
 
-type AppEnv = {
-  Bindings: ApiBindings;
-  Variables: ApiVariables & EvlogVariables["Variables"];
+/**
+ * Edge seams. Defaults are the production adapters; tests inject fakes to
+ * exercise the real routing, middleware, and handlers without Postgres.
+ */
+export type AppDeps = {
+  /** Better Auth session lookup (default opens a pg client only when a session cookie exists). */
+  resolveSession?: SessionResolver;
+  /** Runs request-scoped effects against the request layer. */
+  runRequest?: RequestRunner;
 };
 
-export function createApp() {
-  const app = new Hono<AppEnv>();
+export function createApp(deps: AppDeps = {}) {
+  const app = new Hono<ApiEnv>();
 
   // Sentry first — empty DSN keeps the SDK quiet for clones without observability wired.
   app.use(
@@ -53,7 +59,8 @@ export function createApp() {
     }),
   );
   app.use("*", attachRequestContext);
-  app.use("*", attachAuthSession);
+  app.use("*", attachAuthSession(deps.resolveSession));
+  app.use("*", bindRequestRunner(deps.runRequest ?? runRequestEffect));
   app.on(["POST", "GET"], "/api/auth/*", mountAuthRoutes);
   app.post("/api/webhooks/polar", polarWebhookHandler);
   app.use("/api/rpc/*", mountOrpc);

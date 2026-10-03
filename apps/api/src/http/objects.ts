@@ -1,20 +1,139 @@
 import { Effect } from "effect";
 import type { Context } from "hono";
 
-import type { ApiBindings } from "../platform/cloudflare/bindings";
-import { runRequestEffect } from "../platform/effect/runtime";
+import { authorizeObjectKey } from "../modules/objects/access";
 import { ObjectStore } from "../platform/object-store/object-store-service";
-import type { ApiVariables } from "./context";
+import type { ApiEnv } from "./context";
+import { reportError } from "./report-error";
 
-type ObjectContext = Context<{ Bindings: ApiBindings; Variables: ApiVariables }>;
+type ObjectContext = Context<ApiEnv>;
 
-function objectKey(path: string): string | undefined {
-  const prefix = "/api/objects/";
-  if (!path.startsWith(prefix)) {
-    return undefined;
+/** Upload ceiling for Worker-mediated bytes. Larger files should use presigned R2 URLs. */
+export const MAX_OBJECT_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+const OBJECT_PATH_PREFIX = "/api/objects/";
+
+/**
+ * Types the browser may render inline. SVG is excluded: it can carry script.
+ * Everything else is served as an attachment.
+ */
+const INLINE_IMAGE_TYPES: ReadonlySet<string> = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+]);
+
+const MIME_ESSENCE_PATTERN = /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/;
+
+/** Lowercased `type/subtype` without parameters, or undefined when malformed. */
+export function mimeEssence(value: string | null | undefined): string | undefined {
+  const essence = value?.split(";")[0]?.trim().toLowerCase();
+  return essence && MIME_ESSENCE_PATTERN.test(essence) ? essence : undefined;
+}
+
+/**
+ * Response headers for stored bytes. The API shares the app origin, so
+ * uploaded HTML/SVG must never render as a document there.
+ */
+export function objectResponseHeaders(contentType: string | undefined): Headers {
+  const essence = mimeEssence(contentType);
+  const inline = essence !== undefined && INLINE_IMAGE_TYPES.has(essence);
+  return new Headers({
+    "content-type": essence ?? "application/octet-stream",
+    "content-disposition": inline ? "inline" : "attachment",
+    "x-content-type-options": "nosniff",
+    "content-security-policy": "sandbox",
+    "cache-control": "private, no-store",
+  });
+}
+
+type KeyResult = { kind: "ok"; key: string } | { kind: "missing" } | { kind: "malformed" };
+
+function objectKeyFromUrl(url: string): KeyResult {
+  const pathname = new URL(url).pathname;
+  if (!pathname.startsWith(OBJECT_PATH_PREFIX)) {
+    return { kind: "missing" };
   }
-  const key = decodeURIComponent(path.slice(prefix.length)).trim();
-  return key || undefined;
+  let key: string;
+  try {
+    key = decodeURIComponent(pathname.slice(OBJECT_PATH_PREFIX.length)).trim();
+  } catch {
+    // Malformed percent-encoding is a client error, not a server failure.
+    return { kind: "malformed" };
+  }
+  return key ? { kind: "ok", key } : { kind: "missing" };
+}
+
+/**
+ * Resolve and authorize the key for the signed-in caller, or return the
+ * error response to send.
+ */
+function authorizedKey(c: ObjectContext, action: string): string | Response {
+  if (!c.get("user")) {
+    return c.json({ error: `Sign in to ${action} objects.` }, 401);
+  }
+
+  const parsed = objectKeyFromUrl(c.req.url);
+  if (parsed.kind === "malformed") {
+    return c.json({ error: "Object key is not valid." }, 400);
+  }
+  if (parsed.kind === "missing") {
+    return c.json({ error: "Object key is required." }, 400);
+  }
+
+  const decision = authorizeObjectKey(parsed.key, c.get("requestContext"));
+  if (decision === "invalid") {
+    return c.json({ error: "Object key is not valid." }, 400);
+  }
+  if (decision === "forbidden") {
+    return c.json({ error: "You do not have access to this object." }, 403);
+  }
+  return parsed.key;
+}
+
+type BodyResult = { kind: "ok"; body: Uint8Array } | { kind: "too_large" };
+
+/**
+ * Read the request body, refusing early on a declared oversize length and
+ * aborting mid-stream when undeclared/chunked bodies exceed the cap.
+ */
+export async function readBodyWithLimit(request: Request, maxBytes: number): Promise<BodyResult> {
+  const declared = request.headers.get("content-length");
+  if (declared !== null) {
+    const length = Number(declared);
+    if (Number.isFinite(length) && length > maxBytes) {
+      return { kind: "too_large" };
+    }
+  }
+
+  if (!request.body) {
+    return { kind: "ok", body: new Uint8Array() };
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      return { kind: "too_large" };
+    }
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { kind: "ok", body };
 }
 
 const putObject = Effect.fn("putObject")(function* (input: {
@@ -41,25 +160,24 @@ const deleteObject = Effect.fn("deleteObject")(function* (key: string) {
  * With tokens, sign intents return a presigned R2 URL instead.
  */
 export async function putObjectHandler(c: ObjectContext): Promise<Response> {
-  if (!c.get("user")) {
-    return c.json({ error: "Sign in to upload objects." }, 401);
+  const key = authorizedKey(c, "upload");
+  if (key instanceof Response) {
+    return key;
   }
 
-  const key = objectKey(c.req.path);
-  if (!key) {
-    return c.json({ error: "Object key is required." }, 400);
+  const read = await readBodyWithLimit(c.req.raw, MAX_OBJECT_UPLOAD_BYTES);
+  if (read.kind === "too_large") {
+    return c.json({ error: "Object is too large." }, 413);
   }
 
-  const body = new Uint8Array(await c.req.raw.arrayBuffer());
-  const contentType = c.req.header("content-type") ?? undefined;
+  const contentType = mimeEssence(c.req.header("content-type"));
 
   try {
-    await runRequestEffect(
-      putObject({ key, body, ...(contentType ? { contentType } : {}) }),
-      c.get("requestContext"),
-      c.env,
+    await c.get("runEffect")(
+      putObject({ key, body: read.body, ...(contentType ? { contentType } : {}) }),
     );
-  } catch {
+  } catch (error) {
+    reportError(c.get("log"), error, "objects.put");
     return c.json({ error: "Object store failed." }, 500);
   }
 
@@ -67,44 +185,36 @@ export async function putObjectHandler(c: ObjectContext): Promise<Response> {
 }
 
 export async function getObjectHandler(c: ObjectContext): Promise<Response> {
-  if (!c.get("user")) {
-    return c.json({ error: "Sign in to download objects." }, 401);
-  }
-
-  const key = objectKey(c.req.path);
-  if (!key) {
-    return c.json({ error: "Object key is required." }, 400);
+  const key = authorizedKey(c, "download");
+  if (key instanceof Response) {
+    return key;
   }
 
   try {
-    const stored = await runRequestEffect(getObject(key), c.get("requestContext"), c.env);
+    const stored = await c.get("runEffect")(getObject(key));
     if (!stored) {
       return c.body(null, 404);
     }
     return new Response(stored.body, {
       status: 200,
-      headers: {
-        "content-type": stored.contentType ?? "application/octet-stream",
-      },
+      headers: objectResponseHeaders(stored.contentType),
     });
-  } catch {
+  } catch (error) {
+    reportError(c.get("log"), error, "objects.get");
     return c.json({ error: "Object store failed." }, 500);
   }
 }
 
 export async function deleteObjectHandler(c: ObjectContext): Promise<Response> {
-  if (!c.get("user")) {
-    return c.json({ error: "Sign in to delete objects." }, 401);
-  }
-
-  const key = objectKey(c.req.path);
-  if (!key) {
-    return c.json({ error: "Object key is required." }, 400);
+  const key = authorizedKey(c, "delete");
+  if (key instanceof Response) {
+    return key;
   }
 
   try {
-    await runRequestEffect(deleteObject(key), c.get("requestContext"), c.env);
-  } catch {
+    await c.get("runEffect")(deleteObject(key));
+  } catch (error) {
+    reportError(c.get("log"), error, "objects.delete");
     return c.json({ error: "Object store failed." }, 500);
   }
 
