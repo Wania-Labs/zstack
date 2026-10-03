@@ -1,4 +1,4 @@
-import { safeInternalPath } from "./session";
+import { safeInternalPath } from "./safe-internal-path";
 
 export type AuthRedirectSearch = {
   redirect?: string;

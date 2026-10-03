@@ -1,6 +1,9 @@
 import { redirect } from "@tanstack/react-router";
 
 import { authClient } from "./auth-client";
+import { safeInternalPath } from "./safe-internal-path";
+
+export { safeInternalPath };
 
 export type SessionUser = {
   id: string;
@@ -194,14 +197,4 @@ export function createTeamSlug(name: string): string {
   const stem = base.length > 0 ? base : "team";
   const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 4);
   return `${stem}-${suffix}`;
-}
-
-export function safeInternalPath(value: unknown): string | undefined {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
-    return undefined;
-  }
-  return value;
 }
