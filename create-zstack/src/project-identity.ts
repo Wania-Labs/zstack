@@ -18,6 +18,18 @@ export type ServiceRole = "api" | "web" | "admin";
 const LONGEST_RESOURCE_SUFFIX = "-postgres";
 export const MAX_PROJECT_SLUG_LENGTH = 63 - LONGEST_RESOURCE_SUFFIX.length;
 
+/**
+ * Display names are spliced into TS/JSX string literals, JSX text, template
+ * literals, Markdown, and YAML front matter. A small safe charset means no
+ * per-context escaping, and the length cap keeps rewritten lines inside the
+ * clone's formatter print width so `pnpm format:check` passes on a fresh clone.
+ */
+export const MAX_DISPLAY_NAME_LENGTH = 32;
+const DISPLAY_NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} .'&-]*$/u;
+
+/** npm scope body cap (without `@`); keeps rewritten imports inside print width. */
+export const MAX_NPM_SCOPE_LENGTH = 32;
+
 export type ProjectIdentity = Readonly<{
   displayName: ProductDisplayName;
   slug: ProjectSlug;
@@ -79,6 +91,24 @@ export function titleCaseFromSlug(slug: string): string {
     .join(" ");
 }
 
+export function validateDisplayName(raw: string): ProductDisplayName {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    throw new Error("Project display name is empty.");
+  }
+  if (!DISPLAY_NAME_RE.test(trimmed)) {
+    throw new Error(
+      `Invalid project name ${JSON.stringify(raw)}. Use letters, digits, spaces, and . ' & - only, starting with a letter or digit.`,
+    );
+  }
+  if (trimmed.length > MAX_DISPLAY_NAME_LENGTH) {
+    throw new Error(
+      `Project name ${JSON.stringify(trimmed)} is ${trimmed.length} characters; max is ${MAX_DISPLAY_NAME_LENGTH}.`,
+    );
+  }
+  return brand(trimmed);
+}
+
 export function slugifyProjectName(raw: string): ProjectSlug {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -133,6 +163,12 @@ export function parseNpmScope(raw: string | undefined, slug: ProjectSlug): NpmSc
     );
   }
 
+  if (body.length > MAX_NPM_SCOPE_LENGTH) {
+    throw new Error(
+      `npm scope "${withAt}" is ${body.length} characters after @; max is ${MAX_NPM_SCOPE_LENGTH}.`,
+    );
+  }
+
   return brand(withAt as `@${string}`);
 }
 
@@ -150,10 +186,7 @@ export function buildProjectIdentity(input: {
   scope: NpmScope;
 }): ProjectIdentity {
   const { slug, scope } = input;
-  const displayName = brand<string, "ProductDisplayName">(input.displayName.trim());
-  if (!displayName) {
-    throw new Error("Project display name is empty.");
-  }
+  const displayName = validateDisplayName(input.displayName);
 
   const pg = toPostgresIdentifier(slug);
   const password = brand<string, "LocalPostgresPassword">(pg);
@@ -194,24 +227,42 @@ export function buildProjectIdentity(input: {
   };
 }
 
+/** Title-cased default from the target directory basename, or the reason it has none. */
+function defaultDisplayFromTargetDir(targetDir: string): { name: string } | { error: string } {
+  try {
+    const basename = basenameFromTargetDir(targetDir);
+    return { name: titleCaseFromSlug(slugifyProjectName(basename.replace(/_/g, "-"))) };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export async function resolveProjectIdentity(
   options: ResolveProjectIdentityOptions,
 ): Promise<ProjectIdentity> {
-  const basename = basenameFromTargetDir(options.targetDir);
-  const defaultDisplay = titleCaseFromSlug(slugifyProjectName(basename.replace(/_/g, "-")));
-
   let displayRaw: string;
   if (options.name !== undefined && options.name.trim() !== "") {
+    // An explicit --name wins; the directory basename is never validated.
     displayRaw = options.name.trim();
-  } else if (options.mode === "interactive") {
-    displayRaw = (await options.promptProjectName(defaultDisplay)).trim() || defaultDisplay;
   } else {
-    displayRaw = defaultDisplay;
+    const fallback = defaultDisplayFromTargetDir(options.targetDir);
+    const defaultName = "name" in fallback ? fallback.name : "";
+    if (options.mode === "interactive") {
+      displayRaw = (await options.promptProjectName(defaultName)).trim() || defaultName;
+    } else {
+      displayRaw = defaultName;
+    }
+    if (!displayRaw && "error" in fallback) {
+      throw new Error(
+        `Cannot derive a project name from the target directory: ${fallback.error} Pass --name "<Product Name>".`,
+      );
+    }
   }
 
-  const slug = slugifyProjectName(displayRaw);
+  const displayName = validateDisplayName(displayRaw);
+  const slug = slugifyProjectName(displayName);
   const scope = parseNpmScope(options.scope, slug);
-  return buildProjectIdentity({ displayName: displayRaw, slug, scope });
+  return buildProjectIdentity({ displayName, slug, scope });
 }
 
 export function formatIdentitySummary(identity: ProjectIdentity): string {
@@ -226,4 +277,14 @@ export function formatIdentitySummary(identity: ProjectIdentity): string {
     `  postgres:   ${local.postgresContainer} / ${local.postgresDatabase}`,
     `  slug:       ${slug}`,
   ].join("\n");
+}
+
+/** Interactive-prompt validator: an error message, or undefined when the name is usable. */
+export function projectNameProblem(raw: string): string | undefined {
+  try {
+    slugifyProjectName(validateDisplayName(raw));
+    return undefined;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
 }

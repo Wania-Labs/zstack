@@ -2,15 +2,19 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  MAX_DISPLAY_NAME_LENGTH,
+  MAX_NPM_SCOPE_LENGTH,
   MAX_PROJECT_SLUG_LENGTH,
   basenameFromTargetDir,
   buildProjectIdentity,
   formatIdentitySummary,
   parseNpmScope,
+  projectNameProblem,
   resolveProjectIdentity,
   slugifyProjectName,
   titleCaseFromSlug,
   toPostgresIdentifier,
+  validateDisplayName,
 } from "./project-identity.js";
 
 void test("slugifyProjectName lowercases, strips accents, and collapses separators", () => {
@@ -117,4 +121,93 @@ void test("formatIdentitySummary includes brand, packages, workers, stack, postg
   assert.match(summary, /@acme\/\*/);
   assert.match(summary, /acme-cloud-api/);
   assert.match(summary, /acme_cloud/);
+});
+
+void test("validateDisplayName accepts the safe charset and trims", () => {
+  for (const name of [
+    "Acme Cloud",
+    "O'Brien & Co.",
+    "Café 2",
+    "x-ray",
+    "Zstack Demo",
+    "7 Eleven",
+  ]) {
+    assert.equal(validateDisplayName(`  ${name} `), name);
+  }
+});
+
+void test("validateDisplayName rejects characters that break generated source", () => {
+  for (const name of [
+    'Acme "Cloud"',
+    "Acme {Cloud}",
+    "Acme ${evil}",
+    "Acme `tick`",
+    "Acme <b>",
+    "Acme\\Cloud",
+    "Acme: Cloud",
+    "Acme # Cloud",
+    "-Acme",
+    "&Acme",
+  ]) {
+    assert.throws(() => validateDisplayName(name), /letters, digits, spaces/, name);
+  }
+  assert.throws(() => validateDisplayName("   "), /empty/);
+  assert.throws(
+    () => validateDisplayName("a".repeat(MAX_DISPLAY_NAME_LENGTH + 1)),
+    new RegExp(`max is ${MAX_DISPLAY_NAME_LENGTH}`),
+  );
+});
+
+void test("buildProjectIdentity and resolveProjectIdentity validate display names", async () => {
+  const slug = slugifyProjectName("Acme");
+  assert.throws(
+    () =>
+      buildProjectIdentity({ displayName: 'Acme"', slug, scope: parseNpmScope(undefined, slug) }),
+    /letters, digits, spaces/,
+  );
+  await assert.rejects(
+    resolveProjectIdentity({ mode: "automatic", targetDir: "/tmp/x", name: "Acme ${x}" }),
+    /letters, digits, spaces/,
+  );
+  assert.equal(projectNameProblem("Acme Cloud"), undefined);
+  assert.match(projectNameProblem('Acme "Cloud"') ?? "", /letters, digits, spaces/);
+  assert.match(projectNameProblem("2026 App") ?? "", /must start with a letter/);
+});
+
+void test("parseNpmScope caps scope length", () => {
+  const slug = slugifyProjectName("acme");
+  assert.equal(
+    parseNpmScope("a".repeat(MAX_NPM_SCOPE_LENGTH), slug).length,
+    MAX_NPM_SCOPE_LENGTH + 1,
+  );
+  assert.throws(
+    () => parseNpmScope("a".repeat(MAX_NPM_SCOPE_LENGTH + 1), slug),
+    new RegExp(`max is ${MAX_NPM_SCOPE_LENGTH}`),
+  );
+});
+
+void test("resolveProjectIdentity ignores an invalid target basename when --name is given", async () => {
+  const identity = await resolveProjectIdentity({
+    mode: "automatic",
+    targetDir: "/tmp/2026-app",
+    name: "Acme",
+  });
+  assert.equal(identity.slug, "acme");
+  assert.equal(identity.displayName, "Acme");
+});
+
+void test("resolveProjectIdentity explains an invalid basename without --name", async () => {
+  await assert.rejects(
+    resolveProjectIdentity({ mode: "automatic", targetDir: "/tmp/2026-app" }),
+    /must start with a letter.*Pass --name/s,
+  );
+  const identity = await resolveProjectIdentity({
+    mode: "interactive",
+    targetDir: "/tmp/2026-app",
+    promptProjectName: async (defaultName) => {
+      assert.equal(defaultName, "");
+      return "Acme";
+    },
+  });
+  assert.equal(identity.slug, "acme");
 });
