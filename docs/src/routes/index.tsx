@@ -41,7 +41,7 @@ const capabilities: ReadonlyArray<{ name: string; local: string; on: string; hre
   },
   {
     name: "Billing",
-    local: "Fake checkout and entitlements",
+    local: "Checkout unconfigured, AI unmetered",
     on: "POLAR_ACCESS_TOKEN + POLAR_WEBHOOK_SECRET",
     href: "guides/turn-on-billing",
   },
@@ -59,7 +59,7 @@ const capabilities: ReadonlyArray<{ name: string; local: string; on: string; hre
   },
   {
     name: "Object storage",
-    local: "In-memory store, local R2 under alchemy:dev",
+    local: "Local R2 under alchemy:dev, Worker-signed paths",
     on: "R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY",
     href: "guides/turn-on-object-storage",
   },

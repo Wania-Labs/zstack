@@ -24,6 +24,10 @@ BENTO_SECRET_KEY=…
 
 With credentials bound, mail leaves through Bento. Without them, the console adapter logs the rendered message and spends nothing.
 
+A partial Bento config (some keys set, some empty) stays on console and logs a `console.warn` naming the missing variables, once per isolate.
+
+When `BETTER_AUTH_URL` is https, the console adapter replaces links with `[link redacted]` so reset and verification tokens never reach logs. Local http still prints them.
+
 ## Related
 
 - [Swap email transport](/docs/guides/swap-email-transport) if Bento is the wrong vendor

@@ -14,6 +14,8 @@ AI is `configured`. Product code asks for capability IDs such as `chat.fast`. Mo
 AI_GATEWAY_API_KEY=…
 ```
 
+Plain wrangler reads it from `apps/api/.dev.vars`. `alchemy:dev` reads root `.env` or the shell. Deploy reads the stage env file.
+
 3. Restart `alchemy:dev` or redeploy.
 4. Call `ai.capabilities` (public) or `ai.complete` (signed-in) through oRPC.
 
@@ -21,7 +23,7 @@ AI_GATEWAY_API_KEY=…
 
 Empty key → deterministic fake models, no spend. Key bound → gateway models from the capability registry.
 
-When Polar is configured, `ai.complete` also checks `canUse("ai.<capability>")` and reports `ai.generation` usage after success. Empty Polar does not block the fake path. See [Turn on billing](/docs/guides/turn-on-billing).
+When Polar is configured, `ai.complete` needs an active Team. Without one it returns `FORBIDDEN` "Select a Team to continue." With a Team it checks `canUse("ai.<capability>")` (`FORBIDDEN` "This Team does not include that capability." when denied) and reports `ai.generation` usage against that Team after success. Empty Polar does not block the fake path and does not need a Team. See [Turn on billing](/docs/guides/turn-on-billing).
 
 ## Capability IDs today
 

@@ -1,17 +1,20 @@
 ---
 title: Capabilities
-description: absent vs configured, secrets as the live switch, and what ships today.
+description: core, absent, configured; secrets as the live switch; and what ships today.
 ---
 
-`product.config.ts` records structural capability intent for the clone. It never holds secrets. Alchemy and application Layers should agree with what the file declares.
+`product.config.ts` records structural capability intent for the clone. It never holds secrets. Nothing reads it today: not the API runtime, not `alchemy.run.ts`, not CI. Actual on/off comes from Alchemy resources in `infra/*` plus empty vs set env. Keep the file in sync so humans and agents share one table.
 
 ## States
 
 | State        | Meaning                                                                                   |
 | ------------ | ----------------------------------------------------------------------------------------- |
+| `core`       | Always on with a free/local default (Compose, Better Auth, Paraglide)                     |
 | `absent`     | No Effect Layer, no Alchemy resource, no fake production fallback                         |
 | `configured` | Code and bindings exist; behavior stays off, console, or fake until secrets or flags flip |
-| `enabled`    | Reserved for a later readiness gate; not used as a live switch today                      |
+| `enabled`    | Reserved for live-by-default once a clone commits to a vendor; not used today             |
+
+Values are typed as `CapabilityState`. A typo fails `pnpm typecheck`.
 
 Empty credentials are the day-one default. Prefer console, Compose, and fake models over the author's SaaS accounts.
 
@@ -19,9 +22,9 @@ Empty credentials are the day-one default. Prefer console, Compose, and fake mod
 
 | Capability          | State in config                           | Live default                                                                                                                   |
 | ------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Postgres            | `database: "planetscale"` (deploy target) | Compose locally; PlanetScale on `alchemy:deploy`                                                                               |
-| Auth / orgs / staff | always on (not a capability key)          | Better Auth against Compose                                                                                                    |
-| i18n                | always on (not a capability key)          | Paraglide in `packages/i18n`. No vendor secret                                                                                 |
+| Postgres            | `core` (`deploy.database: "planetscale"`) | Compose locally; PlanetScale on `alchemy:deploy`                                                                               |
+| Auth / orgs / staff | `core` (`auth`)                           | Better Auth against Compose                                                                                                    |
+| i18n                | `core` (`i18n`)                           | Paraglide in `packages/i18n`. No vendor secret                                                                                 |
 | Email               | `configured`                              | Console until `EMAIL_FROM` + `BENTO_*`                                                                                         |
 | Observability       | `configured`                              | Off until `SENTRY_DSN` / `VITE_SENTRY_DSN*`                                                                                    |
 | AI                  | `configured`                              | Fake models until `AI_GATEWAY_API_KEY`                                                                                         |
@@ -35,8 +38,8 @@ Feature-flag SaaS, KV snapshots, and admin flag authoring are not shipped. Produ
 
 ## How to turn one on
 
-1. Confirm the capability is `configured` in `product.config.ts` (or core).
-2. Bind the secrets for that vendor.
+1. Confirm the capability is `configured` (or `core`) in `product.config.ts`.
+2. Bind the secrets for that vendor. Under Alchemy, each key must be listed in `infra/api.ts` `env`.
 3. Restart `alchemy:dev` or the Worker so env reloads.
 
 Guides: [Turn on email](/docs/guides/turn-on-email), [Turn on AI](/docs/guides/turn-on-ai), [Turn on observability](/docs/guides/turn-on-observability), [Turn on analytics](/docs/guides/turn-on-analytics), [Turn on billing](/docs/guides/turn-on-billing), [Turn on object storage](/docs/guides/turn-on-object-storage), [Feature flags](/docs/guides/feature-flags).

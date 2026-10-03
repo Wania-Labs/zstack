@@ -36,7 +36,21 @@ Rules:
 - Empty values are ignored
 - A stored value of the wrong type returns the caller default with reason `error`
 
-Set overlays in `.dev.vars` locally or as Alchemy secrets on deploy. Restart the Worker so env reloads.
+Where to set them:
+
+| Path          | File                                    | New keys                               |
+| ------------- | --------------------------------------- | -------------------------------------- |
+| Wrangler      | `apps/api/.dev.vars`                    | Any `FEATURE_FLAG_*` key works         |
+| `alchemy:dev` | Root `.env` or shell                    | Must be listed in `infra/api.ts` `env` |
+| Deploy        | Stage env file (`--env-file .env.prod`) | Must be listed in `infra/api.ts` `env` |
+
+Alchemy binds only the keys in `infra/api.ts`. `FEATURE_FLAG_EXAMPLE_READY` ships there (default `"true"`). For each new key add:
+
+```ts
+FEATURE_FLAG_EXAMPLE_LIMIT: Config.String("FEATURE_FLAG_EXAMPLE_LIMIT").pipe(Config.withDefault("")),
+```
+
+An empty default is ignored by the overlay, so the call-site default wins. Restart the Worker so env reloads.
 
 ## What you should see
 

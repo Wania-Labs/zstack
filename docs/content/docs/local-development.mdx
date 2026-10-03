@@ -1,23 +1,37 @@
 ---
 title: Local development
-description: Compose Postgres, Alchemy dev, wrangler escape, and optional vendors.
+description: Compose Postgres, Alchemy dev, wrangler escape, env files, and optional vendors.
 ---
 
 ## Preferred path
 
 ```bash
+pnpm install               # also compiles Paraglide (@zstack/i18n prepare)
 pnpm dev:services          # Postgres 18 via Compose
+pnpm db:migrate && pnpm db:seed
 pnpm alchemy:dev           # api :8787 + web :3000 + admin :3001
 ```
 
 Under `ALCHEMY_DEV`, Hyperdrive points at Compose. PlanetScale is **not** created for local smoke.
 
-Migrations and seeds use drizzle-kit against `DATABASE_URL` from Compose:
+`alchemy:dev` needs `BETTER_AUTH_SECRET` in root `.env` or the shell. `BETTER_AUTH_URL` and `ADMIN_URL` default to `http://localhost:3000` and `http://localhost:3001`.
 
-```bash
-pnpm db:migrate
-pnpm db:seed
-```
+If `@zstack/i18n/runtime` fails to resolve, rerun `pnpm install` or `pnpm --filter @zstack/i18n build`. `pnpm dev` (turbo) builds it first.
+
+## Env files
+
+| File                 | Read by                                                           | Committed |
+| -------------------- | ----------------------------------------------------------------- | --------- |
+| `.env`               | Alchemy CLI (`alchemy:dev` / `alchemy:deploy`), Compose           | No        |
+| `.env.local`         | drizzle-kit, `db:seed`, `auth:generate` (over `.env.development`) | No        |
+| `.env.development`   | Same tools; committed local defaults (`DATABASE_URL`, origins)    | Yes       |
+| `apps/api/.dev.vars` | Plain `wrangler dev`                                              | No        |
+
+Alchemy never reads `.env.local`, `.env.development`, or `.dev.vars`. `alchemy … --env-file <file>` replaces `.env` and wins over the shell. `.env.example` lists every key.
+
+For drizzle-kit, `db:seed`, and `auth:generate` the precedence is shell > `.env.local` > `.env.development`. An explicit `DATABASE_URL=… pnpm db:migrate` wins.
+
+Migrations and seeds use drizzle-kit against that `DATABASE_URL`. Hyperdrive does not read it. Wrangler uses `localConnectionString` in `apps/api/wrangler.jsonc`. `alchemy:dev` uses `composeDevOrigin` in `infra/database.ts`.
 
 ## Wrangler escape hatch
 
@@ -29,7 +43,7 @@ pnpm --filter @zstack/web dev
 pnpm --filter @zstack/admin dev
 ```
 
-Vite proxies `/api` to the API Worker. Do not add `@cloudflare/vite-plugin` to web or admin. Alchemy injects its own under `alchemy:dev` and deploy.
+Wrangler reads `apps/api/.dev.vars` (copy `.dev.vars.example`). Vite proxies `/api` to the API Worker (`API_ORIGIN`, default `http://127.0.0.1:8787`). SSR auth and oRPC calls use the same origin. Do not add `@cloudflare/vite-plugin` to web or admin. Alchemy injects its own under `alchemy:dev` and deploy.
 
 ## Ports and proxies
 
@@ -37,22 +51,34 @@ Vite proxies `/api` to the API Worker. Do not add `@cloudflare/vite-plugin` to w
 | ---------------- | ---- | ---------------------------- |
 | `@zstack/api`    | 8787 | Hono Worker                  |
 | `@zstack/web`    | 3000 | Customer; public auth origin |
-| `@zstack/admin`  | 3001 | Staff; same API contract     |
+| `@zstack/admin`  | 3001 | Staff; `ADMIN_URL`           |
 | Compose Postgres | 5432 | Local Hyperdrive origin      |
 
-`BETTER_AUTH_URL` defaults to `http://localhost:3000`. Frontends talk same-origin `/api/*` to the Worker. They never import API source.
+Frontends talk same-origin `/api/*` to the Worker. They never import API source. Deployed, web and admin forward `/api/*` through the `API` service binding. See [Deploy](/docs/guides/deploy).
+
+Localhost dev ports are Better Auth trusted origins only while `BETTER_AUTH_URL` is `http://localhost`.
+
+### Change the Postgres port
+
+Compose publishes `${POSTGRES_PORT:-5432}`. Set `POSTGRES_PORT` in root `.env`, then:
+
+1. Point `DATABASE_URL` in `.env.local` at the new port.
+2. Export `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=postgresql://zstack:zstack@127.0.0.1:<port>/zstack` for `wrangler dev` and `pnpm test:workers`.
+3. Edit `composeDevOrigin.port` in `infra/database.ts` for `alchemy:dev`.
 
 ## Optional vendors
 
-| Capability    | Default      | Turn on with                                  |
-| ------------- | ------------ | --------------------------------------------- |
-| Email         | Console      | `EMAIL_FROM` + `BENTO_*`                      |
-| Observability | Off          | `SENTRY_DSN` / `VITE_SENTRY_DSN*`             |
-| AI            | Fake models  | `AI_GATEWAY_API_KEY`                          |
-| Analytics     | No-op        | `POSTHOG_API_KEY` / `VITE_PUBLIC_POSTHOG_KEY` |
-| Billing       | Unconfigured | `POLAR_ACCESS_TOKEN` + `POLAR_WEBHOOK_SECRET` |
-| Object sign   | Worker paths | R2 S3 API tokens (`R2_ACCESS_KEY_ID`, …)      |
-| Feature flags | In-memory    | `FEATURE_FLAG_*` overlays                     |
+| Capability    | Default      | Turn on with                                           |
+| ------------- | ------------ | ------------------------------------------------------ |
+| Email         | Console      | `EMAIL_FROM` + `BENTO_*`                               |
+| Observability | Off          | `SENTRY_DSN` / `VITE_SENTRY_DSN*`                      |
+| AI            | Fake models  | `AI_GATEWAY_API_KEY`                                   |
+| Analytics     | No-op        | `POSTHOG_API_KEY` / `VITE_PUBLIC_POSTHOG_KEY`          |
+| Billing       | Unconfigured | `POLAR_ACCESS_TOKEN` + `POLAR_WEBHOOK_SECRET`          |
+| Object sign   | Worker paths | R2 S3 API tokens (`R2_ACCESS_KEY_ID`, …). Alchemy only |
+| Feature flags | In-memory    | `FEATURE_FLAG_*` overlays                              |
+
+Set vendor keys in `.dev.vars` for plain wrangler and in root `.env` for `alchemy:dev`. Under Alchemy, a new `POLAR_PRODUCT_*` or `FEATURE_FLAG_*` key also needs an entry in `infra/api.ts`.
 
 How-tos: [Turn on email](/docs/guides/turn-on-email), [Turn on AI](/docs/guides/turn-on-ai), [Turn on observability](/docs/guides/turn-on-observability), [Turn on analytics](/docs/guides/turn-on-analytics), [Turn on billing](/docs/guides/turn-on-billing), [Turn on object storage](/docs/guides/turn-on-object-storage), [Feature flags](/docs/guides/feature-flags).
 

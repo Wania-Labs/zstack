@@ -48,6 +48,7 @@ ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke --force --yes
 ```bash
 cd my-product
 cp apps/api/.dev.vars.example apps/api/.dev.vars
+printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -base64 32)" | tee -a .env >> apps/api/.dev.vars
 pnpm dev:services
 pnpm db:migrate && pnpm db:seed
 pnpm alchemy:dev
@@ -71,7 +72,16 @@ Then open the staff console at http://localhost:3001/login. Use **Users** to pro
 
 ## Secrets for local smoke
 
-Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars`. Keep `BETTER_AUTH_URL=http://localhost:3000`. Generate `BETTER_AUTH_SECRET` with `openssl rand -base64 32` when Alchemy needs it in the process env.
+Generate one `BETTER_AUTH_SECRET` with `openssl rand -base64 32` and write it to two gitignored files:
+
+| File                 | Read by                                 |
+| -------------------- | --------------------------------------- |
+| root `.env`          | `pnpm alchemy:dev` (Alchemy CLI)        |
+| `apps/api/.dev.vars` | Plain `wrangler dev` (copy the example) |
+
+Alchemy never reads `.dev.vars`, `.env.local`, or `.env.development`. The `printf … | tee` line above appends the same value to both. dotenv keeps the last duplicate key, so it overrides the example placeholder.
+
+Local origins need no setup. `BETTER_AUTH_URL=http://localhost:3000` and `ADMIN_URL=http://localhost:3001` are the defaults under `alchemy:dev` and in `.dev.vars.example`. Deploy requires https values. See [Deploy](/docs/guides/deploy).
 
 Optional vendors (Bento, Sentry, AI Gateway, Polar, PostHog) stay off until you set their env vars. See [Capabilities](/docs/concepts/capabilities).
 
@@ -84,10 +94,11 @@ Optional vendors (Bento, Sentry, AI Gateway, Polar, PostHog) stay off until you 
 ```bash
 git clone git@github.com:Wania-Labs/zstack.git
 cd zstack
-pnpm install
+pnpm install               # also compiles Paraglide via @zstack/i18n prepare
 pnpm dev:services
 pnpm db:migrate && pnpm db:seed
 cp apps/api/.dev.vars.example apps/api/.dev.vars
+printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -base64 32)" | tee -a .env >> apps/api/.dev.vars
 pnpm alchemy:dev
 ```
 

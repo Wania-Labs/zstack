@@ -1,6 +1,6 @@
 ---
 title: product.config.ts
-description: Capability intent file. No secrets. Alchemy and Layers should agree.
+description: Typed capability intent file. No secrets. Nothing reads it at runtime today.
 ---
 
 Path: `product.config.ts` at the monorepo root.
@@ -8,28 +8,39 @@ Path: `product.config.ts` at the monorepo root.
 ## Shape today
 
 ```ts
+export type CapabilityState = "core" | "absent" | "configured" | "enabled";
+
 export const product = {
   name: "zstack",
   capabilities: {
-    workflows: "configured",
-    queues: "configured",
+    database: "core",
+    auth: "core",
+    i18n: "core",
     email: "configured",
     observability: "configured",
-    ai: "configured",
-    database: "planetscale",
     objectStorage: "configured",
     flags: "configured",
     billing: "configured",
+    workflows: "configured",
+    queues: "configured",
     analytics: "configured",
+    ai: "configured",
   },
-} as const;
+  deploy: { database: "planetscale" },
+} as const satisfies ProductConfig;
 ```
+
+`ProductConfig` requires every `Capability` key and a `CapabilityState` value for each. `tsconfig.alchemy.json` includes the file, so `pnpm typecheck` catches a missing key or a bad state.
 
 ## Rules
 
 - Secrets never live here.
+- Intent only. Nothing reads the file today: not the API runtime, not `alchemy.run.ts`, not CI. Alchemy always provisions Hyperdrive, R2, the jobs Queue, and the example Workflow.
+- `core` means always on with a free/local default (Compose, Better Auth, Paraglide).
 - `absent` means no Layer and no Alchemy resource for that capability.
 - `configured` means scaffolded code exists; empty credentials keep the safe default.
-- Database value names the deploy target (`planetscale`). Local dev still uses Compose under `alchemy:dev`.
+- `enabled` is reserved for live-by-default once a clone commits to a vendor.
+- `deploy.database` names the deploy target (`planetscale`). Local dev always uses Compose.
+- `name` is rewritten by create-zstack personalization. Keep the `name: "…"` line intact.
 
 See [Capabilities](/docs/concepts/capabilities) for the human-facing state table.
