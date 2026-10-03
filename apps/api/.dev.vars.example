@@ -1,4 +1,7 @@
 BETTER_AUTH_URL=http://localhost:3000
+# Staff console origin (Better Auth trustedOrigins). Localhost dev ports are
+# only trusted while BETTER_AUTH_URL is http://localhost.
+ADMIN_URL=http://localhost:3001
 BETTER_AUTH_SECRET=replace-me-run-openssl-rand-or-auth-secret
 
 # Optional Bento transport (omit → console EmailService)

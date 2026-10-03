@@ -36,6 +36,7 @@ export type SessionResolver = (input: {
 function requireAuthEnv(env: ApiBindings): {
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
+  ADMIN_URL?: string;
   EMAIL_FROM?: string;
   BENTO_SITE_UUID?: string;
   BENTO_PUBLISHABLE_KEY?: string;
@@ -51,6 +52,7 @@ function requireAuthEnv(env: ApiBindings): {
   return {
     BETTER_AUTH_URL,
     BETTER_AUTH_SECRET,
+    ...(env.ADMIN_URL ? { ADMIN_URL: env.ADMIN_URL } : {}),
     ...(env.EMAIL_FROM ? { EMAIL_FROM: env.EMAIL_FROM } : {}),
     ...(env.BENTO_SITE_UUID ? { BENTO_SITE_UUID: env.BENTO_SITE_UUID } : {}),
     ...(env.BENTO_PUBLISHABLE_KEY ? { BENTO_PUBLISHABLE_KEY: env.BENTO_PUBLISHABLE_KEY } : {}),
