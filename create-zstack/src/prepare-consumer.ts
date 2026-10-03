@@ -1,7 +1,88 @@
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { PackageManagerName } from "nypm";
+import { formatJson } from "./format-json.js";
+
+/**
+ * Paths that belong to zstack authoring — never ship into consumer clones.
+ * Keep in sync with AUTHORING.md → Consumer ignore contract.
+ *
+ * Consumer Cursor packs are written by `applyAgentPacks` after download.
+ * Do not put consumer rules under the authoring tree's `.cursor/` — this ignore drops them.
+ */
+export const CONSUMER_IGNORE = [
+  "tech-stack-architecture-guide/**",
+  "AUTHORING.md",
+  ".cursor/**",
+  "create-zstack/**",
+  "docs/**",
+  "agent-transcripts/**",
+  ".audit/**",
+  ".github/workflows/publish-create-zstack.yml",
+  ".github/workflows/generate-clone.yml",
+  ".github/workflows/docs.yml",
+  "scripts/smoke-create-zstack",
+  "apps/*/.cta.json",
+  "repos/**",
+] as const;
+
+/**
+ * Authoring-only directories removed again after download. giget's string
+ * `ignore` uses `path.matchesGlob`, whose `**` skips dotfiles, so a glob alone
+ * leaked `docs/.npmrc` and friends. `isConsumerIgnored` fixes the matcher; this
+ * sweep keeps clones clean even if a future template source bypasses it.
+ */
+export const AUTHORING_DIRECTORIES = [
+  "tech-stack-architecture-guide",
+  ".cursor",
+  "create-zstack",
+  "docs",
+  "agent-transcripts",
+  ".audit",
+  "repos",
+] as const;
+
+function globSegmentToRegExp(segment: string): string {
+  return segment
+    .split("*")
+    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+    .join("[^/]*");
+}
+
+function compileIgnorePattern(pattern: string): (path: string) => boolean {
+  if (pattern.endsWith("/**")) {
+    const prefix = pattern.slice(0, -"/**".length);
+    const prefixRe = new RegExp(`^${prefix.split("/").map(globSegmentToRegExp).join("/")}(?:/|$)`);
+    return (path) => prefixRe.test(path);
+  }
+  const exactRe = new RegExp(`^${pattern.split("/").map(globSegmentToRegExp).join("/")}/?$`);
+  return (path) => exactRe.test(path);
+}
+
+const CONSUMER_IGNORE_MATCHERS = CONSUMER_IGNORE.map(compileIgnorePattern);
+
+/**
+ * giget `ignore` predicate. Unlike `path.matchesGlob`, `*` and `**` here match
+ * dot-prefixed names, so `docs/.npmrc` is ignored along with `docs/README.md`.
+ */
+export function isConsumerIgnored(path: string): boolean {
+  const normalized = path.replaceAll("\\", "/").replace(/^\.?\//, "");
+  if (!normalized) {
+    return false;
+  }
+  return CONSUMER_IGNORE_MATCHERS.some((matches) => matches(normalized));
+}
+
+const AUTHORING_FILES = [
+  "AUTHORING.md",
+  ".github/workflows/publish-create-zstack.yml",
+  ".github/workflows/generate-clone.yml",
+  ".github/workflows/docs.yml",
+  "scripts/smoke-create-zstack",
+] as const;
+
+/** Lint/format ignore entries that only exist for authoring directories. */
+const AUTHORING_IGNORE_PATTERNS = new Set(["docs/**", "tech-stack-architecture-guide/**"]);
 
 const CREATE_ZSTACK_IMPORTER_RE = /\n {2}create-zstack:\n(?: {4}.*\n)*/;
 
@@ -19,7 +100,6 @@ export async function stripAuthoringManifest(root: string): Promise<void> {
   const packagePath = join(root, "package.json");
   const packageJson = JSON.parse(await readFile(packagePath, "utf8")) as {
     scripts?: Record<string, string>;
-    packageManager?: string;
   };
   if (packageJson.scripts) {
     let scriptsChanged = false;
@@ -36,15 +116,31 @@ export async function stripAuthoringManifest(root: string): Promise<void> {
 
   await stripCreateZstackLockfileImporter(root);
 
-  await rm(join(root, ".github/workflows/docs.yml"), { force: true });
-  await rm(join(root, ".github/workflows/generate-clone.yml"), { force: true });
-  await rm(join(root, "scripts/smoke-create-zstack"), { force: true });
-  await rm(join(root, "repos"), { recursive: true, force: true });
+  for (const dir of AUTHORING_DIRECTORIES) {
+    await rm(join(root, dir), { recursive: true, force: true });
+  }
+  for (const file of AUTHORING_FILES) {
+    await rm(join(root, file), { force: true });
+  }
+  await removeCtaJson(root);
 
-  const readmePath = join(root, "README.md");
-  try {
-    let readme = await readFile(readmePath, "utf8");
-    readme = readme
+  for (const config of [".oxlintrc.json", ".oxfmtrc.json"] as const) {
+    await stripAuthoringIgnorePatterns(join(root, config));
+  }
+
+  await rewriteIfPresent(join(root, ".github/workflows/ci.yml"), (ci) =>
+    ci.replace(
+      /\n {4}paths-ignore:\n {6}- "docs\/\*\*"\n {6}- "\.github\/workflows\/docs\.yml"(?=\n)/g,
+      "",
+    ),
+  );
+
+  await rewriteIfPresent(join(root, "product.config.ts"), (product) =>
+    product.replace(/^ \* See AUTHORING\.md → Template wiring policy\.\n/m, ""),
+  );
+
+  await rewriteIfPresent(join(root, "README.md"), (readme) =>
+    readme
       .replace(
         /^- `create-zstack` \/ `@wanialabs\/create-zstack` scaffold CLI \(excluded from clones\)\n/m,
         "",
@@ -70,11 +166,53 @@ export async function stripAuthoringManifest(root: string): Promise<void> {
         /\nSee \[AUTHORING\.md\]\(AUTHORING\.md\)\. Agents: \[AGENTS\.md\]\(AGENTS\.md\)\.\n/g,
         "\nSee [AGENTS.md](AGENTS.md).\n",
       )
-      .replace(/\nSee \[AUTHORING\.md\]\(AUTHORING\.md\)\.\n/g, "\n");
-    await writeFile(readmePath, readme);
+      .replace(/\nSee \[AUTHORING\.md\]\(AUTHORING\.md\)\.\n/g, "\n"),
+  );
+}
+
+async function rewriteIfPresent(path: string, rewrite: (text: string) => string): Promise<void> {
+  let text: string;
+  try {
+    text = await readFile(path, "utf8");
   } catch {
-    // README optional
+    return;
   }
+  const next = rewrite(text);
+  if (next !== text) {
+    await writeFile(path, next);
+  }
+}
+
+async function removeCtaJson(root: string): Promise<void> {
+  let apps: string[];
+  try {
+    apps = await readdir(join(root, "apps"));
+  } catch {
+    return;
+  }
+  for (const app of apps) {
+    await rm(join(root, "apps", app, ".cta.json"), { force: true });
+  }
+}
+
+async function stripAuthoringIgnorePatterns(path: string): Promise<void> {
+  let config: { ignorePatterns?: unknown };
+  try {
+    config = JSON.parse(await readFile(path, "utf8")) as { ignorePatterns?: unknown };
+  } catch {
+    return;
+  }
+  if (!Array.isArray(config.ignorePatterns)) {
+    return;
+  }
+  const next = config.ignorePatterns.filter(
+    (pattern) => typeof pattern !== "string" || !AUTHORING_IGNORE_PATTERNS.has(pattern),
+  );
+  if (next.length === config.ignorePatterns.length) {
+    return;
+  }
+  config.ignorePatterns = next;
+  await writeFile(path, formatJson(config));
 }
 
 /** Drop the authoring CLI importer so consumer `pnpm install --frozen-lockfile` succeeds. */
@@ -87,59 +225,26 @@ export async function stripCreateZstackLockfileImporter(root: string): Promise<v
       await writeFile(lockPath, next);
     }
   } catch {
-    // lockfile optional (e.g. non-pnpm install will regenerate)
+    // lockfile optional
   }
-}
-
-const PACKAGE_MANAGER_FIELD: Record<
-  Exclude<PackageManagerName, "deno" | "aube" | "nub">,
-  string
-> = {
-  npm: "npm@10",
-  yarn: "yarn@1.22.22",
-  pnpm: "pnpm@11.18.0",
-  bun: "bun@1.2.0",
-};
-
-export type ScaffoldPackageManager = keyof typeof PACKAGE_MANAGER_FIELD;
-
-export function isScaffoldPackageManager(value: string): value is ScaffoldPackageManager {
-  return value in PACKAGE_MANAGER_FIELD;
 }
 
 /**
- * Align the clone with the chosen install tool.
- * Non-pnpm drops `pnpm-lock.yaml` so nypm does not keep selecting pnpm from the lockfile.
+ * Clones are pnpm workspaces: `workspace:*` specifiers, `pnpm-workspace.yaml`,
+ * `pnpm --filter` root scripts, and a committed `pnpm-lock.yaml`. npm, yarn,
+ * and bun cannot install them as-is, so the clone's install manager is always
+ * pnpm. (`npm create` / `yarn create` / `bunx` are fine as *launchers*.)
  */
-export async function applyPackageManagerChoice(
-  root: string,
-  packageManager: ScaffoldPackageManager,
-): Promise<void> {
-  const packagePath = join(root, "package.json");
-  const packageJson = JSON.parse(await readFile(packagePath, "utf8")) as {
-    packageManager?: string;
-  };
-  packageJson.packageManager = PACKAGE_MANAGER_FIELD[packageManager];
-  await writeFile(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+export type ScaffoldPackageManager = "pnpm";
 
-  if (packageManager !== "pnpm") {
-    await rm(join(root, "pnpm-lock.yaml"), { force: true });
+export function parsePackageManager(raw: string | undefined): ScaffoldPackageManager {
+  const value = raw?.trim().toLowerCase();
+  if (!value || value === "pnpm") {
+    return "pnpm";
   }
-}
-
-export function runScriptCommand(packageManager: ScaffoldPackageManager, script: string): string {
-  switch (packageManager) {
-    case "npm":
-      return `npm run ${script}`;
-    case "yarn":
-      return `yarn ${script}`;
-    case "bun":
-      return `bun run ${script}`;
-    case "pnpm":
-      return `pnpm ${script}`;
-    default: {
-      const _exhaustive: never = packageManager;
-      return _exhaustive;
-    }
-  }
+  throw new Error(
+    `Unsupported --package-manager "${raw}". zstack clones are pnpm workspaces ` +
+      "(workspace:* deps, pnpm-workspace.yaml, pnpm --filter scripts), so only pnpm is supported. " +
+      "You can still launch the CLI with npm/yarn/bun create; the clone installs with pnpm.",
+  );
 }
