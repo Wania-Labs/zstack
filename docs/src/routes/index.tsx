@@ -84,26 +84,29 @@ const bets = [
   },
 ];
 
-const aiSnippet = `export const completeAi = Effect.fn("completeAi")(function* (input) {
-  const { organizationId } = yield* CurrentRequestContext;
-
+const aiSnippet = `export const authorizeAiUsage = Effect.fn("authorizeAiUsage")(function* (
+  capability: AiCompleteParams["capability"],
+) {
   // Billing is a port: a fake locally, Polar once a token is set.
   const billing = yield* BillingService;
-  if (organizationId && (yield* billing.isConfigured())) {
-    const allowed = yield* billing.canUse({
-      customerId: organizationId,
-      capability: aiCapabilityEntitlement(input.capability),
-    });
-    if (!allowed) {
-      return yield* Effect.fail(
-        new BillingError({ message: "entitlement denied" }),
-      );
-    }
+  if (!(yield* billing.isConfigured())) {
+    return undefined;
   }
 
-  // AI is a port too: a deterministic fake until AI_GATEWAY_API_KEY is set.
-  const ai = yield* AiService;
-  return yield* ai.complete(input);
+  const request = yield* CurrentRequestContext;
+  const organizationId = request.organizationId;
+  if (!organizationId) {
+    return yield* new BillingError({ message: AI_ORGANIZATION_REQUIRED });
+  }
+
+  const allowed = yield* billing.canUse({
+    customerId: organizationId,
+    capability: aiCapabilityEntitlement(capability),
+  });
+  if (!allowed) {
+    return yield* new BillingError({ message: "entitlement denied" });
+  }
+  return organizationId;
 });`;
 
 const agentTree = `AGENTS.md                 // hard rules, commands, env split
