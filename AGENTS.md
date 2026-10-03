@@ -17,7 +17,7 @@ Deep tutorials live on the zstack docs site when published. This file must stay 
 | `packages/auth-access`      | Better Auth admin role access control                                                        |
 | `packages/i18n`             | Paraglide catalogs; compiled messages and runtime                                            |
 | `infra/` + `alchemy.run.ts` | Cloudflare + PlanetScale resources (Alchemy **v2 IaC**, not blockchain Alchemy)              |
-| `product.config.ts`         | Capability **intent** only. Not imported by runtime today. No secrets.                       |
+| `product.config.ts`         | Capability **intent** only. Not read by runtime or Alchemy today. No secrets.                |
 | `.agent/playbooks/`         | Multi-step procedures                                                                        |
 | `.agent/skills/`            | Agent skills (Effect, …). Tool packs may copy these into `.cursor/skills` / `.claude/skills` |
 

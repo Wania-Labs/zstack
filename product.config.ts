@@ -1,61 +1,59 @@
 /**
- * Reviewed capability / readiness intent for this product clone.
- * Secrets never live here. Alchemy provisions only what is selected.
+ * Reviewed capability intent for this product clone. Secrets never live here.
  *
- * Template rule: scaffold ready-to-wire adapters; do not bind the author's
- * real SaaS accounts. Core local paths use Compose / console / empty DSN.
- * Optional vendors stay off until a clone sets secrets or flips the manifest.
- * See AUTHORING.md → Template wiring policy.
- *
- * Workflows and queues are configured: JobQueue and DurableWorkflow always
- * exist. Missing Worker bindings use in-memory fakes. Alchemy binds a Queue
- * producer/consumer and the example Cloudflare Workflow on the API Worker.
- *
- * Email is configured: React Email + EmailService always exist. Transport is
- * console until Bento credentials are bound (`EMAIL_FROM` + `BENTO_*`).
- *
- * Observability is configured: Sentry + evlog are wired. Empty DSNs keep the
- * SDKs and Sentry drain off until a clone binds project credentials.
- *
- * AI is configured: capability registry + Effect AiService + oRPC. Empty
- * `AI_GATEWAY_API_KEY` keeps the deterministic fake model (no spend).
- *
- * Database is PlanetScale Postgres on deploy (Alchemy). Local `alchemy:dev`
- * and wrangler / drizzle-kit use Compose only — no cloud DB create.
- *
- * Object storage is configured: ObjectStore always exists. Missing R2 binding
- * uses an in-memory fake. Sign intents use Worker `/api/objects/*` until R2
- * S3 API tokens are set, then aws4fetch presigns. Alchemy binds a bucket on
- * the API Worker; alchemy:dev uses Alchemy local R2, not a cloud bucket on
- * the author's account.
- *
- * Feature flags are configured: FeatureFlags always exists. The in-memory
- * provider returns the caller-supplied default when a key is missing. No flag SaaS.
- *
- * Billing is configured: BillingService always exists. Empty POLAR_ACCESS_TOKEN
- * keeps checkout/portal unconfigured and entitlements denied. With a token,
- * checkout/portal call Polar HTTP. Verified Polar webhooks write a unique
- * Postgres ledger and entitlement projection; canUse/limit read the projection
- * first and fall back to Polar customer state. Usage goes through an outbox
- * job (`billing.usage`) then Polar `events.ingest`. No Polar org or product IDs
- * in source.
- *
- * Analytics is configured: typed events in `@zstack/analytics`. Empty
- * POSTHOG_API_KEY / VITE_PUBLIC_POSTHOG_KEY keeps a no-op client. Staff capture
- * is skipped. PostHog flags stay off.
+ * Intent only: nothing reads this file today. Not the API runtime, not
+ * `alchemy.run.ts` (which always provisions Hyperdrive, R2, the jobs Queue, and
+ * the example Workflow), not CI. Actual on/off comes from Alchemy resources in
+ * `infra/*` plus empty vs set env (see `.env.example`, `apps/api/.dev.vars.example`).
+ * Keep it in sync with AUTHORING.md → Template wiring policy so humans and agents
+ * share one capability table.
  */
+
+/**
+ * - `core`: always on with a free/local default (Compose, Better Auth, Paraglide).
+ * - `absent`: no Effect Layer, no Alchemy resource, no fake production fallback.
+ * - `configured`: code + Alchemy bindings exist; stays fake / no-op / console
+ *   until a clone sets secrets or flags.
+ * - `enabled`: reserved for live-by-default once a clone commits to a vendor.
+ */
+export type CapabilityState = "core" | "absent" | "configured" | "enabled";
+
+export type Capability =
+  | "database"
+  | "auth"
+  | "i18n"
+  | "email"
+  | "observability"
+  | "objectStorage"
+  | "flags"
+  | "billing"
+  | "workflows"
+  | "queues"
+  | "analytics"
+  | "ai";
+
+export type ProductConfig = {
+  readonly name: string;
+  readonly capabilities: Readonly<Record<Capability, CapabilityState>>;
+  /** Deploy-time vendor choices. Local dev always uses Compose. */
+  readonly deploy: { readonly database: "planetscale" };
+};
+
 export const product = {
   name: "zstack",
   capabilities: {
-    workflows: "configured",
-    queues: "configured",
+    database: "core",
+    auth: "core",
+    i18n: "core",
     email: "configured",
     observability: "configured",
-    ai: "configured",
-    database: "planetscale",
     objectStorage: "configured",
     flags: "configured",
     billing: "configured",
+    workflows: "configured",
+    queues: "configured",
     analytics: "configured",
+    ai: "configured",
   },
-} as const;
+  deploy: { database: "planetscale" },
+} as const satisfies ProductConfig;

@@ -96,7 +96,7 @@ This repo is a **starter template**, not a product under the author's SaaS accou
 1. **Do not provision or bind real third-party projects** for this repo (Sentry orgs, Bento sites, Polar, PostHog, paid PlanetScale clusters for "smoke," etc.) unless the human explicitly asks to exercise a live path.
 2. **Scaffold ready-to-wire code** — SDKs, adapters, Alchemy env slots, docs — so a clone can turn a capability on by config/secrets.
 3. **Core to local functionality may be always-on with a free/local default:** Compose Postgres, Better Auth against that DB, Hono/oRPC, web/admin shells. Those must work with `pnpm alchemy:dev` + `pnpm dev:services` and no paid vendors.
-4. **Everything else is opt-in** via `product.config.ts` (`absent` | `configured` | later `enabled`) and/or empty credentials:
+4. **Everything else is opt-in** via empty vs set credentials. `product.config.ts` records the intended state (`core` | `absent` | `configured` | later `enabled`) but nothing reads it yet:
    - `absent` — no Effect Layer, no Alchemy resource, no fake production fallback.
    - `configured` — code + Alchemy bindings exist; behavior stays off/no-op until secrets or flags are set (Bento, Sentry).
 5. Prefer **empty env defaults** over dummy cloud accounts. Prefer **console / Compose / local workerd** over hitting a vendor during template authoring.
