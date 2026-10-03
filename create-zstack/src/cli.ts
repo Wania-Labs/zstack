@@ -2,47 +2,27 @@ import { defineCommand, runMain } from "citty";
 import { downloadTemplate } from "giget";
 import { installDependencies } from "nypm";
 import * as p from "@clack/prompts";
-import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { lstatSync, readdirSync, statSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
 import { applyAgentPacks, resolveAgentPackSelection, type AgentTool } from "./apply-agent-packs.js";
 import {
   formatIdentitySummary,
+  projectNameProblem,
   resolveProjectIdentity,
   type ProjectIdentity,
 } from "./project-identity.js";
 import { personalizeClone } from "./personalize-identity.js";
 import {
-  applyPackageManagerChoice,
-  isScaffoldPackageManager,
-  runScriptCommand,
+  claimTargetDirectory,
+  isConsumerIgnored,
+  parsePackageManager,
   stripAuthoringManifest,
-  type ScaffoldPackageManager,
+  type TargetClaim,
 } from "./prepare-consumer.js";
-
-/**
- * Paths that belong to zstack authoring — never ship into consumer clones.
- * Keep in sync with AUTHORING.md → Consumer ignore contract.
- *
- * Consumer Cursor packs are written by `applyAgentPacks` after download.
- * Do not put consumer rules under the authoring tree's `.cursor/` — this ignore drops them.
- */
-export const CONSUMER_IGNORE = [
-  "tech-stack-architecture-guide/**",
-  "AUTHORING.md",
-  ".cursor/**",
-  "create-zstack/**",
-  "docs/**",
-  "agent-transcripts/**",
-  ".audit/**",
-  ".github/workflows/publish-create-zstack.yml",
-  ".github/workflows/generate-clone.yml",
-  ".github/workflows/docs.yml",
-  "scripts/smoke-create-zstack",
-  "apps/*/.cta.json",
-  "repos/**",
-] as const;
 
 /** Override with ZSTACK_TEMPLATE (e.g. `git:$(pwd)` or `gh:org/zstack`). */
 const DEFAULT_TEMPLATE = process.env.ZSTACK_TEMPLATE?.trim() || "gh:Wania-Labs/zstack";
@@ -51,47 +31,19 @@ const { version } = createRequire(import.meta.url)("../package.json") as {
   version: string;
 };
 
-const PACKAGE_MANAGERS = [
-  "pnpm",
-  "npm",
-  "yarn",
-  "bun",
-] as const satisfies readonly ScaffoldPackageManager[];
+function fail(error: unknown): never {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+}
 
-async function resolvePackageManager(options: {
-  packageManagerArg: string | undefined;
-  yes: boolean;
-  isTTY: boolean;
-}): Promise<ScaffoldPackageManager> {
-  const raw = options.packageManagerArg?.trim().toLowerCase();
-  if (raw) {
-    if (!isScaffoldPackageManager(raw) || !PACKAGE_MANAGERS.includes(raw)) {
-      throw new Error(
-        `Unknown --package-manager "${raw}". Use one of: ${PACKAGE_MANAGERS.join(", ")}.`,
-      );
-    }
-    return raw;
-  }
-
-  if (options.yes || !options.isTTY) {
-    return "pnpm";
-  }
-
-  const chosen = await p.select({
-    message: "Package manager for install + next steps?",
-    options: [
-      { value: "pnpm", label: "pnpm (recommended — template is a pnpm workspace)" },
-      { value: "npm", label: "npm" },
-      { value: "yarn", label: "yarn" },
-      { value: "bun", label: "bun" },
-    ],
-    initialValue: "pnpm",
+/** Run in the clone so corepack (strict mode) sees its `packageManager` field. */
+function isPnpmAvailable(cwd: string): boolean {
+  const result = spawnSync("pnpm", ["--version"], {
+    cwd,
+    stdio: "ignore",
+    shell: process.platform === "win32",
   });
-  if (p.isCancel(chosen)) {
-    p.cancel("Scaffold cancelled.");
-    process.exit(1);
-  }
-  return chosen as ScaffoldPackageManager;
+  return result.status === 0;
 }
 
 const main = defineCommand({
@@ -109,7 +61,8 @@ const main = defineCommand({
     },
     name: {
       type: "string",
-      description: "Product display name (default: title-cased directory basename)",
+      description:
+        "Product display name: letters, digits, spaces, . ' & - (max 32). Default: title-cased directory basename",
       required: false,
     },
     scope: {
@@ -129,7 +82,7 @@ const main = defineCommand({
     },
     force: {
       type: "boolean",
-      description: "Write into an existing directory",
+      description: "Write into an existing non-empty directory",
       default: false,
     },
     offline: {
@@ -139,12 +92,13 @@ const main = defineCommand({
     },
     install: {
       type: "boolean",
-      description: "Install dependencies with nypm after download",
+      description: "Install dependencies with pnpm after download",
       default: true,
     },
     "package-manager": {
       type: "string",
-      description: "Install + next-step package manager: pnpm (default) | npm | yarn | bun",
+      description:
+        "Clone install manager. Only pnpm is supported (clones are pnpm workspaces); npm/yarn/bun create still work as launchers",
       required: false,
       alias: "p",
     },
@@ -177,11 +131,28 @@ const main = defineCommand({
     const dir = resolve(process.cwd(), args.dir);
     const isTTY = Boolean(process.stdin.isTTY && process.stdout.isTTY);
 
-    if (existsSync(dir) && !args.force) {
-      console.error(
-        `Directory already exists: ${dir}\nPass --force to overwrite into it, or choose another path.`,
-      );
-      process.exit(1);
+    // Early, friendly check before any prompts. The authoritative claim happens
+    // right before download (claimTargetDirectory), since the path can change meanwhile.
+    const existing = lstatSync(dir, { throwIfNoEntry: false });
+    if (existing) {
+      const isDir = existing.isSymbolicLink()
+        ? statSync(dir, { throwIfNoEntry: false })?.isDirectory() === true
+        : existing.isDirectory();
+      if (!isDir) {
+        fail(`Target exists and is not a directory: ${dir}`);
+      }
+      if (readdirSync(dir).length > 0 && !args.force) {
+        fail(
+          `Directory is not empty: ${dir}\nPass --force to write into it, or choose another path.`,
+        );
+      }
+    }
+
+    let packageManager;
+    try {
+      packageManager = parsePackageManager(args["package-manager"]);
+    } catch (error) {
+      fail(error);
     }
 
     let identity: ProjectIdentity | undefined;
@@ -203,6 +174,10 @@ const main = defineCommand({
                     message: "Project name?",
                     placeholder: defaultName,
                     defaultValue: defaultName,
+                    validate: (value) => {
+                      const candidate = value?.trim() || defaultName;
+                      return candidate ? projectNameProblem(candidate) : "Project name is empty.";
+                    },
                   });
                   if (p.isCancel(answer)) {
                     p.cancel("Scaffold cancelled.");
@@ -213,51 +188,8 @@ const main = defineCommand({
               },
         );
       } catch (error) {
-        console.error(error instanceof Error ? error.message : error);
-        process.exit(1);
+        fail(error);
       }
-    }
-
-    console.log(`Downloading ${args.template} → ${dir}`);
-    const result = await downloadTemplate(args.template, {
-      dir,
-      force: args.force,
-      offline: args.offline,
-      preferOffline: args.offline,
-      ignore: [...CONSUMER_IGNORE],
-    });
-
-    console.log(`Template ready at ${result.dir}`);
-    await stripAuthoringManifest(result.dir);
-
-    if (identity) {
-      try {
-        await personalizeClone({ root: result.dir, identity });
-        console.log(formatIdentitySummary(identity));
-      } catch (error) {
-        console.error(error instanceof Error ? error.message : error);
-        process.exit(1);
-      }
-    } else {
-      console.log("Keeping template identity (--keep-identity).");
-    }
-
-    let packageManager: ScaffoldPackageManager;
-    try {
-      packageManager = await resolvePackageManager({
-        packageManagerArg: args["package-manager"],
-        yes: args.yes,
-        isTTY,
-      });
-    } catch (error) {
-      console.error(error instanceof Error ? error.message : error);
-      process.exit(1);
-    }
-    await applyPackageManagerChoice(result.dir, packageManager);
-    if (packageManager !== "pnpm") {
-      console.log(
-        `Note: the template is a pnpm workspace. You chose ${packageManager}; scripts that use pnpm filters may need adjusting.`,
-      );
     }
 
     let selection;
@@ -288,51 +220,100 @@ const main = defineCommand({
         },
       });
     } catch (error) {
+      fail(error);
+    }
+
+    // Everything up to the agent packs is template preparation. If any of it fails,
+    // do not leave a half-personalized tree behind in a directory we created.
+    let cloneDir = dir;
+    let claim: TargetClaim | undefined;
+    try {
+      claim = await claimTargetDirectory(dir, { force: args.force });
+      console.log(`Downloading ${args.template} → ${dir}`);
+      const result = await downloadTemplate(args.template, {
+        dir,
+        force: args.force,
+        offline: args.offline,
+        preferOffline: args.offline,
+        ignore: isConsumerIgnored,
+      });
+      cloneDir = result.dir;
+
+      console.log(`Template ready at ${cloneDir}`);
+      await stripAuthoringManifest(cloneDir, { preserve: claim.preserve });
+
+      if (identity) {
+        await personalizeClone({ root: cloneDir, identity, preserve: claim.preserve });
+        console.log(formatIdentitySummary(identity));
+      } else {
+        console.log("Keeping template identity (--keep-identity).");
+      }
+
+      if (selection.tools.length > 0) {
+        const packIdentity =
+          identity ??
+          (await resolveProjectIdentity({
+            mode: "automatic",
+            targetDir: cloneDir,
+            name: "zstack",
+            scope: "@zstack",
+          }));
+        await applyAgentPacks(cloneDir, selection, packIdentity);
+        const toolLabel = selection.tools.join(", ");
+        const mcpLabel = selection.mcp === "none" ? "" : ` + MCP (${selection.mcp.join(", ")})`;
+        const skillsLabel = selection.skills === "none" ? "" : ` + skills:${selection.skills}`;
+        console.log(`Agent packs written: ${toolLabel}${mcpLabel}${skillsLabel}`);
+        if (selection.tools.includes("codex") && selection.tools.every((t) => t === "codex")) {
+          console.log(
+            "Note: Codex uses the shipped AGENTS.md. Configure Codex MCP in ~/.codex/config.toml if needed.",
+          );
+        }
+      }
+    } catch (error) {
       console.error(error instanceof Error ? error.message : error);
+      if (claim?.created) {
+        await rm(dir, { recursive: true, force: true });
+        console.error(`Removed partially created ${dir}.`);
+      } else if (claim) {
+        console.error(
+          `${dir} existed before create-zstack ran, so it was left in place and may contain a partial clone.`,
+        );
+      }
       process.exit(1);
     }
 
-    if (selection.tools.length > 0) {
-      const packIdentity =
-        identity ??
-        (await resolveProjectIdentity({
-          mode: "automatic",
-          targetDir: result.dir,
-          name: "zstack",
-          scope: "@zstack",
-        }));
-      await applyAgentPacks(result.dir, selection, packIdentity);
-      const toolLabel = selection.tools.join(", ");
-      const mcpLabel = selection.mcp === "none" ? "" : ` + MCP (${selection.mcp.join(", ")})`;
-      const skillsLabel = selection.skills === "none" ? "" : ` + skills:${selection.skills}`;
-      console.log(`Agent packs written: ${toolLabel}${mcpLabel}${skillsLabel}`);
-      if (selection.tools.includes("codex") && selection.tools.every((t) => t === "codex")) {
-        console.log(
-          "Note: Codex uses the shipped AGENTS.md. Configure Codex MCP in ~/.codex/config.toml if needed.",
+    let installed = false;
+    if (args.install) {
+      if (isPnpmAvailable(cloneDir)) {
+        // nypm's installDependencies does not take env. Inherit into the child install.
+        process.env.SHARP_IGNORE_GLOBAL_LIBVIPS ??= "1";
+        console.log(`Installing dependencies with ${packageManager}…`);
+        await installDependencies({
+          cwd: cloneDir,
+          silent: false,
+          packageManager,
+        });
+        console.log("Dependencies installed.");
+        installed = true;
+      } else {
+        console.warn(
+          [
+            "pnpm was not found on PATH, so dependencies were not installed.",
+            "zstack clones are pnpm workspaces. Install pnpm first:",
+            "  corepack enable pnpm   (Node 22 ships corepack)",
+            "  npm install -g pnpm    (alternative)",
+          ].join("\n"),
         );
       }
     }
 
-    if (args.install) {
-      // nypm's installDependencies does not take env. Inherit into the child install.
-      process.env.SHARP_IGNORE_GLOBAL_LIBVIPS ??= "1";
-      console.log(`Installing dependencies with ${packageManager}…`);
-      await installDependencies({
-        cwd: result.dir,
-        silent: false,
-        packageManager,
-      });
-      console.log("Dependencies installed.");
-    }
-
-    const run = (script: string) => runScriptCommand(packageManager, script);
     console.log(`
 Next:
-  cd ${args.dir}
+  cd ${args.dir}${installed ? "" : "\n  pnpm install"}
   cp apps/api/.dev.vars.example apps/api/.dev.vars
-  ${run("dev:services")}
-  ${run("db:migrate")} && ${run("db:seed")}
-  ${run("alchemy:dev")}
+  pnpm dev:services
+  pnpm db:migrate && pnpm db:seed
+  pnpm alchemy:dev
 `);
   },
 });

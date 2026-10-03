@@ -1,8 +1,4 @@
-import type {
-  AiCapabilitiesResponse,
-  AiCapabilityId,
-  AiCompleteResponse,
-} from "@zstack/contracts/ai";
+import type * as AiContract from "@zstack/contracts/ai";
 import { generateText } from "ai";
 import { Context, Effect, Layer, Schema } from "effect";
 
@@ -14,7 +10,7 @@ export class AiError extends Schema.TaggedError<AiError>()("AiError", {
 }) {}
 
 export type AiCompleteParams = {
-  capability: AiCapabilityId;
+  capability: AiContract.AiCapabilityId;
   prompt: string;
 };
 
@@ -25,8 +21,8 @@ export type AiCompleteParams = {
 export class AiService extends Context.Service<
   AiService,
   {
-    listCapabilities(): Effect.Effect<AiCapabilitiesResponse, never>;
-    complete(input: AiCompleteParams): Effect.Effect<AiCompleteResponse, AiError>;
+    listCapabilities(): Effect.Effect<AiContract.AiCapabilitiesResponse, never>;
+    complete(input: AiCompleteParams): Effect.Effect<AiContract.AiCompleteResponse, AiError>;
   }
 >()("@zstack/api/platform/ai/AiService") {}
 
@@ -60,7 +56,7 @@ function makeAiService(env: AiRegistryEnv): AiService["Service"] {
             text: result.text,
             route: resolved.route,
             modelId: resolved.modelId,
-          } satisfies AiCompleteResponse;
+          } satisfies AiContract.AiCompleteResponse;
         },
         catch: (cause) =>
           new AiError({

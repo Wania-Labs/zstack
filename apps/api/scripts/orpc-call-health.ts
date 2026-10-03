@@ -5,8 +5,11 @@ import type { RequestContext } from "../src/http/context";
 import type { ApiBindings } from "../src/platform/cloudflare/bindings";
 import { runRequestEffect } from "../src/platform/effect/runtime";
 
+/** Compose Postgres: user, password, and database share one local identifier. */
+const localPostgres = "zstack";
 const connectionString =
-  process.env.DATABASE_URL ?? "postgresql://zstack:zstack@127.0.0.1:5432/zstack";
+  process.env.DATABASE_URL ??
+  `postgresql://${localPostgres}:${localPostgres}@127.0.0.1:5432/${localPostgres}`;
 
 const env = {
   HYPERDRIVE: { connectionString },

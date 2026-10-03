@@ -1,8 +1,0 @@
----
-description: zstack product monorepo invariants — Alchemy deploy, ports/adapters, contracts-only frontends
-alwaysApply: true
----
-
-Read and follow `AGENTS.md` at the repo root (and nested `AGENTS.md` / `.agent/playbooks/` when editing those trees).
-
-Hard constraints: Alchemy is the only deploy path; modules call platform ports; frontends import `@zstack/contracts`, `@zstack/i18n`, and `@zstack/analytics` only; pin Effect/Drizzle/Alchemy in package.json (no `patches/` directory); no secrets in `product.config.ts`.

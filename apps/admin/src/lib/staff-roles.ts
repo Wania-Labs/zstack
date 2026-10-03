@@ -1,9 +1,6 @@
-import {
-  AssignableUserRole,
-  type AssignableUserRole as AssignableRole,
-} from "@zstack/contracts/staff";
+import { AssignableUserRole } from "@zstack/contracts/staff";
 
-export type { AssignableRole };
+export type AssignableRole = AssignableUserRole;
 
 export const ASSIGNABLE_ROLES = AssignableUserRole.options;
 

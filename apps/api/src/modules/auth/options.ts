@@ -1,4 +1,4 @@
-import { betterAuthAdminRoleNames, betterAuthAdminRoles } from "@zstack/auth-access/admin-roles";
+import * as adminRoles from "@zstack/auth-access/admin-roles";
 import type { BetterAuthOptions } from "better-auth";
 import { admin, organization } from "better-auth/plugins";
 import { Effect, type Layer } from "effect";
@@ -95,8 +95,8 @@ export function createBetterAuthOptions(input: BetterAuthOptionsInput) {
         },
       }),
       admin({
-        roles: betterAuthAdminRoles,
-        adminRoles: [...betterAuthAdminRoleNames],
+        roles: adminRoles.betterAuthAdminRoles,
+        adminRoles: [...adminRoles.betterAuthAdminRoleNames],
       }),
     ],
     // Better Auth only rate-limits when NODE_ENV=production, which workerd never

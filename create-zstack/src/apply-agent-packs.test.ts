@@ -118,6 +118,7 @@ void test("applyAgentPacks writes packs, skills copy, and expanded MCP defaults"
 
     const projectRule = await readFile(join(root, ".cursor/rules/acme-cloud.mdc"), "utf8");
     assert.match(projectRule, /@acme\/contracts/);
+    assert.match(projectRule, /@acme\/auth-access/);
     assert.equal(projectRule.includes("@zstack/"), false);
     await assert.rejects(readFile(join(root, ".cursor/rules/zstack.mdc")));
 

@@ -2,6 +2,7 @@ import { access, copyFile, cp, mkdir, readFile, rm, symlink, writeFile } from "n
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { formatJson } from "./format-json.js";
 import type { ProjectIdentity } from "./project-identity.js";
 
 export const AGENT_TOOLS = ["claude", "cursor", "opencode", "codex"] as const;
@@ -195,7 +196,7 @@ async function ensureDirFor(filePath: string): Promise<void> {
 
 async function writeJson(filePath: string, value: unknown): Promise<void> {
   await ensureDirFor(filePath);
-  await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`);
+  await writeFile(filePath, formatJson(value));
 }
 
 async function mergeMcpServers(
@@ -345,6 +346,6 @@ alwaysApply: true
 
 Read and follow \`AGENTS.md\` at the repo root (and nested \`AGENTS.md\` / \`.agent/playbooks/\` when editing those trees).
 
-Hard constraints: Alchemy is the only deploy path; modules call platform ports; frontends import \`${identity.npm.scope}/contracts\`, \`${identity.npm.scope}/i18n\`, and \`${identity.npm.scope}/analytics\` only; pin Effect/Drizzle/Alchemy in package.json (no \`patches/\` directory); no secrets in \`product.config.ts\`.
+Hard constraints: Alchemy is the only deploy path; modules call platform ports; frontends import only client-safe packages (\`${identity.npm.scope}/contracts\`, \`${identity.npm.scope}/i18n\`, \`${identity.npm.scope}/analytics\`, \`${identity.npm.scope}/auth-access\`), never \`apps/api\` source; pin Effect/Drizzle/Alchemy in package.json (no \`patches/\` directory); no secrets in \`product.config.ts\`.
 `;
 }

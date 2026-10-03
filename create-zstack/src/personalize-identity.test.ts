@@ -8,6 +8,7 @@ import {
   FRAMEWORK_REFERENCE_ALLOWLIST,
   assertConsumerIdentity,
   assertNoUnapprovedSourceIdentity,
+  findSourceIdentityTokens,
   personalizeClone,
 } from "./personalize-identity.js";
 import { buildProjectIdentity, parseNpmScope, slugifyProjectName } from "./project-identity.js";
@@ -36,7 +37,12 @@ async function writeMinimalFixture(root: string): Promise<void> {
     `${JSON.stringify(
       {
         name: "@zstack/api",
-        dependencies: { "@zstack/contracts": "workspace:*" },
+        // Sorted as in the template; after the rename `@acme/*` must move ahead of `@ai-sdk/*`.
+        dependencies: {
+          "@ai-sdk/gateway": "^4.0.0",
+          "@zstack/contracts": "workspace:*",
+          ai: "^7.0.0",
+        },
       },
       null,
       2,
@@ -59,7 +65,7 @@ async function writeMinimalFixture(root: string): Promise<void> {
       "    volumes:",
       "      - zstack_pg_data:/var/lib/postgresql",
       "    healthcheck:",
-      '      test: ["CMD-SHELL", "pg_isready -U zstack -d zstack"]',
+      '      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]',
       "volumes:",
       "  zstack_pg_data:",
       "",
@@ -89,7 +95,12 @@ async function writeMinimalFixture(root: string): Promise<void> {
       "    {",
       '      "localConnectionString": "postgresql://zstack:zstack@127.0.0.1:5432/zstack"',
       "    }",
-      "  ]",
+      "  ],",
+      '  "queues": {',
+      '    "producers": [{ "binding": "JOBS", "queue": "zstack-jobs" }],',
+      '    "consumers": [{ "queue": "zstack-jobs" }]',
+      "  },",
+      '  "workflows": [{ "name": "zstack-example", "binding": "EXAMPLE_WORKFLOW" }]',
       "}",
       "",
     ].join("\n"),
@@ -122,19 +133,28 @@ async function writeMinimalFixture(root: string): Promise<void> {
       "",
     ].join("\n"),
   );
-  await writeFile(join(root, ".github/workflows/publish-create-zstack.yml"), "name: publish\n");
-  await writeFile(join(root, ".github/workflows/generate-clone.yml"), "name: generate\n");
-  await mkdir(join(root, "scripts"), { recursive: true });
-  await writeFile(join(root, "scripts/smoke-create-zstack"), "#!/usr/bin/env bash\n");
+  for (const app of ["web", "admin"]) {
+    await mkdir(join(root, `apps/${app}/src/lib`), { recursive: true });
+    await writeFile(
+      join(root, `apps/${app}/src/lib/sentry.ts`),
+      [
+        "export const sentryServices = {",
+        '  web: "zstack-web",',
+        '  admin: "zstack-admin",',
+        "} as const;",
+        "",
+      ].join("\n"),
+    );
+  }
+}
+
+function identityFor(displayName: string, scope?: string) {
+  const slug = slugifyProjectName(displayName);
+  return buildProjectIdentity({ displayName, slug, scope: parseNpmScope(scope, slug) });
 }
 
 function acmeIdentity() {
-  const slug = slugifyProjectName("Acme Cloud");
-  return buildProjectIdentity({
-    displayName: "Acme Cloud",
-    slug,
-    scope: parseNpmScope("@acme", slug),
-  });
+  return identityFor("Acme Cloud", "@acme");
 }
 
 void test("FRAMEWORK_REFERENCE_ALLOWLIST is path + exactText only", () => {
@@ -145,7 +165,7 @@ void test("FRAMEWORK_REFERENCE_ALLOWLIST is path + exactText only", () => {
   }
 });
 
-void test("personalizeClone rewrites minimal fixture and deletes publish workflow", async () => {
+void test("personalizeClone rewrites the minimal fixture", async () => {
   const root = await mkdtemp(join(tmpdir(), "zstack-personalize-"));
   try {
     await writeMinimalFixture(root);
@@ -153,9 +173,6 @@ void test("personalizeClone rewrites minimal fixture and deletes publish workflo
     const report = await personalizeClone({ root, identity });
 
     assert.ok(report.rewrittenPaths.includes("package.json"));
-    assert.ok(report.deletedPaths.includes(".github/workflows/publish-create-zstack.yml"));
-    assert.ok(report.deletedPaths.includes(".github/workflows/generate-clone.yml"));
-    assert.ok(report.deletedPaths.includes("scripts/smoke-create-zstack"));
 
     const rootPkg = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as {
       name: string;
@@ -171,6 +188,18 @@ void test("personalizeClone rewrites minimal fixture and deletes publish workflo
     assert.equal(apiPkg.name, "@acme/api");
     assert.equal(apiPkg.dependencies["@acme/contracts"], "workspace:*");
     assert.equal(apiPkg.dependencies["@zstack/contracts"], undefined);
+    assert.deepEqual(Object.keys(apiPkg.dependencies), [
+      "@acme/contracts",
+      "@ai-sdk/gateway",
+      "ai",
+    ]);
+
+    const wrangler = await readFile(join(root, "apps/api/wrangler.jsonc"), "utf8");
+    assert.equal(wrangler.match(/"queue": "acme-cloud-jobs"/g)?.length, 2);
+    assert.match(wrangler, /"name": "acme-cloud-example"/);
+
+    const sentry = await readFile(join(root, "apps/web/src/lib/sentry.ts"), "utf8");
+    assert.match(sentry, /web: "acme-cloud-web",\n {2}admin: "acme-cloud-admin",/);
 
     const compose = await readFile(join(root, "compose.yaml"), "utf8");
     assert.match(compose, /container_name: acme-cloud-postgres/);
@@ -201,6 +230,87 @@ void test("assertNoUnapprovedSourceIdentity fails on leftover @zstack", async ()
       () => assertNoUnapprovedSourceIdentity(root),
       /Unapproved source identity/,
     );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+void test("personalizeClone accepts a product name that contains zstack", async () => {
+  const root = await mkdtemp(join(tmpdir(), "zstack-named-zstack-"));
+  try {
+    await writeMinimalFixture(root);
+    const identity = identityFor("Zstack Demo");
+    assert.equal(identity.npm.scope, "@zstack-demo");
+    await personalizeClone({ root, identity });
+
+    const apiPkg = JSON.parse(await readFile(join(root, "apps/api/package.json"), "utf8")) as {
+      name: string;
+      dependencies: Record<string, string>;
+    };
+    assert.equal(apiPkg.name, "@zstack-demo/api");
+    assert.equal(apiPkg.dependencies["@zstack-demo/contracts"], "workspace:*");
+    const compose = await readFile(join(root, "compose.yaml"), "utf8");
+    assert.match(compose, /container_name: zstack-demo-postgres/);
+    const agents = await readFile(join(root, "AGENTS.md"), "utf8");
+    assert.match(agents, /Zstack Demo docs site/);
+
+    await assertConsumerIdentity(root, identity);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+void test("personalizeClone still flags real residue when the name contains zstack", async () => {
+  const root = await mkdtemp(join(tmpdir(), "zstack-named-residue-"));
+  try {
+    await writeMinimalFixture(root);
+    await writeFile(join(root, "note.md"), "Uses the zstack-jobs queue.\n");
+    await assert.rejects(
+      () => personalizeClone({ root, identity: identityFor("Zstack Demo") }),
+      /note\.md:1: zstack/,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+void test("findSourceIdentityTokens treats - _ @ / as boundaries and masks own identity", () => {
+  const texts = (line: string, own: readonly string[] = []) =>
+    findSourceIdentityTokens(line, own).map((hit) => hit.text);
+
+  assert.deepEqual(texts('"queue": "zstack-jobs"'), ["zstack"]);
+  assert.deepEqual(texts("zstack_pg_data"), ["zstack"]);
+  assert.deepEqual(texts("import from @zstack/contracts"), ["@zstack"]);
+  assert.deepEqual(texts("run create-zstack now"), ["zstack"]);
+  assert.deepEqual(texts("ZSTACK_TEMPLATE and Zstack"), ["ZSTACK", "Zstack"]);
+  assert.deepEqual(texts("zstacks myzstack zstack2"), []);
+
+  const own = ["Zstack Demo", "@zstack-demo", "zstack-demo", "zstack_demo"];
+  assert.deepEqual(texts("@zstack-demo/api Zstack Demo zstack_demo", own), []);
+  assert.deepEqual(texts("@zstack-demo/api but also @zstack/api", own), ["@zstack"]);
+});
+
+void test("FRAMEWORK_REFERENCE_ALLOWLIST permits create-zstack only where listed", async () => {
+  const root = await mkdtemp(join(tmpdir(), "zstack-allowlist-"));
+  try {
+    await writeFile(join(root, "AGENTS.md"), "packs (`create-zstack --agent-tools=…`)\n");
+    await assertNoUnapprovedSourceIdentity(root);
+    await writeFile(join(root, "README.md"), "run create-zstack\n");
+    await assert.rejects(() => assertNoUnapprovedSourceIdentity(root), /README\.md:1/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+void test("personalizeClone leaves preserved (pre-existing) paths alone", async () => {
+  const root = await mkdtemp(join(tmpdir(), "zstack-preserve-"));
+  try {
+    await writeMinimalFixture(root);
+    await mkdir(join(root, "docs"), { recursive: true });
+    const userDoc = "We migrated off zstack; see `@zstack/contracts` history.\n";
+    await writeFile(join(root, "docs/design.md"), userDoc);
+    await personalizeClone({ root, identity: acmeIdentity(), preserve: new Set(["docs"]) });
+    assert.equal(await readFile(join(root, "docs/design.md"), "utf8"), userDoc);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

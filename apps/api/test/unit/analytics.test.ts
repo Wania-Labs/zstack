@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  analyticsClientFromEnv,
-  createNoopAnalytics,
-  createPostHogAnalytics,
-} from "@zstack/analytics";
+import * as analytics from "@zstack/analytics";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -23,7 +19,7 @@ function fetchJsonBody(init: unknown): Record<string, unknown> {
 
 describe("createNoopAnalytics", () => {
   it("swallows capture and identify", async () => {
-    const client = createNoopAnalytics();
+    const client = analytics.createNoopAnalytics();
     await expect(
       client.capture(
         { name: "account_signed_up", properties: { source: "web" } },
@@ -38,7 +34,7 @@ describe("analyticsClientFromEnv", () => {
   it("uses the no-op client when the key is empty", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    const client = analyticsClientFromEnv({});
+    const client = analytics.analyticsClientFromEnv({});
     await client.capture(
       { name: "account_signed_up", properties: { source: "web" } },
       { distinctId: "user_1" },
@@ -55,7 +51,7 @@ describe("createPostHogAnalytics", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const client = createPostHogAnalytics({
+    const client = analytics.createPostHogAnalytics({
       apiKey: "phc_test",
       host: "https://us.i.posthog.com",
     });
