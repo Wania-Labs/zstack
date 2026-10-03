@@ -1,4 +1,6 @@
+import * as Sentry from "@sentry/cloudflare";
 import { Effect } from "effect";
+import { log } from "evlog";
 
 import { systemRequestContext } from "../http/context";
 import { flushUsage } from "../modules/billing/service";
@@ -53,7 +55,16 @@ export async function handleJobsQueue(
     try {
       await runRequestEffect(handleJob(message.body), systemRequestContext(), env);
       message.ack();
-    } catch {
+    } catch (error) {
+      // Retry is the recovery path, but a silently retried job hides outages.
+      log.error({
+        action: "jobs.queue",
+        job: message.body.name,
+        messageId: message.id,
+        attempts: message.attempts,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      Sentry.captureException(error, { tags: { operation: "jobs.queue", job: message.body.name } });
       message.retry();
     }
   }
