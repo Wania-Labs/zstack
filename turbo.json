@@ -1,12 +1,15 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
-  "agentGuidance": false,
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**"]
+    },
+    "@zstack/i18n#build": {
+      "inputs": ["messages/**", "project.inlang/settings.json", "package.json"],
+      "outputs": ["src/paraglide/**"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]
@@ -20,6 +23,7 @@
       "outputs": []
     },
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     }
