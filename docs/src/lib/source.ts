@@ -1,6 +1,7 @@
 import { loader } from "fumadocs-core/source";
 import { defineDocs } from "fumadocs-mdx/macro";
 import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
+import { inlineWidgetsForMarkdown } from "./get-started";
 import { docsRoute } from "./shared";
 
 export const docs = defineDocs({
@@ -19,8 +20,8 @@ export const source = loader({
   plugins: [lucideIconsPlugin()],
 });
 
-export async function getLLMText(page: (typeof source)["$inferPage"]) {
-  const processed = await page.data.getText("processed");
+export async function getLLMText(page: (typeof source)["$inferPage"], origin = "") {
+  const processed = inlineWidgetsForMarkdown(await page.data.getText("processed"), origin);
   const description = page.data.description?.trim();
 
   return [

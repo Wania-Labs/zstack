@@ -59,7 +59,7 @@ export function buildLlmsIndex() {
 
 export async function buildLlmsFull() {
   const pages = source.getPages();
-  const scanned = await Promise.all(pages.map(getLLMText));
+  const scanned = await Promise.all(pages.map((page) => getLLMText(page)));
   return `# zstack docs (full)
 
 Prefer /llms.txt for an index. This file concatenates every page for offline ingest.
