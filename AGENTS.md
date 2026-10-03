@@ -90,11 +90,13 @@ Staff promote after sign-up: `STAFF_EMAIL=you@example.com pnpm db:seed`.
 
 ## Env split
 
-| Concern              | Local wrangler                                           | Alchemy                            |
-| -------------------- | -------------------------------------------------------- | ---------------------------------- |
-| `BETTER_AUTH_SECRET` | `apps/api/.dev.vars`                                     | Process / stage env                |
-| Compose DB           | `DATABASE_URL` / Hyperdrive → Compose when `ALCHEMY_DEV` | Deploy uses PlanetScale origin     |
-| Optional vendors     | Empty in `.dev.vars` → safe defaults                     | Same: empty = off / fake / console |
+| Concern              | Local wrangler                                                                                                              | Alchemy                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `BETTER_AUTH_SECRET` | `apps/api/.dev.vars`                                                                                                        | Root `.env` or shell (Alchemy reads only root `.env`, not `.env.local`/`.env.development`) |
+| Hyperdrive → DB      | `localConnectionString` in `apps/api/wrangler.jsonc` (override: `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE`) | `alchemy:dev`: `composeDevOrigin` in `infra/database.ts`; deploy: PlanetScale role         |
+| Optional vendors     | Empty in `.dev.vars` → safe defaults                                                                                        | Root `.env` / shell; empty = off / fake / console                                          |
+
+`DATABASE_URL` feeds only drizzle-kit, `db:seed`, and the auth CLI (shell > `.env.local` > `.env.development`). Neither Hyperdrive path reads it. New `POLAR_PRODUCT_*` / `FEATURE_FLAG_*` keys need a matching entry in `infra/api.ts` `env` to reach the Worker under Alchemy.
 
 Better Auth has no Effect adapter. Session and auth routes use `pg.Client` + `drizzle-orm/node-postgres`. Product modules use `@effect/sql-pg` via `Database`. Keep both until Better Auth can run on Effect (the official Drizzle adapter is promise-only).
 

@@ -47,7 +47,7 @@ pnpm --filter @zstack/admin dev                    # :3001, staff console
 ```bash
 # Cloudflare + PlanetScale auth via Alchemy profiles
 alchemy login
-# BETTER_AUTH_SECRET must be in the environment for alchemy
+# BETTER_AUTH_SECRET must be exported or set in the root .env (Alchemy ignores .env.local)
 export BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
 pnpm alchemy:dev                                   # api :8787 + web :3000 + admin :3001 (Compose only)
 # deploy also needs the public https origins (see .agent/playbooks/deploy-alchemy.md)
