@@ -577,7 +577,8 @@ export function billingLiveFromEnv(env: {
   }
 
   const catalog = readProductCatalog(env);
-  const successUrl = env.POLAR_CHECKOUT_SUCCESS_URL?.trim();
+  // Alchemy binds unset vars as "", which would shadow a caller's successUrl.
+  const successUrl = env.POLAR_CHECKOUT_SUCCESS_URL?.trim() || undefined;
   return PolarBillingLive(credentials, catalog, successUrl);
 }
 
