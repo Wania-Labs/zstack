@@ -1,20 +1,20 @@
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Config from "effect/Config";
 
+import { compatibility } from "./shared.ts";
+
 /**
  * Customer TanStack Start app. Alchemy injects its Cloudflare Vite plugin —
  * do not add `@cloudflare/vite-plugin` in `apps/web/vite.config.ts`.
  *
- * `API` is a service binding for same-origin `/api` proxying later; local
- * Vite still proxies `/api` → `:8787` when running the dual wrangler path.
+ * `API` is the service binding behind same-origin `/api/*`: the
+ * `apps/web/src/routes/api/$.ts` server route and SSR auth/oRPC calls forward
+ * through it. Plain `vite dev` proxies `/api` → `:8787` instead.
  */
 export const Web = (api: Cloudflare.Worker) =>
   Cloudflare.Website.Vite("Web", {
     rootDir: "./apps/web",
-    compatibility: {
-      date: "2026-07-11",
-      flags: ["nodejs_compat"],
-    },
+    compatibility,
     env: {
       API: api,
       // Public browser DSN — empty keeps client Sentry off.
