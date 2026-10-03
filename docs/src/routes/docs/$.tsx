@@ -28,8 +28,12 @@ export const Route = createFileRoute("/docs/$")({
     meta: loaderData
       ? [
           { title: `${loaderData.title} · zstack docs` },
+          { property: "og:title", content: `${loaderData.title} · zstack docs` },
           ...(loaderData.description
-            ? [{ name: "description", content: loaderData.description }]
+            ? [
+                { name: "description", content: loaderData.description },
+                { property: "og:description", content: loaderData.description },
+              ]
             : []),
         ]
       : [],

@@ -1,16 +1,19 @@
-import { Check, Copy, Sparkles, SquareTerminal } from "lucide-react";
-import { useId, useState, useSyncExternalStore } from "react";
-import { CopyIconButton, useCopy } from "@/components/copy";
+import { Sparkles, SquareTerminal } from "lucide-react";
+import { useId, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
+import { CopyIconButton, CopyStateIcon, copyAnnouncement, useCopy } from "@/components/copy";
 import { cn } from "@/lib/cn";
 import {
   DEFAULT_PROJECT_NAME,
   agentTools,
   buildAgentPrompt,
   createCommand,
+  defaultAgentPrompt,
   packageManagers,
-  slugifyProjectName,
+  parseProjectName,
+  setupCommands,
   type AgentToolId,
   type PackageManagerId,
+  type ValidProjectName,
 } from "@/lib/get-started";
 
 const noopSubscribe = () => () => {};
@@ -27,32 +30,69 @@ function useOrigin() {
   );
 }
 
-type Mode = "prompt" | "terminal";
+const NEXT_KEYS = new Set(["ArrowRight", "ArrowDown"]);
+const PREV_KEYS = new Set(["ArrowLeft", "ArrowUp"]);
+
+/**
+ * Roving focus for radiogroups and tablists: one tab stop, arrow keys and
+ * Home/End move between options and select them.
+ */
+function useRovingSelect<T extends string>(ids: ReadonlyArray<T>, onSelect: (id: T) => void) {
+  const refs = useRef(new Map<T, HTMLButtonElement>());
+  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, current: T) => {
+    const index = ids.indexOf(current);
+    let next: number | undefined;
+    if (NEXT_KEYS.has(event.key)) next = (index + 1) % ids.length;
+    else if (PREV_KEYS.has(event.key)) next = (index - 1 + ids.length) % ids.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = ids.length - 1;
+    if (next === undefined) return;
+    event.preventDefault();
+    const id = ids[next]!;
+    onSelect(id);
+    refs.current.get(id)?.focus();
+  };
+  const register = (id: T) => (node: HTMLButtonElement | null) => {
+    if (node) refs.current.set(id, node);
+    else refs.current.delete(id);
+  };
+  return { onKeyDown, register };
+}
 
 function Segmented<T extends string>({
   label,
+  labelledBy,
   value,
   options,
   onChange,
 }: {
-  label: string;
+  label?: string;
+  labelledBy?: string;
   value: T;
   options: ReadonlyArray<{ id: T; label: string }>;
   onChange: (value: T) => void;
 }) {
+  const roving = useRovingSelect(
+    options.map((option) => option.id),
+    onChange,
+  );
   return (
     <div
       role="radiogroup"
       aria-label={label}
+      aria-labelledby={labelledBy}
       className="flex flex-wrap gap-1 rounded-lg bg-fd-muted p-1"
     >
       {options.map((option) => (
         <button
           key={option.id}
+          ref={roving.register(option.id)}
           type="button"
           role="radio"
           aria-checked={option.id === value}
+          tabIndex={option.id === value ? 0 : -1}
           onClick={() => onChange(option.id)}
+          onKeyDown={(event) => roving.onKeyDown(event, option.id)}
           className="rounded-md px-2.5 py-1.5 text-base/5 font-medium text-fd-muted-foreground hover:text-fd-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fd-ring aria-checked:bg-fd-background aria-checked:text-fd-foreground aria-checked:shadow-sm aria-checked:ring-1 aria-checked:ring-fd-foreground/5 sm:py-1 sm:text-sm/5 dark:aria-checked:shadow-none"
         >
           {option.label}
@@ -64,7 +104,7 @@ function Segmented<T extends string>({
 
 function ProjectNameField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const id = useId();
-  const slug = slugifyProjectName(value);
+  const parsed = parseProjectName(value);
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-4">
@@ -74,8 +114,15 @@ function ProjectNameField({ value, onChange }: { value: string; onChange: (v: st
         >
           Project name
         </label>
-        <p className="min-w-0 truncate font-mono text-sm/5 text-fd-muted-foreground sm:text-xs/5">
-          ./{slug} · @{slug}/*
+        <p
+          id={`${id}-hint`}
+          aria-live="polite"
+          className={cn(
+            "min-w-0 truncate text-sm/5 sm:text-xs/5",
+            parsed.ok ? "font-mono text-fd-muted-foreground" : "text-red-700 dark:text-red-400",
+          )}
+        >
+          {parsed.ok ? `./${parsed.slug} · @${parsed.slug}/*` : parsed.error}
         </p>
       </div>
       <input
@@ -85,15 +132,25 @@ function ProjectNameField({ value, onChange }: { value: string; onChange: (v: st
         placeholder={DEFAULT_PROJECT_NAME}
         spellCheck={false}
         autoComplete="off"
-        className="w-full min-w-0 rounded-md bg-fd-background px-3 py-2 text-base/6 text-fd-foreground ring-1 ring-fd-border placeholder:text-fd-muted-foreground focus:ring-2 focus:ring-fd-ring focus:outline-none sm:py-1.5 sm:text-sm/6"
+        aria-invalid={!parsed.ok}
+        aria-describedby={`${id}-hint`}
+        className="w-full min-w-0 rounded-md bg-fd-background px-3 py-2 text-base/6 text-fd-foreground ring-1 ring-fd-border placeholder:text-fd-muted-foreground focus:ring-2 focus:ring-fd-ring focus:outline-none aria-invalid:ring-red-600/60 sm:py-1.5 sm:text-sm/6"
       />
     </div>
   );
 }
 
-function PromptPanel({ name, tool, origin }: { name: string; tool: AgentToolId; origin: string }) {
-  const prompt = buildAgentPrompt({ name, tool, origin });
-  const { copied, copy } = useCopy();
+function PromptPanel({
+  project,
+  tool,
+  origin,
+}: {
+  project: ValidProjectName | null;
+  tool: AgentToolId;
+  origin: string;
+}) {
+  const prompt = project ? buildAgentPrompt(project, tool, origin) : "";
+  const { state, copy } = useCopy();
   const toolLabel = agentTools.find((entry) => entry.id === tool)?.label ?? "your agent";
 
   return (
@@ -104,7 +161,7 @@ function PromptPanel({ name, tool, origin }: { name: string; tool: AgentToolId; 
           aria-label="Agent prompt preview"
           className="max-h-64 overflow-auto rounded-lg bg-fd-muted/60 p-4 font-mono text-[0.8125rem]/6 whitespace-pre-wrap text-fd-foreground/90 ring-1 ring-fd-border ring-inset focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fd-ring"
         >
-          {prompt}
+          {prompt || "Fix the project name to generate a prompt."}
         </pre>
         <div
           aria-hidden="true"
@@ -114,51 +171,46 @@ function PromptPanel({ name, tool, origin }: { name: string; tool: AgentToolId; 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <button
           type="button"
+          disabled={!project}
           onClick={() => void copy(prompt)}
-          className="inline-flex items-center gap-2 rounded-md bg-fd-primary py-2.5 pr-4 pl-3 text-base/6 font-medium text-fd-primary-foreground hover:bg-fd-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fd-ring sm:py-2 sm:text-sm/6"
+          className="inline-flex items-center gap-2 rounded-md bg-fd-primary py-2.5 pr-4 pl-3 text-base/6 font-medium text-fd-primary-foreground hover:bg-fd-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fd-ring disabled:cursor-not-allowed disabled:opacity-50 sm:py-2 sm:text-sm/6"
         >
-          {copied ? (
-            <Check aria-hidden="true" className="size-4 shrink-0" />
-          ) : (
-            <Copy aria-hidden="true" className="size-4 shrink-0" />
-          )}
-          {copied ? "Copied" : "Copy prompt"}
+          <CopyStateIcon state={state} />
+          {state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : "Copy prompt"}
         </button>
         <p className="text-base/6 text-pretty text-fd-muted-foreground sm:text-sm/6">
-          Paste it into {toolLabel} from an empty folder.
+          {state === "failed"
+            ? "Select the prompt above and copy it manually."
+            : `Paste it into ${toolLabel} from an empty folder.`}
         </p>
         <span className="sr-only" aria-live="polite">
-          {copied ? "Prompt copied to clipboard" : ""}
+          {copyAnnouncement(state, "Prompt")}
         </span>
       </div>
     </div>
   );
 }
 
-function CommandLine({ command }: { command: string }) {
+function CommandBlock({ command, label }: { command: string; label: string }) {
   return (
     <div className="flex items-start gap-2 rounded-lg bg-fd-muted/60 py-2 pr-2 pl-4 ring-1 ring-fd-border ring-inset">
       <pre className="min-w-0 flex-1 overflow-x-auto py-1 font-mono text-[0.8125rem]/6 text-fd-foreground">
-        <span aria-hidden="true" className="text-fd-muted-foreground select-none">
-          ${" "}
-        </span>
         {command}
       </pre>
-      <CopyIconButton text={command} label="Copy command" />
+      <CopyIconButton text={command} label={label} />
     </div>
   );
 }
 
-function TerminalPanel({ name, tool }: { name: string; tool: AgentToolId }) {
+function TerminalPanel({ project, tool }: { project: ValidProjectName | null; tool: AgentToolId }) {
   const [manager, setManager] = useState<PackageManagerId>("pnpm");
-  const slug = slugifyProjectName(name);
-  const next = [
-    `cd ${slug}`,
-    "cp apps/api/.dev.vars.example apps/api/.dev.vars",
-    "pnpm dev:services && pnpm db:migrate && pnpm db:seed",
-    "pnpm alchemy:dev",
-  ].join("\n");
-
+  if (!project) {
+    return (
+      <p className="text-base/6 text-fd-muted-foreground sm:text-sm/6">
+        Fix the project name to generate commands.
+      </p>
+    );
+  }
   return (
     <div className="flex flex-col gap-4">
       <Segmented
@@ -167,21 +219,24 @@ function TerminalPanel({ name, tool }: { name: string; tool: AgentToolId }) {
         options={packageManagers.map((entry) => ({ id: entry.id, label: entry.id }))}
         onChange={setManager}
       />
-      <CommandLine command={createCommand({ name, tool }, manager)} />
+      <CommandBlock command={createCommand(project, tool, manager)} label="Copy create command" />
       <div className="flex flex-col gap-2">
         <p className="text-base/6 text-fd-muted-foreground sm:text-sm/6">
-          Then start the stack on local Postgres:
+          Then set a local auth secret and start the stack on Compose Postgres (needs Docker and
+          pnpm):
         </p>
-        <div className="flex items-start gap-2 rounded-lg bg-fd-muted/60 py-2 pr-2 pl-4 ring-1 ring-fd-border ring-inset">
-          <pre className="min-w-0 flex-1 overflow-x-auto py-1 font-mono text-[0.8125rem]/6 text-fd-foreground">
-            {next}
-          </pre>
-          <CopyIconButton text={next} label="Copy setup commands" />
-        </div>
+        <CommandBlock command={setupCommands(project).join("\n")} label="Copy setup commands" />
       </div>
     </div>
   );
 }
+
+const tabs = [
+  { id: "prompt", label: "Agent prompt", icon: Sparkles },
+  { id: "terminal", label: "Terminal", icon: SquareTerminal },
+] as const;
+
+type Mode = (typeof tabs)[number]["id"];
 
 /**
  * Landing-page and MDX "get started" widget: a personalized prompt for coding
@@ -192,12 +247,13 @@ export function GetStarted({ className }: { className?: string }) {
   const [mode, setMode] = useState<Mode>("prompt");
   const [name, setName] = useState(DEFAULT_PROJECT_NAME);
   const [tool, setTool] = useState<AgentToolId>("claude");
-  const tabsId = useId();
-
-  const tabs = [
-    { id: "prompt" as const, label: "Agent prompt", icon: Sparkles },
-    { id: "terminal" as const, label: "Terminal", icon: SquareTerminal },
-  ];
+  const id = useId();
+  const parsed = parseProjectName(name);
+  const project = parsed.ok ? parsed : null;
+  const roving = useRovingSelect(
+    tabs.map((tab) => tab.id),
+    setMode,
+  );
 
   return (
     <div
@@ -214,12 +270,15 @@ export function GetStarted({ className }: { className?: string }) {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            id={`${tabsId}-${tab.id}-tab`}
+            ref={roving.register(tab.id)}
+            id={`${id}-${tab.id}-tab`}
             type="button"
             role="tab"
             aria-selected={mode === tab.id}
-            aria-controls={`${tabsId}-${tab.id}-panel`}
+            aria-controls={`${id}-${tab.id}-panel`}
+            tabIndex={mode === tab.id ? 0 : -1}
             onClick={() => setMode(tab.id)}
+            onKeyDown={(event) => roving.onKeyDown(event, tab.id)}
             className="-mb-px inline-flex items-center gap-2 border-b-2 border-transparent py-3 pr-3 pl-2 text-base/6 font-medium text-fd-muted-foreground hover:text-fd-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-fd-ring aria-selected:border-fd-primary aria-selected:text-fd-foreground sm:text-sm/6"
           >
             <tab.icon aria-hidden="true" className="size-4 shrink-0" />
@@ -232,50 +291,59 @@ export function GetStarted({ className }: { className?: string }) {
         <div className="flex flex-col gap-4">
           <ProjectNameField value={name} onChange={setName} />
           <div className="flex flex-col gap-1.5">
-            <p className="text-base/5 font-medium text-fd-foreground sm:text-sm/5">Coding agent</p>
-            <Segmented label="Coding agent" value={tool} options={agentTools} onChange={setTool} />
+            <p
+              id={`${id}-agent`}
+              className="text-base/5 font-medium text-fd-foreground sm:text-sm/5"
+            >
+              Coding agent
+            </p>
+            <Segmented
+              labelledBy={`${id}-agent`}
+              value={tool}
+              options={agentTools}
+              onChange={setTool}
+            />
           </div>
         </div>
 
         <div
-          id={`${tabsId}-${mode}-panel`}
+          id={`${id}-prompt-panel`}
           role="tabpanel"
-          aria-labelledby={`${tabsId}-${mode}-tab`}
+          aria-labelledby={`${id}-prompt-tab`}
+          hidden={mode !== "prompt"}
         >
-          {mode === "prompt" ? (
-            <PromptPanel name={name} tool={tool} origin={origin} />
-          ) : (
-            <TerminalPanel name={name} tool={tool} />
-          )}
+          <PromptPanel project={project} tool={tool} origin={origin} />
+        </div>
+        <div
+          id={`${id}-terminal-panel`}
+          role="tabpanel"
+          aria-labelledby={`${id}-terminal-tab`}
+          hidden={mode !== "terminal"}
+        >
+          <TerminalPanel project={project} tool={tool} />
         </div>
       </div>
     </div>
   );
 }
 
-/** Compact copy control for MDX pages and secondary CTAs. */
+/** Compact copy control for MDX pages and secondary CTAs. Uses the default project. */
 export function CopyPromptButton({ className }: { className?: string }) {
   const origin = useOrigin();
-  const { copied, copy } = useCopy();
+  const { state, copy } = useCopy();
   return (
     <button
       type="button"
-      onClick={() =>
-        void copy(buildAgentPrompt({ name: DEFAULT_PROJECT_NAME, tool: "claude", origin }))
-      }
+      onClick={() => void copy(defaultAgentPrompt(origin))}
       className={cn(
         "inline-flex items-center gap-2 rounded-md bg-fd-background py-2.5 pr-4 pl-3 text-base/6 font-medium text-fd-foreground ring-1 ring-fd-border hover:bg-fd-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fd-ring sm:py-2 sm:text-sm/6",
         className,
       )}
     >
-      {copied ? (
-        <Check aria-hidden="true" className="size-4 shrink-0 text-fd-primary" />
-      ) : (
-        <Copy aria-hidden="true" className="size-4 shrink-0" />
-      )}
-      {copied ? "Copied" : "Copy agent prompt"}
+      <CopyStateIcon state={state} className={state === "copied" ? "text-fd-primary" : undefined} />
+      {state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : "Copy agent prompt"}
       <span className="sr-only" aria-live="polite">
-        {copied ? "Prompt copied to clipboard" : ""}
+        {copyAnnouncement(state, "Prompt")}
       </span>
     </button>
   );

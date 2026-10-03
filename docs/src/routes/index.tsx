@@ -59,15 +59,9 @@ const capabilities: ReadonlyArray<{ name: string; local: string; on: string; hre
   },
   {
     name: "Object storage",
-    local: "Local R2 through the Worker",
+    local: "In-memory store, local R2 under alchemy:dev",
     on: "R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY",
     href: "guides/turn-on-object-storage",
-  },
-  {
-    name: "Feature flags",
-    local: "In-memory defaults",
-    on: "FEATURE_FLAG_*",
-    href: "guides/feature-flags",
   },
 ];
 
@@ -78,7 +72,7 @@ const bets = [
   },
   {
     title: "One Worker runs the backend",
-    body: "HTTP, queues, workflows, and cron live in the same Hono Worker. No fleet of tiny services to deploy.",
+    body: "HTTP, queue consumers, and workflows live in the same Hono Worker. No fleet of tiny services to deploy.",
   },
   {
     title: "Ports, not vendor SDKs",
@@ -90,22 +84,24 @@ const bets = [
   },
 ];
 
-const aiSnippet = `const completeAi = Effect.fn("ai.complete")(function* (input) {
+const aiSnippet = `export const completeAi = Effect.fn("completeAi")(function* (input) {
   const { organizationId } = yield* CurrentRequestContext;
 
-  // Billing is a port: fake locally, Polar once keyed.
+  // Billing is a port: a fake locally, Polar once a token is set.
   const billing = yield* BillingService;
   if (organizationId && (yield* billing.isConfigured())) {
     const allowed = yield* billing.canUse({
       customerId: organizationId,
-      capability: \`ai.\${input.capability}\`,
+      capability: aiCapabilityEntitlement(input.capability),
     });
     if (!allowed) {
-      return yield* new BillingError({ message: "denied" });
+      return yield* Effect.fail(
+        new BillingError({ message: "entitlement denied" }),
+      );
     }
   }
 
-  // AI too: a deterministic fake until a gateway key.
+  // AI is a port too: a deterministic fake until AI_GATEWAY_API_KEY is set.
   const ai = yield* AiService;
   return yield* ai.complete(input);
 });`;
@@ -134,7 +130,7 @@ const agentFeatures = [
   },
   {
     title: "Docs MCPs on day one",
-    body: "Cloudflare docs, Context7, and the shadcn registry are configured for the tool you pick at scaffold time.",
+    body: "Cloudflare docs, Context7, and the shadcn registry are wired into Claude Code, Cursor, or OpenCode at scaffold time.",
   },
   {
     title: "Docs agents can read",
@@ -361,7 +357,7 @@ function Home() {
               />
               <FeatureList items={bets} />
             </div>
-            <CodePanel filename="apps/api/src/modules/ai/service.ts" code={aiSnippet} />
+            <CodePanel filename="apps/api/src/modules/ai/service.ts (excerpt)" code={aiSnippet} />
           </div>
         </section>
 

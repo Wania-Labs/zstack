@@ -20,8 +20,6 @@ export const Route = createRootRoute({
           "Cloudflare-first TypeScript product starter your coding agent already understands.",
       },
       { property: "og:type", content: "website" },
-      { name: "theme-color", content: "#f9f8f6", media: "(prefers-color-scheme: light)" },
-      { name: "theme-color", content: "#111719", media: "(prefers-color-scheme: dark)" },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
@@ -33,6 +31,9 @@ function RootComponent() {
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* TanStack dedupes meta by name, so the light/dark pair is rendered directly. */}
+        <meta name="theme-color" content="#f9f8f6" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#111719" media="(prefers-color-scheme: dark)" />
       </head>
       <body className="flex min-h-screen flex-col font-sans antialiased">
         <RootProvider>

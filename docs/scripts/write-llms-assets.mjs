@@ -100,8 +100,10 @@ let inlineWidgets = (markdown) =>
 try {
   const mod = await import("../src/lib/get-started.ts");
   inlineWidgets = (markdown) => mod.inlineWidgetsForMarkdown(markdown, "");
-} catch {
-  // keep fallback
+} catch (error) {
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  if (major > 22 || (major === 22 && minor >= 18)) throw error;
+  console.warn(`write-llms-assets: inlining a pointer instead of the prompt (${error.message})`);
 }
 
 const pages = loadPages().map((page) => ({ ...page, body: inlineWidgets(page.body) }));
