@@ -22,16 +22,16 @@ dedupePeers: true
 # pool fails to boot on 5). Keep a single vitest 4 until pool-workers ships
 # vitest 5 support; @effect/vitest's it.effect / it.layer run fine on 4.1.
 overrides:
-  vitest: ^4.1.10
+  vitest: ^4.1.11
 
 peerDependencyRules:
   allowedVersions:
     "@effect/vitest>vitest": ^4.1.0
 
 minimumReleaseAgeExclude:
-  - pg-protocol@1.16.0
-  - pg@8.23.0
-  - evlog@2.25.0
+  - pg-protocol@1.16.1
+  - pg@8.23.1
+  - evlog@2.29.0
   - "@effect/platform-node@4.0.0"
   - "@effect/sql-pg@4.0.0"
   - "@effect/vitest@4.0.0"

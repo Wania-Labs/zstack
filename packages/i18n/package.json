@@ -17,7 +17,7 @@
     "typecheck": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations --strategy cookie preferredLanguage baseLocale && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@inlang/paraglide-js": "2.23.2"
+    "@inlang/paraglide-js": "2.25.4"
   },
   "devDependencies": {
     "@zstack/typescript-config": "workspace:*",

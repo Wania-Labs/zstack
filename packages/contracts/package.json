@@ -14,8 +14,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@orpc/contract": "1.15.0",
-    "zod": "4.4.3"
+    "@orpc/contract": "1.15.4",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@zstack/typescript-config": "workspace:*",

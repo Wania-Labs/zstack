@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 
 import { createBetterAuthOptions } from "./src/modules/auth/options";
+import { schema } from "./src/platform/db/schema";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 config({ path: resolve(root, ".env.development") });
@@ -26,7 +27,7 @@ const db = drizzle({ client: pool });
  */
 export const auth = betterAuth({
   ...createBetterAuthOptions({ baseURL }),
-  database: drizzleAdapter(db, { provider: "pg" }),
+  database: drizzleAdapter(db, { provider: "pg", schema }),
   baseURL,
   secret: process.env.BETTER_AUTH_SECRET ?? "cli-only-not-for-runtime",
 });
