@@ -5,8 +5,11 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
+// Precedence: shell env > .env.local > .env.development. dotenv never
+// overwrites a variable that is already set, so an explicit
+// `DATABASE_URL=… pnpm db:migrate` (e.g. a PlanetScale role) always wins.
+config({ path: resolve(root, ".env.local") });
 config({ path: resolve(root, ".env.development") });
-config({ path: resolve(root, ".env.local"), override: true });
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {

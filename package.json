@@ -10,6 +10,7 @@
     "dev:reset": "docker compose down -v && docker compose up -d --wait && pnpm db:migrate && pnpm db:seed",
     "db:generate": "pnpm --filter @zstack/api db:generate",
     "db:migrate": "pnpm --filter @zstack/api db:migrate",
+    "db:migrate:remote": "pnpm --filter @zstack/api db:migrate:remote",
     "db:seed": "pnpm --filter @zstack/api db:seed",
     "auth:generate": "pnpm --filter @zstack/api auth:generate",
     "email:dev": "pnpm --filter @zstack/email dev",

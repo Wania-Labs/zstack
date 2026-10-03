@@ -10,8 +10,9 @@ import { createBetterAuthOptions } from "./src/modules/auth/options";
 import { schema } from "./src/platform/db/schema";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+// Shell env > .env.local > .env.development (dotenv never overwrites a set var).
+config({ path: resolve(root, ".env.local") });
 config({ path: resolve(root, ".env.development") });
-config({ path: resolve(root, ".env.local"), override: true });
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {

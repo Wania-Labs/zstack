@@ -2,6 +2,10 @@
 
 Alchemy v2 is the only provisioned deploy path.
 
+## Env files Alchemy reads
+
+The Alchemy CLI reads the shell environment plus the **root `.env`** (shell wins), or the file passed with `--env-file` (that file wins over the shell). It never reads `.env.local`, `.env.development`, or `apps/api/.dev.vars`. Put `BETTER_AUTH_SECRET` and any vendor keys for `alchemy:dev` in root `.env` (gitignored) or export them; use a stage file for deploys (see below). `.env.example` lists the keys.
+
 ## Local
 
 ```bash
@@ -9,7 +13,7 @@ pnpm dev:services
 pnpm alchemy:dev
 ```
 
-Under `ALCHEMY_DEV`, PlanetScale resources are skipped. Hyperdrive points at Compose. `BETTER_AUTH_URL` / `ADMIN_URL` default to `http://localhost:3000` / `http://localhost:3001`.
+Under `ALCHEMY_DEV`, PlanetScale resources are skipped. Hyperdrive points at Compose via `composeDevOrigin` in `infra/database.ts` (port 5432; change it there if you set `POSTGRES_PORT`). `BETTER_AUTH_URL` / `ADMIN_URL` default to `http://localhost:3000` / `http://localhost:3001`.
 
 ## Deploy
 
@@ -22,7 +26,7 @@ export ADMIN_URL="https://admin.example.com"         # public staff console orig
 pnpm alchemy:deploy
 ```
 
-Deploy provisions PlanetScale + cloud Hyperdrive. Run migrations with drizzle-kit against `DATABASE_URL` (`pnpm db:migrate`). Alchemy `migrationsDir` is not wired for Drizzle 1.0 folders.
+Deploy provisions PlanetScale + cloud Hyperdrive. Alchemy `migrationsDir` is not wired for Drizzle 1.0 folders, so migrate with drizzle-kit yourself (see [Migrate the deployed database](#migrate-the-deployed-database)).
 
 ### Public origins (`BETTER_AUTH_URL`, `ADMIN_URL`)
 
@@ -46,6 +50,24 @@ Browsers only ever call `/api/*` on the web/admin origin. Deployed, the TanStack
 ### Database role
 
 The Hyperdrive `AppRole` inherits `pg_read_all_data` + `pg_write_all_data` (DML only). Schema changes go through drizzle-kit with a schema-owning `DATABASE_URL`.
+
+## Migrate the deployed database
+
+Plain `pnpm db:migrate` targets local Compose (`DATABASE_URL` from `.env.local` / `.env.development`). For PlanetScale:
+
+1. In the PlanetScale dashboard open the stage's database and select its branch (Alchemy creates one per stage off `main`; `pr-*` stages branch the `staging` database).
+2. **Connect** → create a role (or reset a password) that owns the schema / can run DDL. The Alchemy `AppRole` is DML-only and its credentials stay off stack outputs on purpose. Copy the **direct** Postgres URL (port 5432, `sslmode=verify-full`), not the PSBouncer pooled URL on 6432.
+3. Run:
+
+```bash
+DATABASE_URL='postgresql://<role>:<password>@<host>:5432/postgres?sslmode=verify-full' pnpm db:migrate:remote
+```
+
+`db:migrate:remote` refuses to run without `DATABASE_URL` in the shell, so it never falls back to Compose. A shell `DATABASE_URL` also beats the dotenv files for `pnpm db:migrate` / `db:seed`.
+
+## Worker env keys under Alchemy
+
+Alchemy binds only the keys listed in `infra/api.ts` `env`. Code reads any `POLAR_PRODUCT_<SLUG>` or `FEATURE_FLAG_<KEY>`, but a new key reaches the deployed or `alchemy:dev` Worker only after you add a matching `Config.String(...)` entry there. Today: `POLAR_PRODUCT_PRO`, `POLAR_PRODUCT_ENTERPRISE`, `FEATURE_FLAG_EXAMPLE_READY`.
 
 ## Do not
 

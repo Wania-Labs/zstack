@@ -10,6 +10,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:remote": "node -e \"process.env.DATABASE_URL || (console.error('db:migrate:remote needs DATABASE_URL set in the shell (e.g. the PlanetScale role connection string); it never falls back to .env.development'), process.exit(1))\" && drizzle-kit migrate",
     "db:up": "drizzle-kit up",
     "db:seed": "tsx scripts/seed.ts",
     "auth:generate": "auth generate --config ./auth.cli.ts --output ./src/platform/db/auth-schema.ts --yes",

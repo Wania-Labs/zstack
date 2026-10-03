@@ -12,6 +12,10 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
+These target local Compose: `DATABASE_URL` comes from the shell, then `.env.local`, then the committed `.env.development`. For a deployed PlanetScale branch use `DATABASE_URL=… pnpm db:migrate:remote` (see [Alchemy deploy](deploy-alchemy.md#migrate-the-deployed-database)).
+
+CI fails if `schema.ts` changes without a committed migration (`drizzle-kit generate` must produce nothing) or if `drizzle-kit check` finds inconsistent snapshots.
+
 If drizzle-kit says the migrations folder format is outdated:
 
 ```bash
