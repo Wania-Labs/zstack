@@ -14,12 +14,15 @@
     }
   },
   "scripts": {
-    "typecheck": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations --strategy cookie preferredLanguage baseLocale && tsc --noEmit -p tsconfig.json"
+    "build": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations --strategy cookie preferredLanguage baseLocale",
+    "prepare": "pnpm run build",
+    "typecheck": "pnpm run build && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@inlang/paraglide-js": "2.25.4"
   },
   "devDependencies": {
+    "@inlang/plugin-message-format": "4.0.0",
     "@zstack/typescript-config": "workspace:*",
     "typescript": "7.0.2"
   }

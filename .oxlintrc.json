@@ -12,6 +12,7 @@
     "**/.wrangler/**",
     "packages/i18n/src/paraglide/**",
     "packages/i18n/project.inlang/cache/**",
-    "repos/**"
+    "repos/**",
+    ".claude/worktrees/**"
   ]
 }

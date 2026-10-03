@@ -33,17 +33,40 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      # Also compiles Paraglide via @zstack/i18n `prepare`.
       - name: Install
         run: pnpm install --frozen-lockfile
 
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Test
-        run: pnpm test
-
       - name: Lint
         run: pnpm lint
 
       - name: Format
         run: pnpm format:check
+
+      - name: Test
+        run: pnpm test
+
+      # workerd pool smoke. Hyperdrive only needs a connection string, not a live DB.
+      - name: Test (workers pool)
+        run: pnpm test:workers
+
+      # api wrangler dry-run bundle + web/admin vite builds.
+      - name: Build
+        run: pnpm build
+
+      # drizzle-kit reads DATABASE_URL from the committed .env.development but
+      # neither command connects to Postgres.
+      - name: Drizzle migrations consistent
+        run: pnpm --filter @zstack/api exec drizzle-kit check
+
+      - name: Drizzle schema has no ungenerated migration
+        run: |
+          pnpm --filter @zstack/api exec drizzle-kit generate
+          if [ -n "$(git status --porcelain apps/api/drizzle)" ]; then
+            git status --porcelain apps/api/drizzle
+            echo "::error::schema.ts changed without a migration. Run 'pnpm db:generate' and commit apps/api/drizzle."
+            exit 1
+          fi

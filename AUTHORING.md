@@ -96,7 +96,7 @@ This repo is a **starter template**, not a product under the author's SaaS accou
 1. **Do not provision or bind real third-party projects** for this repo (Sentry orgs, Bento sites, Polar, PostHog, paid PlanetScale clusters for "smoke," etc.) unless the human explicitly asks to exercise a live path.
 2. **Scaffold ready-to-wire code** — SDKs, adapters, Alchemy env slots, docs — so a clone can turn a capability on by config/secrets.
 3. **Core to local functionality may be always-on with a free/local default:** Compose Postgres, Better Auth against that DB, Hono/oRPC, web/admin shells. Those must work with `pnpm alchemy:dev` + `pnpm dev:services` and no paid vendors.
-4. **Everything else is opt-in** via `product.config.ts` (`absent` | `configured` | later `enabled`) and/or empty credentials:
+4. **Everything else is opt-in** via empty vs set credentials. `product.config.ts` records the intended state (`core` | `absent` | `configured` | later `enabled`) but nothing reads it yet:
    - `absent` — no Effect Layer, no Alchemy resource, no fake production fallback.
    - `configured` — code + Alchemy bindings exist; behavior stays off/no-op until secrets or flags are set (Bento, Sentry).
 5. Prefer **empty env defaults** over dummy cloud accounts. Prefer **console / Compose / local workerd** over hitting a vendor during template authoring.
@@ -121,11 +121,11 @@ Alchemy v2 (`alchemy@2.0.0-beta.*`) is the sole owner of provisioned Cloudflare 
 
 `wrangler` in `apps/api` remains a local development / dry-run escape hatch. Do not grow a parallel Wrangler deploy path.
 
-Hyperdrive is declared in `infra/database.ts`. Under `alchemy:dev` (`ALCHEMY_DEV`), PlanetScale resources are skipped and Hyperdrive origin is Compose (`pnpm dev:services`). Under `alchemy:deploy` / `plan`, cloud origin comes from a PlanetScale `PostgresRole` (`AppRole.origin`) and Hyperdrive `dev` still points at Compose. Migrations stay on drizzle-kit against `DATABASE_URL` — Alchemy `migrationsDir` is not wired yet (expects flat numeric-prefixed `.sql`, not Drizzle 1.0 folders).
+Hyperdrive is declared in `infra/database.ts`. Under `alchemy:dev` (`ALCHEMY_DEV`), PlanetScale resources are skipped and Hyperdrive origin is Compose (`pnpm dev:services`). Under `alchemy:deploy` / `plan`, cloud origin comes from a PlanetScale `PostgresRole` (`AppRole.origin`) and Hyperdrive `dev` still points at Compose. Migrations stay on drizzle-kit against `DATABASE_URL` — Alchemy `migrationsDir` is not wired yet (expects flat numeric-prefixed `.sql`, not Drizzle 1.0 folders). `DATABASE_URL` never feeds Hyperdrive: wrangler uses `localConnectionString` in `apps/api/wrangler.jsonc` (override with `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE`) and `alchemy:dev` uses `composeDevOrigin`. Compose publishes `${POSTGRES_PORT:-5432}`; changing it means updating all three. Deployed DBs migrate with `DATABASE_URL=… pnpm db:migrate:remote` (see `.agent/playbooks/deploy-alchemy.md`).
 
 PlanetScale auth for `alchemy plan` / `deploy`: `alchemy login` (or token credentials). Not required for `alchemy:dev`. Optional `PLANETSCALE_REGION` (default `us-east`). Cluster size is `PS_DEV`, Postgres major `18` to match Compose.
 
-`BETTER_AUTH_SECRET` for wrangler lives in ignored `apps/api/.dev.vars`. For Alchemy, set it in the process env / stage secret store (`Config.Redacted("BETTER_AUTH_SECRET")`). Regenerate with `openssl rand -base64 32` or `pnpm dlx auth@latest secret`.
+`BETTER_AUTH_SECRET` for wrangler lives in ignored `apps/api/.dev.vars`. For Alchemy (`Config.Redacted("BETTER_AUTH_SECRET")`), export it or put it in the root `.env` (or the `--env-file` stage file for deploys): the Alchemy CLI never reads `.env.local` / `.env.development`. Regenerate with `openssl rand -base64 32` or `pnpm dlx auth@latest secret`.
 
 `BETTER_AUTH_URL` (web origin) and `ADMIN_URL` (staff console origin) go through `publicOrigin` in `infra/shared.ts`: under `alchemy:dev` they default to `http://localhost:3000` / `:3001`; on deploy / plan they are required and must be `https://`. They cannot be derived from `web.url` / `admin.url` because web and admin bind the API Worker (resource cycle). The API trusts both origins and adds the localhost dev ports only while `BETTER_AUTH_URL` is `http://localhost`. Details and the workers.dev bootstrap: `.agent/playbooks/deploy-alchemy.md`.
 
@@ -167,11 +167,11 @@ Suggested project split: one Sentry project each for api, web, and admin.
 
 ## CI
 
-Product gate: `.github/workflows/ci.yml` — typecheck / test / lint / format for the monorepo. **Ignores `docs/**`.**
+Product gate: `.github/workflows/ci.yml` — one job: install (compiles Paraglide via `@zstack/i18n` `prepare`), typecheck (includes `apps/api/tsconfig.test.json` for tests / scripts / configs), lint, format, `pnpm test`, `pnpm test:workers`, `pnpm build` (api wrangler dry-run + web/admin Vite builds), `drizzle-kit check`, and a guard that `drizzle-kit generate` writes nothing new under `apps/api/drizzle`. **Ignores `docs/**`.**
 
 Docs gate: `.github/workflows/docs.yml` — install/typecheck/lint/format/Worker build **inside `docs/` only** (separate lockfile). Never fold docs into the product job. Production deploy is Workers Builds in the Cloudflare dashboard (root `docs`), not this workflow.
 
-`pnpm test` runs API unit tests plus deterministic `vitest-evals` (fake models). Workerd pool tests (`pnpm test:workers`) stay local/optional. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
+`pnpm test` runs API unit tests, deterministic `vitest-evals` (fake models), and `apps/web` unit tests. `pnpm test:workers` boots the workerd pool from `wrangler.jsonc` bindings and needs no live Postgres (Hyperdrive only exposes a connection string). The drizzle steps read `DATABASE_URL` from the committed `.env.development` but never connect. Depot runners, DB/integration jobs, Playwright, Alchemy plan/deploy, and cloud previews come later.
 
 ## Docs site (authoring only)
 
@@ -187,7 +187,7 @@ Product `pnpm lint` uses `--disable-nested-config` so the isolated `docs/.oxlint
 
 - **Unit:** Vitest (node) in `apps/api` — `pnpm --filter @zstack/api test:unit`
 - **Evals:** `vitest-evals` + `@vitest-evals/harness-ai-sdk` — `test/evals/*.eval.ts`, fake by default
-- **Workers:** `@cloudflare/vitest-pool-workers` — `pnpm test:workers` (needs wrangler/bindings; not CI yet)
+- **Workers:** `@cloudflare/vitest-pool-workers` — `pnpm test:workers` (wrangler bindings in workerd; runs in CI without a DB)
 
 ## AI
 
@@ -215,7 +215,7 @@ Capability registry + Effect `AiService` in `apps/api/src/platform/ai/`. Product
 `FeatureFlags` in `apps/api/src/platform/flags/` is the Effect boundary. Callers pass the safe default at the call site.
 
 - Default: in-memory map (`FakeFeatureFlagsLive`). Missing keys and empty config return the caller default with reason `default`. They do not throw.
-- `featureFlagsLiveFromEnv` overlays `FEATURE_FLAG_*` bindings onto that map (`FEATURE_FLAG_EXAMPLE_READY=true` → `example.ready`).
+- `featureFlagsLiveFromEnv` overlays `FEATURE_FLAG_*` bindings onto that map (`FEATURE_FLAG_EXAMPLE_READY=true` → `example.ready`). Under Alchemy each key must also be listed in `infra/api.ts` `env`; only `FEATURE_FLAG_EXAMPLE_READY` is bound today.
 - No PostHog, OpenFeature npm package, KV snapshot, or admin authoring.
 
 ## Billing
@@ -223,7 +223,7 @@ Capability registry + Effect `AiService` in `apps/api/src/platform/ai/`. Product
 `BillingService` in `apps/api/src/platform/billing/` is the Effect boundary. The billable customer is the Better Auth organization id. Callers ask `canUse(capability)` and `limit(name)`, not Polar subscription status. The client may pass a product slug, never a Polar product id.
 
 - Default: `FakeBillingLive` when `POLAR_ACCESS_TOKEN` is empty. Checkout and portal return `{ kind: "unconfigured" }`. Entitlements deny (`canUse` false, `limit` 0). Empty Polar env does not throw.
-- Live: `PolarBillingLive` when `POLAR_ACCESS_TOKEN` is non-empty. Checkout and portal call Polar HTTP and return `{ kind: "url", url }` when successful. Requires product catalog via `POLAR_PRODUCT_<SLUG>=<product_id>` env vars.
+- Live: `PolarBillingLive` when `POLAR_ACCESS_TOKEN` is non-empty. Checkout and portal call Polar HTTP and return `{ kind: "url", url }` when successful. Requires product catalog via `POLAR_PRODUCT_<SLUG>=<product_id>` env vars. Under Alchemy each `POLAR_PRODUCT_<SLUG>` must also be listed in `infra/api.ts` `env`; only `PRO` and `ENTERPRISE` are bound today.
 - Webhooks: `POST /api/webhooks/polar` verifies Standard Webhooks (`POLAR_WEBHOOK_SECRET`). Events land in `billing_webhook_event` (Polar event id is the primary key). Entitlements recompute into `billing_entitlement`. Duplicates recompute, they do not double-capture analytics.
 - Usage: `reportUsage` writes `billing_usage_outbox`, flushes Polar ingest in-process (so wrangler without `JOBS` still delivers), then publishes `billing.usage` for retries. `ai.complete` checks `canUse("ai.<capability>")` when Polar is configured and reports `ai.generation` after success. Empty Polar does not block the fake AI path.
 - Product `canUse` / `limit` / `remaining` / `entitlement` read the projection first, then Polar customer state.

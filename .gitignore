@@ -55,7 +55,7 @@ pnpm-debug.log*
 # TypeScript incremental
 *.tsbuildinfo
 
-# Paraglide compile output (packages/i18n typecheck compiles first)
+# Paraglide compile output (packages/i18n `prepare` / `build` compiles it on install)
 packages/i18n/src/paraglide
 
 # inlang generated files. Keep settings.json.
@@ -63,3 +63,6 @@ packages/i18n/project.inlang/cache
 packages/i18n/project.inlang/.meta.json
 packages/i18n/project.inlang/README.md
 packages/i18n/project.inlang/.gitignore
+
+# Coding-agent worktrees (Claude Code)
+.claude/worktrees/

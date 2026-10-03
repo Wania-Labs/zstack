@@ -19,7 +19,7 @@ Optional vendors (Sentry, Bento, …) are scaffolded and **off until a clone bin
 - `@zstack/i18n` Paraglide catalogs (`en`; always-on, no vendor)
 - `@zstack/auth-access` Better Auth admin role AC
 - R2 ObjectStore (Worker paths, or S3 presign when R2 API tokens are set)
-- Vitest + vitest-evals (deterministic) in CI; workerd pool optional
+- Vitest + vitest-evals (deterministic) + workerd pool smoke in CI
 - `create-zstack` / `@wanialabs/create-zstack` scaffold CLI (excluded from clones)
 
 Workflows and queues live **inside** `apps/api` — same Hono Worker, not separate apps.
@@ -47,7 +47,7 @@ pnpm --filter @zstack/admin dev                    # :3001, staff console
 ```bash
 # Cloudflare + PlanetScale auth via Alchemy profiles
 alchemy login
-# BETTER_AUTH_SECRET must be in the environment for alchemy
+# BETTER_AUTH_SECRET must be exported or set in the root .env (Alchemy ignores .env.local)
 export BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
 pnpm alchemy:dev                                   # api :8787 + web :3000 + admin :3001 (Compose only)
 # deploy also needs the public https origins (see .agent/playbooks/deploy-alchemy.md)
@@ -63,7 +63,7 @@ Product PRs run `.github/workflows/ci.yml` (ignores `docs/**`). Docs changes run
 
 ```bash
 pnpm test              # api unit + vitest-evals (fake)
-pnpm test:workers      # optional workerd pool
+pnpm test:workers      # workerd pool smoke (no DB needed)
 npm create @wanialabs/zstack@latest my-app
 pnpm create @wanialabs/zstack@latest my-app
 cd docs && pnpm install && pnpm dev   # authoring docs :4000

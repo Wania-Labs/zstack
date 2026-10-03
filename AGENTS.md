@@ -17,7 +17,7 @@ Deep tutorials live on the zstack docs site when published. This file must stay 
 | `packages/auth-access`      | Better Auth admin role access control                                                        |
 | `packages/i18n`             | Paraglide catalogs; compiled messages and runtime                                            |
 | `infra/` + `alchemy.run.ts` | Cloudflare + PlanetScale resources (Alchemy **v2 IaC**, not blockchain Alchemy)              |
-| `product.config.ts`         | Capability **intent** only. Not imported by runtime today. No secrets.                       |
+| `product.config.ts`         | Capability **intent** only. Not read by runtime or Alchemy today. No secrets.                |
 | `.agent/playbooks/`         | Multi-step procedures                                                                        |
 | `.agent/skills/`            | Agent skills (Effect, …). Tool packs may copy these into `.cursor/skills` / `.claude/skills` |
 
@@ -27,7 +27,7 @@ Nested `AGENTS.md` files add package-local rules. Read the nearest one when edit
 
 1. **Alchemy owns deploy.** Entry is `alchemy.run.ts` + `infra/*`. `wrangler` in `apps/api` is local/dry-run only. Do not add a parallel Wrangler deploy path.
 2. **Modules call ports.** Feature code under `apps/api/src/modules/` uses Effect services from `apps/api/src/platform/`. Do not import Bento, AI Gateway, Sentry, R2 SDK, Polar SDK, or console email adapters directly from modules.
-3. **Frontends import contracts, i18n, and analytics only.** `apps/web` and `apps/admin` may import `@zstack/contracts`, `@zstack/i18n`, and `@zstack/analytics`. They must not import `apps/api` source.
+3. **Frontends import client-safe packages only.** `apps/web` and `apps/admin` may import `@zstack/contracts`, `@zstack/i18n`, `@zstack/analytics`, and `@zstack/auth-access` (Better Auth admin roles for the client plugin). They must not import `apps/api` source.
 4. **Pin Effect / Drizzle / Alchemy.** Versions live in root and workspace `package.json`. There is no `patches/` directory; do not add pnpm patches unless a future pin actually needs one.
 5. **No `@cloudflare/vite-plugin` on web/admin.** Alchemy injects its own under `alchemy dev` / deploy.
 6. **Secrets stay out of `product.config.ts`.** Flip optional vendors with empty vs set env (see `.dev.vars.example`).
@@ -90,11 +90,13 @@ Staff promote after sign-up: `STAFF_EMAIL=you@example.com pnpm db:seed`.
 
 ## Env split
 
-| Concern              | Local wrangler                                           | Alchemy                            |
-| -------------------- | -------------------------------------------------------- | ---------------------------------- |
-| `BETTER_AUTH_SECRET` | `apps/api/.dev.vars`                                     | Process / stage env                |
-| Compose DB           | `DATABASE_URL` / Hyperdrive → Compose when `ALCHEMY_DEV` | Deploy uses PlanetScale origin     |
-| Optional vendors     | Empty in `.dev.vars` → safe defaults                     | Same: empty = off / fake / console |
+| Concern              | Local wrangler                                                                                                              | Alchemy                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `BETTER_AUTH_SECRET` | `apps/api/.dev.vars`                                                                                                        | Root `.env` or shell (Alchemy reads only root `.env`, not `.env.local`/`.env.development`) |
+| Hyperdrive → DB      | `localConnectionString` in `apps/api/wrangler.jsonc` (override: `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE`) | `alchemy:dev`: `composeDevOrigin` in `infra/database.ts`; deploy: PlanetScale role         |
+| Optional vendors     | Empty in `.dev.vars` → safe defaults                                                                                        | Root `.env` / shell; empty = off / fake / console                                          |
+
+`DATABASE_URL` feeds only drizzle-kit, `db:seed`, and the auth CLI (shell > `.env.local` > `.env.development`). Neither Hyperdrive path reads it. New `POLAR_PRODUCT_*` / `FEATURE_FLAG_*` keys need a matching entry in `infra/api.ts` `env` to reach the Worker under Alchemy.
 
 Better Auth has no Effect adapter. Session and auth routes use `pg.Client` + `drizzle-orm/node-postgres`. Product modules use `@effect/sql-pg` via `Database`. Keep both until Better Auth can run on Effect (the official Drizzle adapter is promise-only).
 

@@ -14,5 +14,5 @@ Customer TanStack Start shell (shadcn base-nova).
 
 ## Do not
 
-- Import `apps/api` source
+- Import `apps/api` source, or workspace packages beyond `@zstack/contracts`, `@zstack/i18n`, `@zstack/analytics`, and `@zstack/auth-access`
 - Add `@cloudflare/vite-plugin` (Alchemy owns that under `alchemy:dev` / deploy)

@@ -9,7 +9,6 @@ import { runRequestEffect } from "../platform/effect/runtime";
 import { BILLING_USAGE_JOB, type JobMessage } from "../platform/queue/job-queue";
 import { DurableWorkflow, EXAMPLE_WORKFLOW_NAME } from "../platform/workflow/durable-workflow";
 
-export const EXAMPLE_JOB_ECHO = "example.echo";
 export const EXAMPLE_JOB_WORKFLOW = "example.workflow";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
