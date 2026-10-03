@@ -50,7 +50,9 @@ describe("analyticsClientFromEnv", () => {
 
 describe("createPostHogAnalytics", () => {
   it("posts named events and skips staff", async () => {
-    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }));
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(null, { status: 200 }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const client = createPostHogAnalytics({

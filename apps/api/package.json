@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "build": "wrangler deploy --dry-run --outdir=dist",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -46,6 +46,7 @@
     "@cloudflare/vitest-pool-workers": "^0.22.0",
     "@cloudflare/workers-types": "^5.20261002.1",
     "@effect/vitest": "4.0.0",
+    "@orpc/contract": "1.15.4",
     "@types/node": "22.20.5",
     "@types/pg": "8.23.1",
     "@vitest-evals/harness-ai-sdk": "^0.17.0",
