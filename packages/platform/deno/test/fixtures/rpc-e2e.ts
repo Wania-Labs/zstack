@@ -1,12 +1,12 @@
 import { assert, describe, it } from "@effect/vitest"
 import { Cause, Context, Effect, Fiber, Option, Schedule, Stream } from "effect"
 import * as Layer from "effect/Layer"
-import * as RpcClient from "effect/unstable/rpc/RpcClient"
-import type { RpcClientError } from "effect/unstable/rpc/RpcClientError"
-import type * as RpcGroup from "effect/unstable/rpc/RpcGroup"
-import * as RpcServer from "effect/unstable/rpc/RpcServer"
-import * as RpcTest from "effect/unstable/rpc/RpcTest"
-import { AuthClient, AuthLive, TimingLive, User, UserRpcs, UsersLive } from "./rpc-schemas.ts"
+import * as RpcClient from "effect/rpc/RpcClient"
+import type { RpcClientError } from "effect/rpc/RpcClientError"
+import type * as RpcGroup from "effect/rpc/RpcGroup"
+import * as RpcServer from "effect/rpc/RpcServer"
+import * as RpcTest from "effect/rpc/RpcTest"
+import { AuthClient, AuthLayer, TimingLayer, User, UserRpcs, UsersLayer } from "./rpc-schemas.ts"
 
 export class UsersClient extends Context.Service<
   UsersClient,
@@ -16,7 +16,7 @@ export class UsersClient extends Context.Service<
     Layer.provide(AuthClient)
   )
   static layerTest = Layer.effect(UsersClient)(RpcTest.makeClient(UserRpcs)).pipe(
-    Layer.provide([UsersLive, AuthLive, TimingLive, AuthClient])
+    Layer.provide([UsersLayer, AuthLayer, TimingLayer, AuthClient])
   )
 }
 
