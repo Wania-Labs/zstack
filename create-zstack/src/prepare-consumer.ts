@@ -232,7 +232,12 @@ export async function stripAuthoringManifest(
   );
 
   await rewriteIfPresent(join(root, "product.config.ts"), (product) =>
-    product.replace(/^ \* See AUTHORING\.md → Template wiring policy\.\n/m, ""),
+    product
+      .replace(/^ \* See AUTHORING\.md → Template wiring policy\.\n/m, "")
+      .replace(
+        /^ \* Keep it in sync with AUTHORING\.md → Template wiring policy so humans and agents\n \* share one capability table\.\n/m,
+        "",
+      ),
   );
 
   await rewriteIfPresent(join(root, "README.md"), (readme) =>

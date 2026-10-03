@@ -346,6 +346,6 @@ alwaysApply: true
 
 Read and follow \`AGENTS.md\` at the repo root (and nested \`AGENTS.md\` / \`.agent/playbooks/\` when editing those trees).
 
-Hard constraints: Alchemy is the only deploy path; modules call platform ports; frontends import \`${identity.npm.scope}/contracts\`, \`${identity.npm.scope}/i18n\`, and \`${identity.npm.scope}/analytics\` only; pin Effect/Drizzle/Alchemy in package.json (no \`patches/\` directory); no secrets in \`product.config.ts\`.
+Hard constraints: Alchemy is the only deploy path; modules call platform ports; frontends import only client-safe packages (\`${identity.npm.scope}/contracts\`, \`${identity.npm.scope}/i18n\`, \`${identity.npm.scope}/analytics\`, \`${identity.npm.scope}/auth-access\`), never \`apps/api\` source; pin Effect/Drizzle/Alchemy in package.json (no \`patches/\` directory); no secrets in \`product.config.ts\`.
 `;
 }

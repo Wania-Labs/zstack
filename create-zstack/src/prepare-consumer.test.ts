@@ -118,6 +118,9 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, lockf
         " * Optional vendors stay off until a clone sets secrets or flips the manifest.",
         " * See AUTHORING.md → Template wiring policy.",
         " *",
+        " * `infra/*` plus empty vs set env.",
+        " * Keep it in sync with AUTHORING.md → Template wiring policy so humans and agents",
+        " * share one capability table.",
         " */",
         "",
       ].join("\n"),
@@ -187,7 +190,10 @@ void test("stripAuthoringManifest removes create-zstack workspace, script, lockf
 
     const product = await readFile(join(root, "product.config.ts"), "utf8");
     assert.equal(product.includes("AUTHORING"), false);
-    assert.match(product, /flips the manifest\.\n \*\n/);
+    assert.match(
+      product,
+      /flips the manifest\.\n \*\n \* `infra\/\*` plus empty vs set env\.\n \*\/\n/,
+    );
 
     const readme = await readFile(join(root, "README.md"), "utf8");
     assert.equal(readme.includes("create-zstack"), false);
