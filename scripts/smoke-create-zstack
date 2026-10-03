@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Generate consumer clones from committed HEAD and check them.
 #
-# Full variants run the clone's own CI gate
-# (install --frozen-lockfile, typecheck, lint, format:check, test):
+# Full variants run the steps of the clone's own ci.yml
+# (install --frozen-lockfile, typecheck, lint, format:check, test, test:workers,
+# build, drizzle-kit check + generate guard):
 #   acme         --name "Acme Cloud" --scope @acme
 #   my-product   default identity from the directory + --agent-tools=all
 #   zstack-demo  default identity whose name contains "zstack"
@@ -108,6 +109,17 @@ run_clone_ci() {
     pnpm lint
     pnpm format:check
     pnpm test
+    pnpm test:workers
+    pnpm build
+    pnpm --filter ./apps/api exec drizzle-kit check
+    # Mirror ci.yml's "no ungenerated migration" guard without needing a git repo.
+    local before after
+    before="$(find apps/api/drizzle -type f -exec shasum {} + | sort)"
+    pnpm --filter ./apps/api exec drizzle-kit generate
+    after="$(find apps/api/drizzle -type f -exec shasum {} + | sort)"
+    if [[ "$before" != "$after" ]]; then
+      die "drizzle-kit generate produced a migration in the clone"
+    fi
   )
 }
 

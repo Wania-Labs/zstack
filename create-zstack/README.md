@@ -21,7 +21,7 @@ ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-agents --force --yes -
 
 Defaults to `gh:Wania-Labs/zstack` (override with `--template` or `ZSTACK_TEMPLATE`). Local paths use giget's `git:` provider (`git:$(pwd)` or `git:./`), not `file:`, and read committed HEAD. Always strips authoring paths (guide, AUTHORING, create-zstack, docs, …, including their dotfiles) via a giget `ignore` predicate plus a post-download sweep.
 
-`pnpm smoke:create` generates clones for several identities (Acme Cloud / `@acme`, default + `--agent-tools=all`, `zstack-demo`, shortest, longest) and runs each clone's install, typecheck, lint, format:check, and test, plus quick checks for wide-character and punctuation names and `--force` into an existing directory.
+`pnpm smoke:create` generates clones for several identities (Acme Cloud / `@acme`, default + `--agent-tools=all`, `zstack-demo`, shortest, longest) and runs the steps of each clone's `ci.yml` (install, typecheck, lint, format:check, test, test:workers, build, drizzle checks), plus quick checks for wide-character and punctuation names and `--force` into an existing directory.
 
 Requires Node.js `>=22.5`.
 

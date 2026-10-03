@@ -63,7 +63,7 @@ ZSTACK_SMOKE_VARIANTS="acme" pnpm smoke:create
 ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke-agents --force --yes --agent-tools=all
 ```
 
-`pnpm smoke:create` generates five clones and runs each clone's CI gate (`pnpm install --frozen-lockfile`, `typecheck`, `lint`, `format:check`, `test`): `--name "Acme Cloud" --scope @acme`; default identity + `--agent-tools=all`; target `zstack-demo` (a name containing "zstack"); the shortest identity (`--name A`, scope `@a`); and the longest (32-column name, 32-character scope, `--agent-tools=all`). Quick variants also format-check a wide-character name and a punctuation name, and check that `--force` into an existing directory keeps the user's `docs/`, `.cursor/`, and `repos/`. Pick a subset with `ZSTACK_SMOKE_VARIANTS`.
+`pnpm smoke:create` generates five clones and runs the steps of each clone's `ci.yml` (`pnpm install --frozen-lockfile`, `typecheck`, `lint`, `format:check`, `test`, `test:workers`, `build`, `drizzle-kit check`, and the no-ungenerated-migration guard): `--name "Acme Cloud" --scope @acme`; default identity + `--agent-tools=all`; target `zstack-demo` (a name containing "zstack"); the shortest identity (`--name A`, scope `@a`); and the longest (32-column name, 32-character scope, `--agent-tools=all`). Quick variants also format-check a wide-character name and a punctuation name, and check that `--force` into an existing directory keeps the user's `docs/`, `.cursor/`, and `repos/`. Pick a subset with `ZSTACK_SMOKE_VARIANTS`.
 
 Default remote template: `gh:Wania-Labs/zstack` (public; override with `--template` or `ZSTACK_TEMPLATE`). CLI requires Node `>=22.5`.
 
