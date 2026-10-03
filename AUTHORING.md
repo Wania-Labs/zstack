@@ -127,7 +127,11 @@ PlanetScale auth for `alchemy plan` / `deploy`: `alchemy login` (or token creden
 
 `BETTER_AUTH_SECRET` for wrangler lives in ignored `apps/api/.dev.vars`. For Alchemy, set it in the process env / stage secret store (`Config.Redacted("BETTER_AUTH_SECRET")`). Regenerate with `openssl rand -base64 32` or `pnpm dlx auth@latest secret`.
 
-`BETTER_AUTH_URL` defaults to `http://localhost:3000` (web is the public origin). Vite proxies `/api/*` to the API Worker on `:8787` for the dual-process local path.
+`BETTER_AUTH_URL` (web origin) and `ADMIN_URL` (staff console origin) go through `publicOrigin` in `infra/shared.ts`: under `alchemy:dev` they default to `http://localhost:3000` / `:3001`; on deploy / plan they are required and must be `https://`. They cannot be derived from `web.url` / `admin.url` because web and admin bind the API Worker (resource cycle). The API trusts both origins and adds the localhost dev ports only while `BETTER_AUTH_URL` is `http://localhost`. Details and the workers.dev bootstrap: `.agent/playbooks/deploy-alchemy.md`.
+
+Same-origin `/api/*`: Vite proxies it to `:8787` on the dual-process local path. Deployed (and under `alchemy:dev` when the Vite proxy is bypassed), the TanStack Start server route `apps/{web,admin}/src/routes/api/$.ts` forwards to the `API` service binding, read via `cloudflare:workers` env in `src/lib/api-upstream.server.ts`. SSR `beforeLoad` auth/oRPC calls go through `apiFetch` (`src/lib/api-fetch.ts`), which forwards the incoming Cookie header and relays `Set-Cookie`.
+
+Workers compatibility date lives once in `infra/shared.ts` (`compatibility`); keep each app's `wrangler.jsonc` `compatibility_date` equal to it.
 
 Do not add `@cloudflare/vite-plugin` to `apps/web` — Alchemy injects its own under `alchemy dev` / deploy.
 
