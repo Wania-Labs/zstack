@@ -117,7 +117,7 @@ This repo is a **starter template**, not a product under the author's SaaS accou
 
 ## Deploy authority
 
-Alchemy v2 (`alchemy@2.0.0-beta.*`) is the sole owner of provisioned Cloudflare resources, secret bindings, and production deploys. Entry: `alchemy.run.ts` + `infra/*`. Pin the exact beta and upgrade with Effect. Current pin is `2.0.0-beta.72`. beta.70 dies on Effect `4.0.0-rc.108` (`Schema.TaggedErrorClass` was renamed to `Schema.TaggedError`).
+Alchemy v2 (`alchemy@2.0.0-beta.*`) is the sole owner of provisioned Cloudflare resources, secret bindings, and production deploys. Entry: `alchemy.run.ts` + `infra/*`. Pin the exact beta and upgrade with Effect. Current pin is `2.0.0-beta.80`, the first beta that peers on stable Effect `^4.0.0` (and `@effect/sql-pg` / `@effect/vitest` / `@effect/platform-node` `^4.0.0`). Effect 4.0.0 stable renamed the `Config` constructors to PascalCase (`Config.string` → `Config.String`, `Config.redacted` → `Config.Redacted`), so `infra/*` moved with it.
 
 `wrangler` in `apps/api` remains a local development / dry-run escape hatch. Do not grow a parallel Wrangler deploy path.
 
@@ -125,7 +125,7 @@ Hyperdrive is declared in `infra/database.ts`. Under `alchemy:dev` (`ALCHEMY_DEV
 
 PlanetScale auth for `alchemy plan` / `deploy`: `alchemy login` (or token credentials). Not required for `alchemy:dev`. Optional `PLANETSCALE_REGION` (default `us-east`). Cluster size is `PS_DEV`, Postgres major `18` to match Compose.
 
-`BETTER_AUTH_SECRET` for wrangler lives in ignored `apps/api/.dev.vars`. For Alchemy, set it in the process env / stage secret store (`Config.redacted("BETTER_AUTH_SECRET")`). Regenerate with `openssl rand -base64 32` or `pnpm dlx auth@latest secret`.
+`BETTER_AUTH_SECRET` for wrangler lives in ignored `apps/api/.dev.vars`. For Alchemy, set it in the process env / stage secret store (`Config.Redacted("BETTER_AUTH_SECRET")`). Regenerate with `openssl rand -base64 32` or `pnpm dlx auth@latest secret`.
 
 `BETTER_AUTH_URL` defaults to `http://localhost:3000` (web is the public origin). Vite proxies `/api/*` to the API Worker on `:8787` for the dual-process local path.
 
@@ -238,7 +238,9 @@ Capability registry + Effect `AiService` in `apps/api/src/platform/ai/`. Product
 
 ## Drizzle 1.0 RC
 
-Pinned to `drizzle-orm` / `drizzle-kit` `1.0.0-rc.5-ab785fc` (Alchemy 72's exact peer; `1.0.0-rc.4` crashes at import against Effect `>=4.0.0-beta.105`). App queries use `drizzle-orm/effect-postgres` + `@effect/sql-pg`. Better Auth keeps the promise `node-postgres` driver until it supports Effect. Do not widen the range until drizzle publishes a real `1.0.0-rc.5`.
+Pinned to `drizzle-orm` / `drizzle-kit` `1.0.0-rc.5-ab785fc` (Alchemy beta.80's exact peer; `1.0.0-rc.4` crashes at import against Effect `>=4.0.0-beta.105`). App queries use `drizzle-orm/effect-postgres` + `@effect/sql-pg`. Better Auth keeps the promise `node-postgres` driver until it supports Effect. Do not widen the range until drizzle publishes a real `1.0.0-rc.5`.
+
+`@effect/sql-pg` 4.0.0 speaks the Postgres wire protocol itself (over `node:net` / `node:tls`, fine under `nodejs_compat`) and no longer wraps `pg`, so there is no node-postgres type parser to tweak. Drizzle's `effect-postgres` codecs cast date / timestamp / interval columns to text in the SQL, and `sslmode=prefer` is handled natively.
 
 After `pnpm --filter @zstack/api auth:generate`, strip any RQBv1 `relations(...)` helpers from `auth-schema.ts` (tables only). RQB lives in `src/platform/db/relations.ts` via `defineRelations`.
 

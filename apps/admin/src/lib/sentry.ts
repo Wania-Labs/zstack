@@ -24,7 +24,6 @@ export function initBrowserSentry(router: AnyRouter, service: "zstack-web" | "zs
       Sentry.tanstackRouterBrowserTracingIntegration(router),
       Sentry.replayIntegration(),
     ],
-    enableLogs: true,
     tracesSampleRate,
     replaysSessionSampleRate,
     replaysOnErrorSampleRate: 1.0,

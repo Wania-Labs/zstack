@@ -11,15 +11,31 @@ allowBuilds:
   sharp: false
   "@sentry/cli": true
 
+# One install per peer version. Without this, optional peers that only some
+# workspaces see (drizzle-orm's zod and Effect SQL drivers via alchemy,
+# react-start's supports-color) split better-auth into per-workspace copies,
+# so apps/api and @zstack/auth-access end up with different better-auth types.
+dedupePeers: true
+
+# @effect/vitest 4.0.0 (also an alchemy peer) asks for vitest 5, but
+# @cloudflare/vitest-pool-workers still only runs on vitest 4.1 (the workerd
+# pool fails to boot on 5). Keep a single vitest 4 until pool-workers ships
+# vitest 5 support; @effect/vitest's it.effect / it.layer run fine on 4.1.
+overrides:
+  vitest: ^4.1.11
+
+peerDependencyRules:
+  allowedVersions:
+    "@effect/vitest>vitest": ^4.1.0
+
 minimumReleaseAgeExclude:
-  - pg-protocol@1.16.0
-  - pg@8.23.0
-  - evlog@2.25.0
-  - "@effect/platform-node-shared@4.0.0-rc.108"
-  - "@effect/platform-node@4.0.0-rc.108"
-  - "@effect/sql-pg@4.0.0-rc.108"
-  - "@effect/vitest@4.0.0-rc.108"
-  - effect@4.0.0-rc.108
-  - alchemy@2.0.0-beta.72
+  - pg-protocol@1.16.1
+  - pg@8.23.1
+  - evlog@2.29.0
+  - "@effect/platform-node@4.0.0"
+  - "@effect/sql-pg@4.0.0"
+  - "@effect/vitest@4.0.0"
+  - effect@4.0.0
+  - alchemy@2.0.0-beta.80
   - drizzle-orm@1.0.0-rc.5-ab785fc
   - drizzle-kit@1.0.0-rc.5-ab785fc

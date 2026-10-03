@@ -5,46 +5,45 @@
  * requests, then converts normal and streaming Anthropic responses back into
  * Effect AI response content with provider metadata.
  *
+ * @stability unstable
  * @since 4.0.0
  */
 /** @effect-diagnostics preferSchemaOverJson:skip-file */
+import * as AiError from "effect/ai/AiError"
+import { toCodecAnthropic } from "effect/ai/AnthropicStructuredOutput"
+import * as IdGenerator from "effect/ai/IdGenerator"
+import * as LanguageModel from "effect/ai/LanguageModel"
+import * as AiModel from "effect/ai/Model"
+import type * as Prompt from "effect/ai/Prompt"
+import type * as Response from "effect/ai/Response"
+import * as Tool from "effect/ai/Tool"
 import * as Arr from "effect/Array"
 import * as Context from "effect/Context"
 import * as DateTime from "effect/DateTime"
 import * as Effect from "effect/Effect"
-import * as Encoding from "effect/Encoding"
+import * as Base64 from "effect/encoding/Base64"
 import { dual } from "effect/Function"
+import type * as HttpClientRequest from "effect/http/HttpClientRequest"
+import type * as HttpClientResponse from "effect/http/HttpClientResponse"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Predicate from "effect/Predicate"
 import * as Redactable from "effect/Redactable"
 import * as Schema from "effect/Schema"
 import * as SchemaAST from "effect/SchemaAST"
-import * as SchemaIssue from "effect/SchemaIssue"
 import * as Stream from "effect/Stream"
 import type { Span } from "effect/Tracer"
 import type { Mutable, Simplify } from "effect/Types"
-import * as AiError from "effect/unstable/ai/AiError"
-import { toCodecAnthropic } from "effect/unstable/ai/AnthropicStructuredOutput"
-import * as IdGenerator from "effect/unstable/ai/IdGenerator"
-import * as LanguageModel from "effect/unstable/ai/LanguageModel"
-import * as AiModel from "effect/unstable/ai/Model"
-import type * as Prompt from "effect/unstable/ai/Prompt"
-import type * as Response from "effect/unstable/ai/Response"
-import * as Tool from "effect/unstable/ai/Tool"
-import type * as HttpClientRequest from "effect/unstable/http/HttpClientRequest"
-import type * as HttpClientResponse from "effect/unstable/http/HttpClientResponse"
 import { AnthropicClient, type MessageStreamEvent } from "./AnthropicClient.ts"
 import { addGenAIAnnotations } from "./AnthropicTelemetry.ts"
 import type { AnthropicTool } from "./AnthropicTool.ts"
 import type * as Generated from "./Generated.ts"
 import * as InternalUtilities from "./internal/utilities.ts"
 
-const formatIssue = SchemaIssue.makeFormatterDefault()
-
 /**
  * Known Anthropic Claude model identifiers exposed by the generated Anthropic schema.
  *
+ * @stability unstable
  * @category models
  * @since 4.0.0
  */
@@ -68,6 +67,7 @@ export type Model = (typeof Generated.Model)["members"][1]["Encoded"]
  * requests. Scoped configuration overrides defaults supplied to `model`,
  * `make`, or `layer`.
  *
+ * @stability unstable
  * @category services
  * @since 4.0.0
  */
@@ -89,6 +89,12 @@ export class Config extends Context.Service<
        */
       readonly disableParallelToolCalls?: boolean | undefined
       /**
+       * Whether the model supports native structured outputs.
+       *
+       * Overrides automatic capability detection based on the model identifier.
+       */
+      readonly structuredOutputs?: boolean | undefined
+      /**
        * Whether to use strict JSON schema validation for tool calls.
        *
        * **Details**
@@ -105,7 +111,7 @@ export class Config extends Context.Service<
 // Provider Options / Metadata
 // =============================================================================
 
-declare module "effect/unstable/ai/Prompt" {
+declare module "effect/ai/Prompt" {
   /**
    * Anthropic-specific options for system messages.
    *
@@ -114,6 +120,7 @@ declare module "effect/unstable/ai/Prompt" {
    * These options are used when translating system messages into Anthropic
    * request content.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -134,6 +141,7 @@ declare module "effect/unstable/ai/Prompt" {
    * These options are used when translating user messages into Anthropic
    * request content.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -154,6 +162,7 @@ declare module "effect/unstable/ai/Prompt" {
    * These options are used when replaying assistant messages in Anthropic
    * conversation history.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -174,6 +183,7 @@ declare module "effect/unstable/ai/Prompt" {
    * These options are used when converting tool results into Anthropic user
    * content blocks.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -193,6 +203,7 @@ declare module "effect/unstable/ai/Prompt" {
    *
    * Use when you use these options to control how text blocks are sent to Anthropic.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -213,6 +224,7 @@ declare module "effect/unstable/ai/Prompt" {
    * Preserves Claude thinking metadata when reasoning content is sent back to
    * Anthropic in later turns.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -248,6 +260,7 @@ declare module "effect/unstable/ai/Prompt" {
    * Controls document metadata, citations, and prompt caching for files sent to
    * Anthropic.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -286,6 +299,7 @@ declare module "effect/unstable/ai/Prompt" {
    * Carries Anthropic tool caller metadata, MCP metadata, and cache control for
    * tool use blocks.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -319,6 +333,7 @@ declare module "effect/unstable/ai/Prompt" {
    * Carries Anthropic MCP metadata and controls prompt caching for tool result
    * content.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -347,6 +362,7 @@ declare module "effect/unstable/ai/Prompt" {
    *
    * Controls prompt caching for human approval requests in conversations.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -366,6 +382,7 @@ declare module "effect/unstable/ai/Prompt" {
    *
    * Controls prompt caching for human approval responses in conversations.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -379,7 +396,7 @@ declare module "effect/unstable/ai/Prompt" {
   }
 }
 
-declare module "effect/unstable/ai/Response" {
+declare module "effect/ai/Response" {
   /**
    * Anthropic metadata attached when a reasoning block begins.
    *
@@ -388,6 +405,7 @@ declare module "effect/unstable/ai/Response" {
    * Includes Claude thinking metadata needed to continue reasoning-aware
    * conversations.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -418,6 +436,7 @@ declare module "effect/unstable/ai/Response" {
    *
    * Includes the signature for streamed Claude thinking content when available.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -441,6 +460,7 @@ declare module "effect/unstable/ai/Response" {
    *
    * Preserves Claude thinking or redacted thinking information for later turns.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -472,6 +492,7 @@ declare module "effect/unstable/ai/Response" {
    * Identifies Anthropic caller details and MCP tool metadata emitted by the
    * provider.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -501,6 +522,7 @@ declare module "effect/unstable/ai/Response" {
    * Identifies MCP tool metadata associated with provider-executed tool
    * results.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -525,6 +547,7 @@ declare module "effect/unstable/ai/Response" {
    *
    * Records the cited document span by character position or page number.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -569,6 +592,7 @@ declare module "effect/unstable/ai/Response" {
    *
    * Records cited URL text or web-search source freshness information.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -599,6 +623,7 @@ declare module "effect/unstable/ai/Response" {
    * Includes container state, context management information, stop details, and
    * token usage reported by Anthropic.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -618,6 +643,7 @@ declare module "effect/unstable/ai/Response" {
    *
    * Includes the provider request identifier when Anthropic returns one.
    *
+   * @stability unstable
    * @category models
    * @since 4.0.0
    */
@@ -643,6 +669,7 @@ declare module "effect/unstable/ai/Response" {
  * @see {@link layer} for creating a `LanguageModel.LanguageModel` layer directly
  * @see {@link make} for constructing the language model service effectfully
  *
+ * @stability unstable
  * @category constructors
  * @since 4.0.0
  */
@@ -657,7 +684,7 @@ export const model = (
  *
  * **When to use**
  *
- * Use when you need to construct a `LanguageModel.Service` value backed by
+ * Use when you need to construct a `LanguageModel` value backed by
  * `AnthropicClient` inside an Effect.
  *
  * **Details**
@@ -669,19 +696,23 @@ export const model = (
  * @see {@link layer} for providing the service as a `Layer`
  * @see {@link model} for creating a model descriptor for `AiModel.provide`
  *
+ * @stability unstable
  * @category constructors
  * @since 4.0.0
  */
 export const make = Effect.fnUntraced(function*({ model, config: providerConfig }: {
   readonly model: (string & {}) | Model
   readonly config?: Omit<typeof Config.Service, "model"> | undefined
-}): Effect.fn.Return<LanguageModel.Service, never, AnthropicClient> {
+}): Effect.fn.Return<LanguageModel.LanguageModel, never, AnthropicClient> {
   const client = yield* AnthropicClient
 
-  const makeConfig: Effect.Effect<typeof Config.Service & { readonly model: string }> = Effect.gen(function*() {
-    const services = yield* Effect.context<never>()
-    return { model, ...providerConfig, ...services.mapUnsafe.get(Config.key) }
-  })
+  const makeConfig: Effect.Effect<typeof Config.Service & { readonly model: string }> = Effect.contextWith((services) =>
+    Effect.succeed({
+      model,
+      ...providerConfig,
+      ...Context.getOrUndefined(services, Config)
+    })
+  )
 
   const makeRequest = Effect.fnUntraced(
     function*<Tools extends ReadonlyArray<Tool.Any>>({ config, options, toolNameMapper }: {
@@ -693,7 +724,10 @@ export const make = Effect.fnUntraced(function*({ model, config: providerConfig 
       readonly payload: typeof Generated.BetaCreateMessageParams.Encoded
     }, AiError.AiError> {
       const betas = new Set<string>()
-      const capabilities = getModelCapabilities(config.model!)
+      const modelCapabilities = getModelCapabilities(config.model!)
+      const capabilities = Predicate.isNotUndefined(config.structuredOutputs)
+        ? { ...modelCapabilities, supportsStructuredOutput: config.structuredOutputs }
+        : modelCapabilities
       const { messages, system } = yield* prepareMessages({ betas, options, toolNameMapper })
       const outputFormat = yield* getOutputFormat({ capabilities, options })
       const { tools, toolChoice } = yield* prepareTools({ betas, capabilities, config, options })
@@ -701,7 +735,13 @@ export const make = Effect.fnUntraced(function*({ model, config: providerConfig 
       if (betas.size > 0) {
         params["anthropic-beta"] = Array.from(betas).join(",")
       }
-      const { disableParallelToolCalls: _, output_config, ...requestConfig } = config
+      const {
+        disableParallelToolCalls: _,
+        output_config,
+        strictJsonSchema: _strictJsonSchema,
+        structuredOutputs: _structuredOutputs,
+        ...requestConfig
+      } = config
       const payload: Mutable<typeof Generated.BetaCreateMessageParams.Encoded> = {
         ...requestConfig,
         max_tokens: requestConfig.max_tokens ?? capabilities.maxOutputTokens,
@@ -765,6 +805,7 @@ export const make = Effect.fnUntraced(function*({ model, config: providerConfig 
  * @see {@link make} for constructing the language model service effectfully
  * @see {@link model} for creating a model service directly
  *
+ * @stability unstable
  * @category layers
  * @since 4.0.0
  */
@@ -791,6 +832,7 @@ export const layer = (options: {
  *
  * @see {@link Config} for available Anthropic request configuration fields
  *
+ * @stability unstable
  * @category configuration
  * @since 4.0.0
  */
@@ -879,7 +921,13 @@ const prepareMessages = Effect.fnUntraced(
 
                         const source = isUrlData(part.data)
                           ? { type: "url", url: getUrlString(part.data) } as const
-                          : { type: "base64", media_type: mediaType, data: Encoding.encodeBase64(part.data) } as const
+                          : {
+                            type: "base64",
+                            media_type: mediaType,
+                            data: typeof part.data === "string"
+                              ? part.data.replace(/^data:[^;]+;base64,/, "")
+                              : Base64.encode(part.data)
+                          } as const
 
                         content.push({ type: "image", source, cache_control: cacheControl })
                       } else if (part.mediaType === "application/pdf" || part.mediaType === "text/plain") {
@@ -897,7 +945,7 @@ const prepareMessages = Effect.fnUntraced(
                           ? {
                             type: "base64",
                             media_type: "application/pdf",
-                            data: typeof part.data === "string" ? part.data : Encoding.encodeBase64(part.data)
+                            data: typeof part.data === "string" ? part.data : Base64.encode(part.data)
                           } as const
                           : {
                             type: "text",
@@ -952,7 +1000,7 @@ const prepareMessages = Effect.fnUntraced(
                   content.push({
                     type: "tool_result",
                     tool_use_id: part.id,
-                    content: JSON.stringify(part.result),
+                    content: typeof part.result === "string" ? part.result : JSON.stringify(part.result),
                     is_error: part.isFailure,
                     cache_control: cacheControl
                   })
@@ -1233,6 +1281,7 @@ const prepareMessages = Effect.fnUntraced(
  *
  * @see {@link AnthropicProviderDefinedTool} for the request shape used by Anthropic built-in provider tools
  *
+ * @stability unstable
  * @category tools
  * @since 4.0.0
  */
@@ -1246,6 +1295,7 @@ export type AnthropicUserDefinedTool = typeof Generated.BetaTool.Encoded
  * These include Anthropic's built-in tools like computer use, code execution,
  * web search, and text editing.
  *
+ * @stability unstable
  * @category tools
  * @since 4.0.0
  */
@@ -1277,10 +1327,6 @@ const prepareTools = Effect.fnUntraced(
     readonly tools: ReadonlyArray<AnthropicUserDefinedTool | AnthropicProviderDefinedTool> | undefined
     readonly toolChoice: typeof Generated.BetaToolChoice.Encoded | undefined
   }, AiError.AiError> {
-    if (options.tools.length === 0 || options.toolChoice === "none") {
-      return { tools: undefined, toolChoice: undefined }
-    }
-
     // Return a JSON response tool when using non-native structured outputs
     if (options.responseFormat.type === "json" && !capabilities.supportsStructuredOutput) {
       const input_schema = yield* tryJsonSchema(options.responseFormat.schema, "prepareTools")
@@ -1298,6 +1344,10 @@ const prepareTools = Effect.fnUntraced(
           disable_parallel_tool_use: true
         }
       }
+    }
+
+    if (options.tools.length === 0 || options.toolChoice === "none") {
+      return { tools: undefined, toolChoice: undefined }
     }
 
     const userTools: Array<AnthropicUserDefinedTool> = []
@@ -1554,6 +1604,9 @@ const makeResponse = Effect.fnUntraced(
     const mcpToolCalls: Map<string, Response.ToolCallPartEncoded> = new Map()
     const serverToolCalls: Map<string, string> = new Map()
     const citableDocuments = extractCitableDocuments(options.prompt)
+    const responseFormat = options.responseFormat
+    const hasStructuredOutputTool = responseFormat.type === "json" &&
+      rawResponse.content.some((part) => part.type === "tool_use" && part.name === responseFormat.objectName)
 
     parts.push({
       type: "response-metadata",
@@ -1566,10 +1619,12 @@ const makeResponse = Effect.fnUntraced(
     for (const part of rawResponse.content) {
       switch (part.type) {
         case "text": {
-          // Text parts are added for both text and json response formats.
-          // For native structured output (json_schema), the JSON comes directly
-          // in a text content block. For tool-based structured output, text may
-          // also be present alongside the tool_use.
+          // The response tool supplies the JSON payload. Accompanying prose
+          // must not be concatenated with it during structured output decoding.
+          if (hasStructuredOutputTool) {
+            break
+          }
+
           parts.push({
             type: "text",
             text: part.text
@@ -1616,7 +1671,7 @@ const makeResponse = Effect.fnUntraced(
         case "tool_use": {
           // When the `"json"` response format is requested, the JSON we need
           // is returned by a tool call injected into the request
-          if (options.responseFormat.type === "json") {
+          if (responseFormat.type === "json" && part.name === responseFormat.objectName) {
             parts.push({
               type: "text",
               text: JSON.stringify(part.input)
@@ -2973,75 +3028,61 @@ const processCitation = Effect.fnUntraced(
 interface ModelCapabilities {
   readonly maxOutputTokens: number
   readonly supportsStructuredOutput: boolean
-  readonly isKnownModel: boolean
 }
 
 /**
  * Returns the capabilities of a Claude model that are used for defaults and feature selection.
+ * Legacy models are listed as exceptions so newly released models inherit modern defaults.
  *
  * @see https://docs.claude.com/en/docs/about-claude/models/overview#model-comparison-table
  * @see https://platform.claude.com/docs/en/build-with-claude/structured-outputs
  */
 const getModelCapabilities = (modelId: string): ModelCapabilities => {
   if (
-    modelId.includes("claude-opus-4-6") ||
-    modelId.includes("claude-sonnet-4-6") ||
-    modelId.includes("claude-opus-4-7") ||
-    modelId.includes("claude-opus-4-8")
-  ) {
-    return {
-      maxOutputTokens: 128000,
-      supportsStructuredOutput: true,
-      isKnownModel: true
-    }
-  } else if (
     modelId.includes("claude-sonnet-4-5") ||
     modelId.includes("claude-opus-4-5") ||
     modelId.includes("claude-haiku-4-5")
   ) {
     return {
       maxOutputTokens: 64000,
-      supportsStructuredOutput: true,
-      isKnownModel: true
+      supportsStructuredOutput: true
     }
   } else if (modelId.includes("claude-opus-4-1")) {
     return {
       maxOutputTokens: 32000,
-      supportsStructuredOutput: true,
-      isKnownModel: true
+      supportsStructuredOutput: true
     }
   } else if (
-    modelId.includes("claude-sonnet-4-") ||
+    modelId.includes("claude-sonnet-4-0") ||
+    modelId.includes("claude-sonnet-4-20250514") ||
     modelId.includes("claude-3-7-sonnet")
   ) {
     return {
       maxOutputTokens: 64000,
-      supportsStructuredOutput: false,
-      isKnownModel: true
+      supportsStructuredOutput: false
     }
-  } else if (modelId.includes("claude-opus-4-")) {
+  } else if (
+    modelId.includes("claude-opus-4-0") ||
+    modelId.includes("claude-opus-4-20250514")
+  ) {
     return {
       maxOutputTokens: 32000,
-      supportsStructuredOutput: false,
-      isKnownModel: true
+      supportsStructuredOutput: false
     }
   } else if (modelId.includes("claude-3-5-haiku")) {
     return {
       maxOutputTokens: 8192,
-      supportsStructuredOutput: false,
-      isKnownModel: true
+      supportsStructuredOutput: false
     }
-  } else if (modelId.includes("claude-3-haiku")) {
+  } else if (modelId.includes("claude-3-")) {
     return {
       maxOutputTokens: 4096,
-      supportsStructuredOutput: false,
-      isKnownModel: true
+      supportsStructuredOutput: false
     }
   } else {
     return {
-      maxOutputTokens: 4096,
-      supportsStructuredOutput: false,
-      isKnownModel: false
+      maxOutputTokens: 128000,
+      supportsStructuredOutput: true
     }
   }
 }
@@ -3107,19 +3148,13 @@ const transformToolCallParams = Effect.fnUntraced(function*<Tools extends Readon
 
   const { codec } = yield* tryCodecTransform(tool.parametersSchema, "makeResponse")
 
-  const transform = Schema.decodeEffect(codec)
-
+  // Normalize valid parameters; leave invalid ones for Toolkit.
   return yield* (
-    transform(toolParams) as Effect.Effect<unknown, Schema.SchemaError>
-  ).pipe(Effect.mapError((error) =>
-    AiError.make({
-      module: "AnthropicLanguageModel",
-      method: "makeResponse",
-      reason: new AiError.ToolParameterValidationError({
-        toolName,
-        toolParams,
-        description: formatIssue(error.issue)
-      })
-    })
-  ))
+    Schema.decodeEffect(codec)(toolParams) as Effect.Effect<unknown, Schema.SchemaError>
+  ).pipe(
+    Effect.flatMap((decoded) =>
+      Schema.encodeUnknownEffect(tool.parametersSchema)(decoded) as Effect.Effect<unknown, Schema.SchemaError>
+    ),
+    Effect.orElseSucceed(() => toolParams)
+  )
 })

@@ -43,15 +43,15 @@
     "test": "tsx --test src/*.test.ts"
   },
   "dependencies": {
-    "@clack/prompts": "^1.7.0",
+    "@clack/prompts": "^1.8.1",
     "citty": "^0.2.2",
     "giget": "^3.3.1",
-    "nypm": "^0.6.9"
+    "nypm": "^0.6.10"
   },
   "devDependencies": {
-    "@types/node": "22.19.1",
+    "@types/node": "22.20.5",
     "@zstack/typescript-config": "workspace:*",
-    "tsx": "4.23.11",
+    "tsx": "4.23.15",
     "typescript": "7.0.2"
   },
   "engines": {

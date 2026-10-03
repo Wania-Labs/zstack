@@ -1,16 +1,9 @@
 import { assert, describe, it } from "@effect/vitest"
 import { Cause, Clock, Duration, Effect, Exit, Fiber, Latch, Layer, Option, Schema } from "effect"
-import { ClusterWorkflowEngine, Entity, EntityId } from "effect/unstable/cluster"
-import { PersistedQueue } from "effect/unstable/persistence"
-import { Rpc } from "effect/unstable/rpc"
-import {
-  Activity,
-  DurableClock,
-  DurableDeferred,
-  DurableQueue,
-  Workflow,
-  WorkflowEngine
-} from "effect/unstable/workflow"
+import { ClusterSchema, ClusterWorkflowEngine, Entity, EntityId, Sharding } from "effect/cluster"
+import { PersistedQueue } from "effect/persistence"
+import { Rpc } from "effect/rpc"
+import { Activity, DurableClock, DurableDeferred, DurableQueue, Workflow, WorkflowEngine } from "effect/workflow"
 import { type Backend, type ClusterRunner, make } from "./harness.ts"
 
 const EndToEndWorkflow = Workflow.make("ClusterIntegrationEndToEnd", {
@@ -70,6 +63,125 @@ const RestartWorkflow = Workflow.make("ClusterIntegrationRestart", {
 })
 
 const RestartWorkflowLayer = RestartWorkflow.toLayer(() => DurableDeferred.await(RestartGate))
+
+const RaceReplayGate = DurableDeferred.make("ClusterIntegrationRaceReplayGate", {
+  success: Schema.String
+})
+
+const RaceReplayTail = DurableDeferred.make("ClusterIntegrationRaceReplayTail", {
+  success: Schema.String
+})
+
+const RaceReplayWorkflow = Workflow.make("ClusterIntegrationRaceReplay", {
+  payload: { id: Schema.String },
+  success: Schema.String,
+  idempotencyKey: ({ id }) => id
+})
+
+const raceReplayEnters = new Map<string, number>()
+
+const RaceReplayWorkflowLayer = RaceReplayWorkflow.toLayer(({ id }) =>
+  Effect.gen(function*() {
+    const winner = yield* DurableDeferred.raceAll({
+      name: "ClusterIntegrationRaceReplay",
+      success: Schema.String,
+      error: Schema.Never,
+      effects: [
+        DurableDeferred.await(RaceReplayGate),
+        Effect.sync(() => raceReplayEnters.set(id, (raceReplayEnters.get(id) ?? 0) + 1)).pipe(
+          Effect.andThen(Effect.never)
+        )
+      ]
+    })
+    const tail = yield* DurableDeferred.await(RaceReplayTail)
+    return `${winner}:${tail}`
+  })
+)
+
+const CompensationGate = DurableDeferred.make("ClusterIntegrationCompensationGate")
+
+class CompensationError extends Schema.Error<CompensationError>("ClusterIntegrationCompensationError")({
+  _tag: Schema.tag("ClusterIntegrationCompensationError"),
+  id: Schema.String
+}) {}
+
+const CompensationWorkflow = Workflow.make("ClusterIntegrationCompensation", {
+  payload: { id: Schema.String },
+  error: CompensationError,
+  idempotencyKey: ({ id }) => id
+})
+
+const compensationRuns = new Map<string, number>()
+
+const CompensationWorkflowLayer = CompensationWorkflow.toLayer(Effect.fnUntraced(function*({ id }) {
+  yield* Activity.make({
+    name: "ClusterIntegrationCompensationRegistered",
+    success: Schema.String,
+    execute: Effect.succeed(id)
+  }).pipe(
+    CompensationWorkflow.withCompensation(() =>
+      Effect.sync(() => compensationRuns.set(id, (compensationRuns.get(id) ?? 0) + 1))
+    )
+  )
+  yield* DurableDeferred.await(CompensationGate)
+  return yield* new CompensationError({ id })
+}))
+
+const SuspendFailureGate = DurableDeferred.make("ClusterIntegrationSuspendFailureGate")
+
+const SuspendFailureWorkflow = Workflow.make("ClusterIntegrationSuspendFailure", {
+  payload: { id: Schema.String },
+  idempotencyKey: ({ id }) => id
+}).annotate(Workflow.SuspendOnFailure, true)
+
+const suspendFailures = new Set<string>()
+
+const SuspendFailureWorkflowLayer = SuspendFailureWorkflow.toLayer(Effect.fnUntraced(function*({ id }) {
+  yield* DurableDeferred.await(SuspendFailureGate)
+  return yield* Activity.make({
+    name: "ClusterIntegrationSuspendFailure",
+    execute: Effect.sync(() => suspendFailures.add(id)).pipe(
+      Effect.andThen(Effect.die("suspend after owner loss"))
+    )
+  })
+}))
+
+const RaceBoundaryGateA = DurableDeferred.make("ClusterIntegrationRaceBoundaryGateA", {
+  success: Schema.String
+})
+
+const RaceBoundaryGateB = DurableDeferred.make("ClusterIntegrationRaceBoundaryGateB", {
+  success: Schema.String
+})
+
+const RaceBoundaryWorkflow = Workflow.make("ClusterIntegrationRaceBoundary", {
+  payload: { id: Schema.String },
+  success: Schema.String,
+  idempotencyKey: ({ id }) => id
+})
+
+let raceBoundaryCommitStarted = Latch.makeUnsafe()
+let raceBoundaryCommit = Latch.makeUnsafe()
+const raceBoundaryRuns = new Map<string, number>()
+
+const RaceBoundaryWorkflowLayer = RaceBoundaryWorkflow.toLayer(Effect.fnUntraced(function*({ id }) {
+  raceBoundaryRuns.set(id, (raceBoundaryRuns.get(id) ?? 0) + 1)
+  return yield* DurableDeferred.raceAll({
+    name: "ClusterIntegrationRaceBoundary",
+    success: Schema.String,
+    error: Schema.Never,
+    effects: [
+      DurableDeferred.await(RaceBoundaryGateA),
+      DurableDeferred.await(RaceBoundaryGateB)
+    ]
+  }).pipe(
+    Effect.ensuring(
+      Effect.sync(() => raceBoundaryCommitStarted.openUnsafe()).pipe(
+        Effect.andThen(raceBoundaryCommit.await)
+      )
+    )
+  )
+}))
 
 class RetryError extends Schema.Error<RetryError>("ClusterIntegrationRetryError")({
   _tag: Schema.tag("ClusterIntegrationRetryError"),
@@ -159,6 +271,143 @@ const InterruptWorkflow = Workflow.make("ClusterIntegrationInterrupt", {
 
 const InterruptWorkflowLayer = InterruptWorkflow.toLayer(() => DurableDeferred.await(InterruptGate))
 
+const ShutdownActivityWorkflow = Workflow.make("ClusterIntegrationShutdownActivity", {
+  payload: { id: Schema.String },
+  success: Schema.String,
+  idempotencyKey: ({ id }) => id
+})
+
+const ShutdownSuspendActivityWorkflow = Workflow.make("ClusterIntegrationShutdownSuspendActivity", {
+  payload: { id: Schema.String },
+  success: Schema.String,
+  idempotencyKey: ({ id }) => id
+}).annotate(Workflow.SuspendOnFailure, true)
+
+const activityHandoffState = {
+  ready: Latch.makeUnsafe(),
+  start: Latch.makeUnsafe(),
+  faultArmed: false,
+  persisted: Latch.makeUnsafe(),
+  faultRelease: Latch.makeUnsafe(true),
+  runs: new Map<string, number>(),
+  compensations: new Set<string>(),
+  resourceEvents: new Map<string, Array<"acquire" | "release">>()
+}
+
+const abandon = Effect.interruptible(Effect.callback<never>(() => {
+  const fiber = Fiber.getCurrent()!
+  fiber.interruptUnsafe(fiber.id, ClusterSchema.Abandon.annotation)
+}))
+
+const resetActivityHandoffState = (id: string, options?: { readonly faultReleaseOpen?: boolean }) => {
+  activityHandoffState.ready = Latch.makeUnsafe()
+  activityHandoffState.start = Latch.makeUnsafe()
+  activityHandoffState.faultArmed = false
+  activityHandoffState.persisted = Latch.makeUnsafe()
+  activityHandoffState.faultRelease = Latch.makeUnsafe(options?.faultReleaseOpen ?? true)
+  activityHandoffState.runs.delete(id)
+  activityHandoffState.compensations.delete(id)
+  activityHandoffState.resourceEvents.set(id, [])
+}
+
+const ShutdownActivityWorkflowLayer = ShutdownActivityWorkflow.toLayer(({ id }) =>
+  Effect.gen(function*() {
+    yield* Effect.succeed(id).pipe(
+      ShutdownActivityWorkflow.withCompensation(() => Effect.sync(() => activityHandoffState.compensations.add(id)))
+    )
+    yield* Effect.acquireRelease(
+      Effect.sync(() => activityHandoffState.resourceEvents.get(id)!.push("acquire")),
+      () => Effect.sync(() => activityHandoffState.resourceEvents.get(id)!.push("release"))
+    ).pipe(Workflow.provideScope)
+    activityHandoffState.ready.openUnsafe()
+    yield* activityHandoffState.start.await
+    return yield* Activity.make({
+      name: "ShutdownActivity",
+      success: Schema.String,
+      execute: Effect.sync(() => {
+        activityHandoffState.runs.set(id, (activityHandoffState.runs.get(id) ?? 0) + 1)
+        return `completed:${id}`
+      })
+    })
+  })
+)
+
+const ShutdownSuspendActivityWorkflowLayer = ShutdownSuspendActivityWorkflow.toLayer(({ id }) =>
+  Effect.gen(function*() {
+    yield* Effect.succeed(id).pipe(
+      ShutdownSuspendActivityWorkflow.withCompensation(() =>
+        Effect.sync(() => activityHandoffState.compensations.add(id))
+      )
+    )
+    yield* Effect.acquireRelease(
+      Effect.sync(() => activityHandoffState.resourceEvents.get(id)!.push("acquire")),
+      () => Effect.sync(() => activityHandoffState.resourceEvents.get(id)!.push("release"))
+    ).pipe(Workflow.provideScope)
+    activityHandoffState.ready.openUnsafe()
+    yield* activityHandoffState.start.await
+    return yield* Activity.make({
+      name: "ShutdownActivity",
+      success: Schema.String,
+      execute: Effect.sync(() => {
+        activityHandoffState.runs.set(id, (activityHandoffState.runs.get(id) ?? 0) + 1)
+        return `completed:${id}`
+      })
+    })
+  })
+)
+
+const ActivityHandoffShardingLayer = Layer.effect(
+  Sharding.Sharding,
+  Effect.gen(function*() {
+    const sharding = yield* Sharding.Sharding
+    return Sharding.Sharding.of({
+      ...sharding,
+      makeClient: (entity) =>
+        // The wrapped factory returns the same dynamic RPC client shape, but
+        // its generic relationship to the entity protocol is no longer visible.
+        Effect.map(sharding.makeClient(entity), (makeClient) => (entityId: string) => {
+          // RPC clients expose their protocol methods dynamically, so the
+          // Proxy type cannot retain this client's generated method shape.
+          return new Proxy(makeClient(entityId), {
+            get(target, property, receiver) {
+              if (property !== "activity") return Reflect.get(target, property, receiver)
+              const activity = Reflect.get(target, property, receiver) as (
+                payload: { readonly name: string },
+                options?: object
+              ) => Effect.Effect<unknown, unknown, unknown>
+              return (payload: { readonly name: string }, options?: object) => {
+                if (!activityHandoffState.faultArmed) {
+                  return activity(payload, options)
+                }
+                activityHandoffState.faultArmed = false
+                // Mirror sendOutgoing's persisted abandon branch during a
+                // runner shutdown: accept the durable request, then interrupt
+                // the caller because this runner can never observe the reply.
+                return activity(payload, { ...options, discard: true }).pipe(
+                  Effect.tap(() => activityHandoffState.persisted.open),
+                  Effect.andThen(activityHandoffState.faultRelease.await),
+                  Effect.andThen(abandon)
+                )
+              }
+            }
+          }) as any
+        }) as any
+    })
+  })
+)
+
+const ShutdownActivityEntities = Layer.mergeAll(
+  ShutdownActivityWorkflowLayer,
+  ShutdownSuspendActivityWorkflowLayer
+).pipe(
+  Layer.provide(Layer.effect(
+    WorkflowEngine.WorkflowEngine,
+    ClusterWorkflowEngine.make
+  )),
+  Layer.provide(ActivityHandoffShardingLayer),
+  Layer.orDie
+)
+
 const CompleteDeferred = Rpc.make("CompleteDeferred", {
   payload: {
     token: DurableDeferred.Token,
@@ -167,13 +416,28 @@ const CompleteDeferred = Rpc.make("CompleteDeferred", {
   success: Schema.String
 })
 
-const DeferredControl = Entity.make("ClusterIntegrationDeferredControl", [CompleteDeferred])
+const CompleteRaceBoundaryDeferred = Rpc.make("CompleteRaceBoundaryDeferred", {
+  payload: {
+    token: DurableDeferred.Token,
+    value: Schema.String
+  },
+  success: Schema.String
+})
+
+const DeferredControl = Entity.make("ClusterIntegrationDeferredControl", [
+  CompleteDeferred,
+  CompleteRaceBoundaryDeferred
+])
 
 const DeferredControlLayer = DeferredControl.toLayer(Effect.gen(function*() {
   const runner = yield* Entity.CurrentRunnerAddress
   return {
     CompleteDeferred: ({ payload }) =>
       DurableDeferred.succeed(RestartGate, payload).pipe(
+        Effect.as(`${runner.host}:${runner.port}`)
+      ),
+    CompleteRaceBoundaryDeferred: ({ payload }) =>
+      DurableDeferred.succeed(RaceBoundaryGateB, payload).pipe(
         Effect.as(`${runner.host}:${runner.port}`)
       )
   }
@@ -183,6 +447,10 @@ const Workflows = Layer.mergeAll(
   EndToEndWorkflowLayer,
   ReplayWorkflowLayer,
   RestartWorkflowLayer,
+  RaceReplayWorkflowLayer,
+  CompensationWorkflowLayer,
+  SuspendFailureWorkflowLayer,
+  RaceBoundaryWorkflowLayer,
   RetryWorkflowLayer,
   ClockWorkflowLayer,
   QueueWorkflowLayer,
@@ -346,6 +614,166 @@ describe("cluster workflow integration", () => {
         assert.deepStrictEqual(result.exit, Exit.succeed("after-restart"))
       }))
 
+    it.live(`${backend}: wakes a DurableDeferred raceAll and replays the winner after owner death`, () =>
+      Effect.gen(function*() {
+        const id = `${backend}-race-replay`
+        const cluster = yield* make({ backend, entities })
+        yield* cluster.start(3)
+        yield* cluster.waitForStableAssignments()
+        const executionId = yield* withWorkflow(cluster, RaceReplayWorkflow.execute({ id }, { discard: true }))
+        yield* cluster.waitUntil(
+          "The durable race did not start",
+          Effect.sync(() => (raceReplayEnters.get(id) ?? 0) > 0)
+        )
+
+        const raceToken = DurableDeferred.tokenFromExecutionId(RaceReplayGate, {
+          workflow: RaceReplayWorkflow,
+          executionId
+        })
+        yield* withWorkflow(
+          cluster,
+          DurableDeferred.succeed(RaceReplayGate, {
+            token: raceToken,
+            value: "winner"
+          })
+        )
+        yield* waitForSuspended(cluster, RaceReplayWorkflow, executionId)
+        const entriesBeforeKill = raceReplayEnters.get(id)
+
+        const owner = workflowOwner(cluster, executionId)
+        assert.isDefined(owner)
+        yield* cluster.kill(owner!)
+        yield* cluster.waitForStableAssignments()
+
+        const tailToken = DurableDeferred.tokenFromExecutionId(RaceReplayTail, {
+          workflow: RaceReplayWorkflow,
+          executionId
+        })
+        yield* withWorkflow(
+          cluster,
+          DurableDeferred.succeed(RaceReplayTail, {
+            token: tailToken,
+            value: "after-owner-death"
+          })
+        )
+        const result = yield* waitForComplete(cluster, RaceReplayWorkflow, executionId)
+
+        assert.deepStrictEqual(result.exit, Exit.succeed("winner:after-owner-death"))
+        assert.strictEqual(raceReplayEnters.get(id), entriesBeforeKill)
+      }))
+
+    it.live(`${backend}: runs compensation and SuspendOnFailure after the owner is lost`, () =>
+      Effect.gen(function*() {
+        const compensationId = `${backend}-compensation-owner-loss`
+        const suspendId = `${backend}-suspend-owner-loss`
+        const cluster = yield* make({ backend, entities })
+        yield* cluster.start(3)
+        yield* cluster.waitForStableAssignments()
+        const compensationExecutionId = yield* withWorkflow(
+          cluster,
+          CompensationWorkflow.execute({ id: compensationId }, { discard: true })
+        )
+        const suspendExecutionId = yield* withWorkflow(
+          cluster,
+          SuspendFailureWorkflow.execute({ id: suspendId }, { discard: true })
+        )
+        yield* waitForSuspended(cluster, CompensationWorkflow, compensationExecutionId)
+        yield* waitForSuspended(cluster, SuspendFailureWorkflow, suspendExecutionId)
+
+        const compensationOwner = workflowOwner(cluster, compensationExecutionId)
+        const suspendOwner = workflowOwner(cluster, suspendExecutionId)
+        assert.isDefined(compensationOwner)
+        assert.isDefined(suspendOwner)
+        yield* Effect.forEach(
+          new Set([compensationOwner!, suspendOwner!]),
+          cluster.kill,
+          { discard: true }
+        )
+        yield* cluster.waitForStableAssignments()
+
+        const compensationToken = DurableDeferred.tokenFromExecutionId(CompensationGate, {
+          workflow: CompensationWorkflow,
+          executionId: compensationExecutionId
+        })
+        yield* withWorkflow(
+          cluster,
+          DurableDeferred.succeed(CompensationGate, {
+            token: compensationToken,
+            value: undefined
+          })
+        )
+        const compensationResult = yield* waitForComplete(
+          cluster,
+          CompensationWorkflow,
+          compensationExecutionId
+        )
+        assert(Exit.isFailure(compensationResult.exit))
+        const failure = Cause.findErrorOption(compensationResult.exit.cause)
+        assert(Option.isSome(failure))
+        assert.strictEqual(failure.value._tag, "ClusterIntegrationCompensationError")
+        assert.strictEqual(compensationRuns.get(compensationId), 1)
+
+        const suspendToken = DurableDeferred.tokenFromExecutionId(SuspendFailureGate, {
+          workflow: SuspendFailureWorkflow,
+          executionId: suspendExecutionId
+        })
+        yield* withWorkflow(
+          cluster,
+          DurableDeferred.succeed(SuspendFailureGate, {
+            token: suspendToken,
+            value: undefined
+          })
+        )
+        yield* cluster.waitUntil(
+          "SuspendOnFailure did not run after the workflow owner was lost",
+          Effect.sync(() => suspendFailures.has(suspendId))
+        )
+        yield* waitForSuspended(cluster, SuspendFailureWorkflow, suspendExecutionId)
+      }))
+
+    it.live(`${backend}: accepts a late durable-race completion across the suspend commit`, () =>
+      Effect.gen(function*() {
+        const id = `${backend}-race-suspend-commit`
+        raceBoundaryCommitStarted = Latch.makeUnsafe()
+        raceBoundaryCommit = Latch.makeUnsafe()
+        const cluster = yield* make({ backend, entities })
+        yield* cluster.start(3)
+        yield* cluster.waitForStableAssignments()
+        const executionId = yield* withWorkflow(
+          cluster,
+          RaceBoundaryWorkflow.execute({ id }, { discard: true })
+        )
+        yield* cluster.waitUntil(
+          "The durable race did not reach its suspend commit",
+          Effect.as(raceBoundaryCommitStarted.await, true)
+        )
+
+        const owner = workflowOwner(cluster, executionId)
+        assert.isDefined(owner)
+        const [controlId, controlOwner] = yield* findControlOnAnotherRunner(cluster, owner!)
+        const control = yield* cluster.getClient(DeferredControl)
+        const token = DurableDeferred.tokenFromExecutionId(RaceBoundaryGateB, {
+          workflow: RaceBoundaryWorkflow,
+          executionId
+        })
+        const completedBy = yield* control(controlId).CompleteRaceBoundaryDeferred({
+          token,
+          value: "late-winner"
+        })
+        assert.strictEqual(completedBy, `${controlOwner.address.host}:${controlOwner.address.port}`)
+
+        const killFiber = yield* cluster.kill(owner!).pipe(Effect.forkChild({ startImmediately: true }))
+        // The uninterruptible ensuring finalizer holds Scope.close here until
+        // the commit latch opens, keeping the owner blocked mid-commit.
+        raceBoundaryCommit.openUnsafe()
+        yield* Fiber.join(killFiber)
+        yield* cluster.waitForStableAssignments()
+
+        const result = yield* waitForComplete(cluster, RaceBoundaryWorkflow, executionId)
+        assert.deepStrictEqual(result.exit, Exit.succeed("late-winner"))
+        assert.isAtLeast(raceBoundaryRuns.get(id) ?? 0, 2)
+      }))
+
     it.live(`${backend}: applies activity retry policy and preserves the exhausted error`, () =>
       Effect.gen(function*() {
         const cluster = yield* make({ backend, entities })
@@ -421,6 +849,126 @@ describe("cluster workflow integration", () => {
         assert(Exit.isFailure(result.exit))
         assert.isTrue(Exit.hasInterrupts(result.exit))
         assert.isTrue(Cause.hasInterrupts(result.exit.cause))
+      }))
+
+    it.live(`${backend}: replays a persisted activity handoff without leaking workflow resources`, () =>
+      Effect.gen(function*() {
+        const cluster = yield* make({ backend, entities: ShutdownActivityEntities })
+        yield* cluster.start(3)
+        yield* cluster.waitForStableAssignments()
+        for (
+          const [suffix, workflow] of [
+            ["default", ShutdownActivityWorkflow],
+            ["suspend-on-failure", ShutdownSuspendActivityWorkflow]
+          ] as const
+        ) {
+          const id = `${backend}-shutdown-activity-${suffix}`
+          resetActivityHandoffState(id)
+          const executionId = yield* withWorkflow(
+            cluster,
+            workflow.execute({ id }, { discard: true })
+          )
+          yield* cluster.waitUntil(
+            "The shutdown activity workflow did not start",
+            Effect.as(activityHandoffState.ready.await, true)
+          )
+
+          activityHandoffState.faultArmed = true
+          activityHandoffState.start.openUnsafe()
+
+          const result = yield* waitForComplete(cluster, workflow, executionId)
+          assert.isTrue(activityHandoffState.persisted.isOpen())
+          assert.deepStrictEqual(result.exit, Exit.succeed(`completed:${id}`))
+          assert.strictEqual(activityHandoffState.runs.get(id), 1)
+          assert.isFalse(activityHandoffState.compensations.has(id))
+          assert.deepStrictEqual(activityHandoffState.resourceEvents.get(id), [
+            "acquire",
+            "release",
+            "acquire",
+            "release"
+          ])
+        }
+      }))
+
+    it.live(`${backend}: preserves a safe interrupt during a persisted activity handoff`, () =>
+      Effect.gen(function*() {
+        const id = `${backend}-shutdown-activity-interrupt`
+        resetActivityHandoffState(id, { faultReleaseOpen: false })
+        const cluster = yield* make({ backend, entities: ShutdownActivityEntities })
+        yield* cluster.start(3)
+        yield* cluster.waitForStableAssignments()
+        const executionId = yield* withWorkflow(
+          cluster,
+          ShutdownActivityWorkflow.execute({ id }, { discard: true })
+        )
+        yield* cluster.waitUntil(
+          "The shutdown activity workflow did not start",
+          Effect.as(activityHandoffState.ready.await, true)
+        )
+
+        activityHandoffState.faultArmed = true
+        yield* withWorkflow(cluster, ShutdownActivityWorkflow.interrupt(executionId))
+        activityHandoffState.start.openUnsafe()
+        yield* cluster.waitUntil(
+          "The shutdown activity request was not persisted",
+          Effect.as(activityHandoffState.persisted.await, true)
+        )
+        yield* cluster.waitUntil(
+          "The shutdown activity request was not processed",
+          Effect.sync(() => activityHandoffState.runs.get(id) === 1)
+        )
+        activityHandoffState.faultRelease.openUnsafe()
+
+        const result = yield* waitForComplete(cluster, ShutdownActivityWorkflow, executionId)
+        assert.isTrue(Exit.isFailure(result.exit))
+        assert.isTrue(Exit.hasInterrupts(result.exit))
+        assert.isTrue(activityHandoffState.compensations.has(id))
+      }).pipe(
+        Effect.ensuring(Effect.sync(() => {
+          activityHandoffState.faultRelease.openUnsafe()
+        }))
+      ))
+
+    it.live(`${backend}: recovers a persisted activity across an actual owner handoff`, () =>
+      Effect.gen(function*() {
+        const id = `${backend}-shutdown-activity-handoff`
+        resetActivityHandoffState(id)
+        const cluster = yield* make({
+          backend,
+          config: { entityTerminationTimeout: 100 },
+          entities: ShutdownActivityWorkflowLayer.pipe(
+            Layer.provide(ClusterWorkflowEngine.layer),
+            Layer.orDie
+          )
+        })
+        yield* cluster.start(3)
+        yield* cluster.waitForStableAssignments()
+        const executionId = yield* withWorkflow(
+          cluster,
+          ShutdownActivityWorkflow.execute({ id }, { discard: true })
+        )
+        yield* cluster.waitUntil(
+          "The shutdown activity workflow did not start",
+          Effect.as(activityHandoffState.ready.await, true)
+        )
+
+        const owner = workflowOwner(cluster, executionId)
+        assert.isDefined(owner)
+        const stopping = yield* cluster.stop(owner!).pipe(Effect.forkChild({ startImmediately: true }))
+        activityHandoffState.start.openUnsafe()
+        yield* cluster.waitUntil(
+          "The shutdown activity workflow was not handed to another runner",
+          Effect.sync(() => {
+            const nextOwner = workflowOwner(cluster, executionId)
+            return nextOwner !== undefined && nextOwner !== owner
+          })
+        )
+
+        const result = yield* waitForComplete(cluster, ShutdownActivityWorkflow, executionId)
+        yield* Fiber.join(stopping)
+        assert.deepStrictEqual(result.exit, Exit.succeed(`completed:${id}`))
+        assert.strictEqual(activityHandoffState.runs.get(id), 1)
+        assert.strictEqual((yield* cluster.messageCounts()).unprocessed, 0)
       }))
   }
 })

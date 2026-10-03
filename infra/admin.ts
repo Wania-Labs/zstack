@@ -14,11 +14,11 @@ export const Admin = (api: Cloudflare.Worker) =>
     },
     env: {
       API: api,
-      VITE_SENTRY_DSN: Config.string("VITE_SENTRY_DSN_ADMIN").pipe(Config.withDefault("")),
-      VITE_SENTRY_ENVIRONMENT: Config.string("SENTRY_ENVIRONMENT").pipe(
+      VITE_SENTRY_DSN: Config.String("VITE_SENTRY_DSN_ADMIN").pipe(Config.withDefault("")),
+      VITE_SENTRY_ENVIRONMENT: Config.String("SENTRY_ENVIRONMENT").pipe(
         Config.withDefault("development"),
       ),
-      VITE_SENTRY_RELEASE: Config.string("SENTRY_RELEASE").pipe(Config.withDefault("")),
+      VITE_SENTRY_RELEASE: Config.String("SENTRY_RELEASE").pipe(Config.withDefault("")),
     },
     assets: {
       runWorkerFirst: true,

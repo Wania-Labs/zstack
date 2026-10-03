@@ -18,15 +18,15 @@ export const Web = (api: Cloudflare.Worker) =>
     env: {
       API: api,
       // Public browser DSN — empty keeps client Sentry off.
-      VITE_SENTRY_DSN: Config.string("VITE_SENTRY_DSN_WEB").pipe(Config.withDefault("")),
-      VITE_SENTRY_ENVIRONMENT: Config.string("SENTRY_ENVIRONMENT").pipe(
+      VITE_SENTRY_DSN: Config.String("VITE_SENTRY_DSN_WEB").pipe(Config.withDefault("")),
+      VITE_SENTRY_ENVIRONMENT: Config.String("SENTRY_ENVIRONMENT").pipe(
         Config.withDefault("development"),
       ),
-      VITE_SENTRY_RELEASE: Config.string("SENTRY_RELEASE").pipe(Config.withDefault("")),
-      VITE_PUBLIC_POSTHOG_KEY: Config.string("VITE_PUBLIC_POSTHOG_KEY").pipe(
+      VITE_SENTRY_RELEASE: Config.String("SENTRY_RELEASE").pipe(Config.withDefault("")),
+      VITE_PUBLIC_POSTHOG_KEY: Config.String("VITE_PUBLIC_POSTHOG_KEY").pipe(
         Config.withDefault(""),
       ),
-      VITE_PUBLIC_POSTHOG_HOST: Config.string("VITE_PUBLIC_POSTHOG_HOST").pipe(
+      VITE_PUBLIC_POSTHOG_HOST: Config.String("VITE_PUBLIC_POSTHOG_HOST").pipe(
         Config.withDefault("https://us.i.posthog.com"),
       ),
     },
