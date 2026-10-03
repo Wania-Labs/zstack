@@ -21,8 +21,10 @@ export const MAX_PROJECT_SLUG_LENGTH = 63 - LONGEST_RESOURCE_SUFFIX.length;
 /**
  * Display names are spliced into TS/JSX string literals, JSX text, template
  * literals, Markdown, and YAML front matter. A small safe charset means no
- * per-context escaping, and the length cap keeps rewritten lines inside the
+ * per-context escaping, and the width cap keeps rewritten lines inside the
  * clone's formatter print width so `pnpm format:check` passes on a fresh clone.
+ * Width is measured in terminal columns (East Asian wide characters count 2),
+ * because that is how the formatter measures line length.
  */
 export const MAX_DISPLAY_NAME_LENGTH = 32;
 const DISPLAY_NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} .'&-]*$/u;
@@ -91,8 +93,36 @@ export function titleCaseFromSlug(slug: string): string {
     .join(" ");
 }
 
+/** East Asian Wide / Fullwidth ranges (what the formatter counts as two columns). */
+const WIDE_RANGES: ReadonlyArray<readonly [number, number]> = [
+  [0x1100, 0x115f],
+  [0x2e80, 0x303e],
+  [0x3041, 0x33ff],
+  [0x3400, 0x4dbf],
+  [0x4e00, 0x9fff],
+  [0xa000, 0xa4cf],
+  [0xa960, 0xa97f],
+  [0xac00, 0xd7a3],
+  [0xf900, 0xfaff],
+  [0xfe30, 0xfe4f],
+  [0xff00, 0xff60],
+  [0xffe0, 0xffe6],
+  [0x1b000, 0x1b2ff],
+  [0x20000, 0x3fffd],
+];
+
+/** Display width in columns: wide characters count 2, everything else 1. */
+export function displayWidth(text: string): number {
+  let width = 0;
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0;
+    width += WIDE_RANGES.some(([lo, hi]) => code >= lo && code <= hi) ? 2 : 1;
+  }
+  return width;
+}
+
 export function validateDisplayName(raw: string): ProductDisplayName {
-  const trimmed = raw.trim();
+  const trimmed = raw.normalize("NFC").trim();
   if (!trimmed) {
     throw new Error("Project display name is empty.");
   }
@@ -101,9 +131,10 @@ export function validateDisplayName(raw: string): ProductDisplayName {
       `Invalid project name ${JSON.stringify(raw)}. Use letters, digits, spaces, and . ' & - only, starting with a letter or digit.`,
     );
   }
-  if (trimmed.length > MAX_DISPLAY_NAME_LENGTH) {
+  const width = displayWidth(trimmed);
+  if (width > MAX_DISPLAY_NAME_LENGTH) {
     throw new Error(
-      `Project name ${JSON.stringify(trimmed)} is ${trimmed.length} characters; max is ${MAX_DISPLAY_NAME_LENGTH}.`,
+      `Project name ${JSON.stringify(trimmed)} is ${width} columns wide; max is ${MAX_DISPLAY_NAME_LENGTH} (wide characters count as 2).`,
     );
   }
   return brand(trimmed);
@@ -259,7 +290,17 @@ export async function resolveProjectIdentity(
     }
   }
 
-  const displayName = validateDisplayName(displayRaw);
+  let displayName: ProductDisplayName;
+  try {
+    displayName = validateDisplayName(displayRaw);
+  } catch (error) {
+    const fromName = options.name !== undefined && options.name.trim() !== "";
+    if (fromName) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${message} Pass --name "<Product Name>" to choose a shorter name.`);
+  }
   const slug = slugifyProjectName(displayName);
   const scope = parseNpmScope(options.scope, slug);
   return buildProjectIdentity({ displayName, slug, scope });

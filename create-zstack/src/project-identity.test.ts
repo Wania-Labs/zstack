@@ -6,6 +6,7 @@ import {
   MAX_NPM_SCOPE_LENGTH,
   MAX_PROJECT_SLUG_LENGTH,
   basenameFromTargetDir,
+  displayWidth,
   buildProjectIdentity,
   formatIdentitySummary,
   parseNpmScope,
@@ -155,6 +156,28 @@ void test("validateDisplayName rejects characters that break generated source", 
   assert.throws(
     () => validateDisplayName("a".repeat(MAX_DISPLAY_NAME_LENGTH + 1)),
     new RegExp(`max is ${MAX_DISPLAY_NAME_LENGTH}`),
+  );
+});
+
+void test("validateDisplayName measures width in columns (wide characters count 2)", () => {
+  assert.equal(displayWidth("Acme"), 4);
+  assert.equal(displayWidth("漢字"), 4);
+  assert.equal(displayWidth("한국"), 4);
+  const fits = `A ${"漢".repeat(15)}`;
+  assert.equal(displayWidth(fits), MAX_DISPLAY_NAME_LENGTH);
+  assert.equal(validateDisplayName(fits), fits);
+  assert.throws(() => validateDisplayName(`A ${"漢".repeat(16)}`), /34 columns wide/);
+  // NFD input is normalized so combining accents count as letters.
+  assert.equal(validateDisplayName("Cafe\u0301"), "Caf\u00e9");
+});
+
+void test("resolveProjectIdentity suggests --name when the directory-derived name is too wide", async () => {
+  await assert.rejects(
+    resolveProjectIdentity({
+      mode: "automatic",
+      targetDir: "/tmp/an-extremely-long-directory-name-for-a-product",
+    }),
+    /max is 32.*Pass --name/s,
   );
 });
 
