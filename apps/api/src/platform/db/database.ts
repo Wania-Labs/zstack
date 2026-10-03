@@ -2,15 +2,8 @@ import { PgClient } from "@effect/sql-pg";
 import { sql } from "drizzle-orm";
 import * as PgDrizzle from "drizzle-orm/effect-postgres";
 import { Context, Effect, Layer, Redacted, Schema } from "effect";
-import { types } from "pg";
 
 import { relations } from "./relations";
-
-/**
- * pg returns Date objects for these OIDs by default; Drizzle wants raw strings.
- * @see https://orm.drizzle.team/docs/connect-effect-postgres
- */
-const DRIZZLE_RAW_DATE_OIDS = new Set([1184, 1114, 1082, 1186, 1231, 1115, 1185, 1187, 1182]);
 
 export class DatabaseError extends Schema.TaggedError<DatabaseError>()("DatabaseError", {
   message: Schema.String,
@@ -27,20 +20,15 @@ export class Database extends Context.Service<Database, AppDatabase>()(
   static readonly Live = Layer.effect(Database, PgDrizzle.makeWithDefaults({ relations }));
 }
 
+/**
+ * `@effect/sql-pg` 4 speaks the Postgres wire protocol itself (no `pg`), so
+ * there is no node-postgres type parser to override. Drizzle's
+ * `effect-postgres` codecs cast date / timestamp / interval columns to text in
+ * the query, which is what the old raw-date parser override used to fake.
+ * `sslmode=prefer` (Hyperdrive's local origin passthrough) is handled natively.
+ */
 export function pgClientLayer(connectionString: string) {
-  return PgClient.layerFrom(
-    PgClient.makeClient({
-      url: Redacted.make(connectionString),
-      types: {
-        getTypeParser: (typeId, format) => {
-          if (DRIZZLE_RAW_DATE_OIDS.has(typeId)) {
-            return (val: unknown) => val;
-          }
-          return types.getTypeParser(typeId, format);
-        },
-      },
-    }),
-  );
+  return PgClient.layerFrom(PgClient.makeClient({ url: Redacted.make(connectionString) }));
 }
 
 export function databaseLayer(connectionString: string) {

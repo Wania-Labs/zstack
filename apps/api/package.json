@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.46",
-    "@effect/sql-pg": "4.0.0-rc.108",
+    "@effect/sql-pg": "4.0.0",
     "@orpc/client": "1.15.0",
     "@orpc/server": "1.15.0",
     "@polar-sh/sdk": "1.0.0-alpha.16",
@@ -36,7 +36,7 @@
     "better-auth": "1.6.26",
     "dotenv": "17.4.2",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
-    "effect": "4.0.0-rc.108",
+    "effect": "4.0.0",
     "evlog": "2.25.0",
     "hono": "^4.13.1",
     "pg": "8.23.0",
@@ -45,7 +45,7 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.20.3",
     "@cloudflare/workers-types": "^4.20250803.0",
-    "@effect/vitest": "4.0.0-rc.108",
+    "@effect/vitest": "4.0.0",
     "@types/node": "22.19.1",
     "@types/pg": "8.15.5",
     "@vitest-evals/harness-ai-sdk": "^0.16.1",

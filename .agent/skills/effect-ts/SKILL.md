@@ -5,7 +5,7 @@ description: Idiomatic Effect v4 usage in this monorepo. Read before writing Eff
 
 # Effect in zstack
 
-This product uses Effect `4.0.0-rc.*` with `@effect/sql-pg`, platform ports under `apps/api/src/platform/`, and modules that call those ports.
+This product uses Effect `4.0.0` (stable, exact pin) with `@effect/sql-pg`, platform ports under `apps/api/src/platform/`, and modules that call those ports.
 
 ## Before writing Effect code
 
