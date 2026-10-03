@@ -1,47 +1,126 @@
 #!/usr/bin/env bash
+# Generate consumer clones from committed HEAD and run each clone's own CI gate
+# (install --frozen-lockfile, typecheck, lint, format:check, test).
+#
+# Variants (select a subset with ZSTACK_SMOKE_VARIANTS="acme zstack-demo"):
+#   acme         --name "Acme Cloud" --scope @acme
+#   my-product   default identity from the directory + --agent-tools=all
+#   zstack-demo  default identity whose name contains "zstack"
+#
+# ZSTACK_SMOKE_DIR sets the parent directory for the clones (default: mktemp).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [[ -n "${ZSTACK_SMOKE_DIR:-}" ]]; then
-  DEST="$ZSTACK_SMOKE_DIR"
-  if [[ "$DEST" != /* ]]; then
-    DEST="$(pwd)/$DEST"
+  BASE="$ZSTACK_SMOKE_DIR"
+  if [[ "$BASE" != /* ]]; then
+    BASE="$(pwd)/$BASE"
   fi
+  mkdir -p "$BASE"
 else
-  DEST="$(mktemp -d /tmp/zstack-smoke.XXXXXX)"
+  BASE="$(mktemp -d /tmp/zstack-smoke.XXXXXX)"
 fi
 
 if [[ -n "$(git -C "$ROOT" status --porcelain)" ]]; then
   echo "warning: uncommitted changes in $ROOT; giget git: only sees committed HEAD" >&2
 fi
 
-echo "DEST=$DEST"
+VARIANTS="${ZSTACK_SMOKE_VARIANTS:-acme my-product zstack-demo}"
 
-cd "$ROOT"
-ZSTACK_TEMPLATE="git:$(pwd)" pnpm run create-zstack "$DEST" --name "Acme Cloud" --scope @acme --force --yes --no-install
+echo "BASE=$BASE"
 
-if [[ -e "$DEST/create-zstack" ]]; then
-  echo "clone still contains create-zstack/" >&2
-  exit 1
-fi
+assert_clone_shape() {
+  local dest="$1"
 
-if grep -qE '^[[:space:]]*-[[:space:]]*"create-zstack"' "$DEST/pnpm-workspace.yaml"; then
-  echo "pnpm-workspace.yaml still lists create-zstack" >&2
-  exit 1
-fi
+  for authoring in create-zstack docs tech-stack-architecture-guide repos agent-transcripts .audit \
+    AUTHORING.md .cursor/skills/verify-zstack .cursor/skills/release-create-zstack \
+    scripts/smoke-create-zstack .github/workflows/docs.yml \
+    .github/workflows/generate-clone.yml .github/workflows/publish-create-zstack.yml; do
+    if [[ -e "$dest/$authoring" ]]; then
+      echo "clone still contains authoring path: $authoring" >&2
+      exit 1
+    fi
+  done
 
-while IFS= read -r pkg; do
-  if grep -qE '"name"[[:space:]]*:[[:space:]]*"zstack"' "$pkg"; then
-    echo "clone package.json still named zstack: $pkg" >&2
+  if grep -qE '^[[:space:]]*-[[:space:]]*"create-zstack"' "$dest/pnpm-workspace.yaml"; then
+    echo "pnpm-workspace.yaml still lists create-zstack" >&2
     exit 1
   fi
-  if grep -qE '"name"[[:space:]]*:[[:space:]]*"@zstack/' "$pkg"; then
-    echo "clone workspace packages still use @zstack: $pkg" >&2
+
+  if grep -qE 'docs/\*\*|tech-stack-architecture-guide' "$dest/.oxlintrc.json" "$dest/.oxfmtrc.json" \
+    "$dest/.github/workflows/ci.yml"; then
+    echo "clone configs still reference authoring paths" >&2
     exit 1
   fi
-done < <(find "$DEST" -name package.json)
 
-cd "$DEST"
-pnpm install --frozen-lockfile
-pnpm typecheck
+  if grep -q 'AUTHORING' "$dest/product.config.ts"; then
+    echo "product.config.ts still references AUTHORING.md" >&2
+    exit 1
+  fi
+}
+
+assert_personalized() {
+  local dest="$1"
+  while IFS= read -r pkg; do
+    if grep -qE '"name"[[:space:]]*:[[:space:]]*"zstack"' "$pkg"; then
+      echo "clone package.json still named zstack: $pkg" >&2
+      exit 1
+    fi
+    if grep -qE '"name"[[:space:]]*:[[:space:]]*"@zstack/' "$pkg"; then
+      echo "clone workspace packages still use @zstack: $pkg" >&2
+      exit 1
+    fi
+  done < <(find "$dest" -name package.json -not -path '*/node_modules/*')
+}
+
+run_clone_ci() {
+  local dest="$1"
+  (
+    cd "$dest"
+    pnpm install --frozen-lockfile
+    pnpm typecheck
+    pnpm lint
+    pnpm format:check
+    pnpm test
+  )
+}
+
+run_variant() {
+  local dest="$1"
+  shift
+  echo
+  echo "==> create-zstack $dest $*"
+  rm -rf "$dest"
+  (cd "$ROOT" && ZSTACK_TEMPLATE="git:$ROOT" pnpm run create-zstack "$dest" --yes --no-install "$@")
+  assert_clone_shape "$dest"
+  assert_personalized "$dest"
+  run_clone_ci "$dest"
+  echo "==> ok: $dest"
+}
+
+for variant in $VARIANTS; do
+  case "$variant" in
+    acme)
+      run_variant "$BASE/acme" --name "Acme Cloud" --scope @acme
+      grep -q '"name": "acme-cloud"' "$BASE/acme/package.json"
+      ;;
+    my-product)
+      run_variant "$BASE/my-product" --agent-tools=all
+      grep -q '"name": "@my-product/api"' "$BASE/my-product/apps/api/package.json"
+      test -f "$BASE/my-product/CLAUDE.md"
+      test -f "$BASE/my-product/.cursor/rules/my-product.mdc"
+      ;;
+    zstack-demo)
+      run_variant "$BASE/zstack-demo"
+      grep -q '"name": "@zstack-demo/api"' "$BASE/zstack-demo/apps/api/package.json"
+      ;;
+    *)
+      echo "unknown smoke variant: $variant" >&2
+      exit 1
+      ;;
+  esac
+done
+
+echo
+echo "All smoke variants passed: $VARIANTS"

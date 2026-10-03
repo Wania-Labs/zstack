@@ -22,11 +22,13 @@ apps/*/.cta.json
 repos/**
 ```
 
-Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template). The ignore list is encoded in `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`) — keep both in sync.
+Also exclude any future authoring-only paths (internal plans, draft CLIs, unpublished create-package sources that are not part of the product template). The ignore list is encoded in `create-zstack/src/prepare-consumer.ts` (`CONSUMER_IGNORE`, plus `AUTHORING_DIRECTORIES` for the `dir/**` entries) — keep both in sync with this file. giget gets a function `ignore` (`isConsumerIgnored`), not the glob strings: Node's `path.matchesGlob` `**` skips dot-prefixed names, so `docs/.npmrc` and friends leaked into clones.
 
-After download, `create-zstack/src/prepare-consumer.ts` (`stripAuthoringManifest`) rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and the `create-zstack` / `smoke:create` root scripts, remove the `create-zstack` importer from `pnpm-lock.yaml`, remove `.github/workflows/docs.yml` and `.github/workflows/generate-clone.yml`, remove `scripts/smoke-create-zstack`, remove `repos/` (vendored Effect source), and scrub authoring-only README lines.
+After download, `create-zstack/src/prepare-consumer.ts` (`stripAuthoringManifest`) rewrites the clone so install works without authoring paths: drop the `create-zstack` workspace member and the `create-zstack` / `smoke:create` root scripts, remove the `create-zstack` importer from `pnpm-lock.yaml`, delete every `AUTHORING_DIRECTORIES` entry again (`docs`, `.cursor`, `create-zstack`, `tech-stack-architecture-guide`, `agent-transcripts`, `.audit`, `repos`), delete `AUTHORING.md`, `apps/*/.cta.json`, the authoring workflows, and `scripts/smoke-create-zstack`, drop the `docs/**` / `tech-stack-architecture-guide/**` entries from `.oxlintrc.json` / `.oxfmtrc.json`, drop the docs `paths-ignore` from `.github/workflows/ci.yml`, drop the `AUTHORING.md` pointer from `product.config.ts`, and scrub authoring-only README lines.
 
-Then, unless `--keep-identity` is set, `personalizeClone` rewrites product identity from `--name` / `--scope` (or the target directory basename): root package name, `@scope/*` workspace packages, Compose/Postgres/Hyperdrive locals, Alchemy stack, Worker names, brand strings, and related filters/imports.
+Then, unless `--keep-identity` is set, `personalizeClone` rewrites product identity from `--name` / `--scope` (or the target directory basename): root package name, `@scope/*` workspace packages (dependency maps re-sorted the way oxfmt expects), Compose/Postgres/Hyperdrive locals, Alchemy stack, Worker names, the `${slug}-jobs` queue and `${slug}-example` workflow, brand strings, and related filters/imports. A residual audit then fails the scaffold on any leftover `zstack` name segment (`-`, `_`, `@`, `/` count as boundaries, so `zstack-jobs` is caught). Spans that belong to the new identity are masked first, so a product called "Zstack Demo" works. Legit framework mentions live in `FRAMEWORK_REFERENCE_ALLOWLIST` (path + exact text). If personalization fails, the CLI removes the target directory when it created it.
+
+Display names are limited to letters, digits, spaces, and `. ' & -` (max 32 characters; scope max 32 after `@`). That keeps them safe in TS/JSX strings, template literals, Markdown, and YAML front matter without per-context escaping, and keeps rewritten lines inside the formatter's print width. Template lines that carry identity are written so their length does not depend on the name (for example `sentryServices` in `apps/*/src/lib/sentry.ts`, `localPostgres` in `apps/api/scripts/orpc-call-health.ts`, and `$${POSTGRES_USER}` in the Compose healthcheck). Keep that property when you add identity-bearing lines.
 
 Optional coding-agent packs are **not** taken from the authoring tree's `.cursor/` (that path is ignored). They live in `create-zstack/packs/` and are written by `applyAgentPacks` when the user passes `--agent-tools` (or answers the TTY prompt). Skills under `.agent/skills/` can be **copied** or **symlinked** into tool dirs (`--skills=copy|symlink|none`).
 
@@ -44,23 +46,24 @@ Human architecture docs live on the separate zstack website, not in cloned produ
 
 - **citty** — `@wanialabs/create-zstack` CLI (`create-zstack/` in this repo; published; excluded from clones). `--version` is read from `create-zstack/package.json` so the trusted-publisher bump stays in sync. Install sets `SHARP_IGNORE_GLOBAL_LIBVIPS=1` (nypm has no `env` on `installDependencies`).
 - **giget** — template download without git history (`ignore` for the paths above)
-- **nypm** — install with the user's chosen package manager (`--package-manager`)
+- **nypm** — install the clone with pnpm. Clones are pnpm workspaces (`workspace:*`, `pnpm-workspace.yaml`, `pnpm --filter` scripts), so `--package-manager` only accepts `pnpm`. If `pnpm` is not on PATH the CLI skips install and prints how to enable it (`corepack enable pnpm`).
 
-Published consumers:
+Published consumers (any launcher works; the clone always installs with pnpm):
 
 ```bash
-npm create @wanialabs/zstack@latest my-app
 pnpm create @wanialabs/zstack@latest my-app
-yarn create @wanialabs/zstack@latest my-app
-bunx @wanialabs/create-zstack@latest my-app
+npm create @wanialabs/zstack@latest my-app
 ```
 
-Local smoke against this tree (giget local provider is `git:`, not `file:`):
+Local smoke against this tree (giget local provider is `git:`, not `file:`, and it reads committed HEAD, so commit first):
 
 ```bash
 pnpm smoke:create
+ZSTACK_SMOKE_VARIANTS="acme" pnpm smoke:create
 ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke-agents --force --yes --agent-tools=all
 ```
+
+`pnpm smoke:create` generates three clones (`--name "Acme Cloud" --scope @acme`; default identity + `--agent-tools=all`; target `zstack-demo`, a name containing "zstack") and runs each clone's CI gate: `pnpm install --frozen-lockfile`, `typecheck`, `lint`, `format:check`, `test`.
 
 Default remote template: `gh:Wania-Labs/zstack` (public; override with `--template` or `ZSTACK_TEMPLATE`). CLI requires Node `>=22.5`.
 
@@ -77,7 +80,7 @@ From `main` with a clean tree:
 That dispatches the workflow. CI bumps `create-zstack/package.json`, publishes `@wanialabs/create-zstack`, pushes `create-zstack@x.y.z`, and opens a GitHub release. The published CLI still clones `gh:Wania-Labs/zstack` at runtime (usually `main`); the tag is the CLI version, not a frozen template snapshot.
 
 - Agent pack flags:
-  - `--package-manager` / `-p` — `pnpm` (default with `--yes`) \| `npm` \| `yarn` \| `bun`
+  - `--package-manager` / `-p` — `pnpm` only (other values fail with an explanation)
   - `--agent-tools=none|all|claude,cursor,opencode,codex` — omit to prompt on a TTY; non-TTY / `--yes` defaults to none
   - `--mcp=defaults|docs|account|all|none|<ids>` — public docs MCPs by default when tools selected
   - `--skills=copy|symlink|none` — how to install `.agent/skills` into Cursor/Claude skill dirs (default `copy`)
