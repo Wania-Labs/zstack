@@ -48,11 +48,11 @@ When docs say “swap the Layer,” they mean the Effect adapter, not a new Reac
 
 ## What is not swapped in code today
 
-| Concern | Default                           | Notes                                                                                                                                        |
-| ------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth    | Better Auth + drizzle adapter     | Dual Postgres: Better Auth uses `pg.Client` (no Effect adapter). Org IDs stay opaque so auth can move later without rewriting product tables |
-| UI host | TanStack Start + shadcn base-nova | You can replace the host; keep oRPC contracts                                                                                                |
-| Deploy  | Alchemy sole authority            | Wrangler is a local escape, not a second deploy path                                                                                         |
+| Concern | Default                           | Notes                                                                                                                                                                                                                                          |
+| ------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth    | Better Auth + drizzle adapter     | Dual Postgres: Better Auth uses `pg.Client` + `drizzle-orm/node-postgres` (no Effect adapter). Product modules use `@effect/sql-pg` 4, which no longer wraps `pg`. Org IDs stay opaque so auth can move later without rewriting product tables |
+| UI host | TanStack Start + shadcn base-nova | You can replace the host; keep oRPC contracts                                                                                                                                                                                                  |
+| Deploy  | Alchemy sole authority            | Wrangler is a local escape, not a second deploy path                                                                                                                                                                                           |
 
 ## How to swap in practice
 

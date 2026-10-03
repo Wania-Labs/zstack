@@ -8,30 +8,32 @@ Billing is `configured` in `product.config.ts`. `BillingService` always exists. 
 ## Steps
 
 1. Create a Polar organization and access token (sandbox or production).
-2. Create products in Polar and copy their product IDs.
+2. Create products in Polar and copy their product IDs. To grant a capability, give the benefit a `feature` metadata key (for example `feature: ai.chat.fast`).
 3. Add a webhook in Polar that POSTs to your API Worker at `/api/webhooks/polar`. Copy the signing secret.
-4. Set in the API Worker env (`.dev.vars` locally, Alchemy secrets on deploy):
+4. Set in the API Worker env (`.dev.vars` for plain wrangler, root `.env` for `alchemy:dev`, a stage file on deploy):
 
 ```bash
 POLAR_ACCESS_TOKEN=pol_your_token_here
 POLAR_SERVER=sandbox  # or "production"
 POLAR_WEBHOOK_SECRET=whsec_…
-# Optional. Defaults to BETTER_AUTH_URL if unset.
-# POLAR_CHECKOUT_SUCCESS_URL=http://localhost:3000
+# Optional. Unset → Polar's default success page.
+# POLAR_CHECKOUT_SUCCESS_URL=https://app.example.com/billing/success
 
 # Product catalog: POLAR_PRODUCT_<SLUG>=<product_id>
 POLAR_PRODUCT_PRO=prod_abc123xyz
 POLAR_PRODUCT_ENTERPRISE=prod_def456uvw
 ```
 
+Under Alchemy, only keys listed in `infra/api.ts` `env` reach the Worker. `POLAR_PRODUCT_PRO` and `POLAR_PRODUCT_ENTERPRISE` ship there. Add a `Config.String("POLAR_PRODUCT_<SLUG>").pipe(Config.withDefault(""))` entry for each new slug. Plain wrangler reads any key from `.dev.vars`.
+
 Polar must reach `/api/webhooks/polar` on a public URL. Local `alchemy:dev` needs a tunnel or Polar's sandbox delivery against a deployed Worker.
 
 5. Restart `alchemy:dev` or redeploy so the Worker sees the env.
 6. Call billing oRPC from a signed-in Team session. The organization id comes from the session, not the client.
 
-   - `billing.createCheckout({ productSlug })` → checkout URL
-   - `billing.customerPortal({})` → portal URL
-   - `billing.snapshot()` → projected capabilities and limits
+   - `billing.createCheckout({ productSlug })` → checkout URL (Team `owner` or `admin`)
+   - `billing.customerPortal({})` → portal URL (Team `owner` or `admin`)
+   - `billing.snapshot()` → projected capabilities and limits (any member)
 
 ## What you should see
 
@@ -41,25 +43,38 @@ With credentials and catalog bound:
 - `customerPortal` returns `{ kind: "url", url: "https://polar.sh/.../portal/..." }`
 - Polar `external_customer_id` is the Better Auth organization id
 - Verified webhooks return `202` and write `billing_webhook_event` plus `billing_entitlement`
-- Bad signatures return `403`. Missing `POLAR_WEBHOOK_SECRET` returns `503`
+- Webhooks dedupe on the Standard Webhooks `webhook-id` header. Polar retries keep their id. Distinct events for one subscription each get processed
+- Bad signatures, missing `webhook-*` headers, or a timestamp more than 5 minutes off return `403`. Missing `POLAR_WEBHOOK_SECRET` returns `503`
+- Only benefits with `feature` metadata grant a capability. The Polar benefit type alone grants nothing
 - `canUse` / `limit` / `remaining` read the Postgres projection first, then Polar customer state
 - Usage goes through `billing_usage_outbox`, an in-process flush, the `billing.usage` queue job, then Polar `events.ingest` with `external_id` equal to the operation id
-- `ai.complete` checks `canUse("ai.<capability>")` when Polar is configured. Empty Polar does not block fake AI. Usage failures after a successful completion are swallowed so the model reply still returns
+- `ai.complete` requires an active Team and `canUse("ai.<capability>")` when Polar is configured. Usage failures after a successful completion are logged and the model reply still returns
 
 Without credentials:
 
-- Checkout and portal return `{ kind: "unconfigured" }`
+- Checkout and portal return `{ kind: "unconfigured" }` (still owner/admin only)
 - Entitlements stay denied
-- Fake AI still runs
+- Fake AI runs unmetered, with or without a Team
+
+## Access rules
+
+| Caller                  | `createCheckout` / `customerPortal`                           | `snapshot`     |
+| ----------------------- | ------------------------------------------------------------- | -------------- |
+| Signed out              | `UNAUTHORIZED`                                                | `UNAUTHORIZED` |
+| No active Team          | `BAD_REQUEST` "Select a Team to continue."                    | `BAD_REQUEST`  |
+| Team `member`           | `FORBIDDEN` "Only Team owners and admins can manage billing." | Allowed        |
+| Team `owner` or `admin` | Allowed                                                       | Allowed        |
+
+The session only carries an organization id when a `member` row backs it. A user removed from a Team loses billing access on the next request.
 
 ## Product catalog
 
-The server maps product slugs to Polar product IDs. Clients request a slug such as `"pro"`. The server checks the catalog before calling Polar, so Polar IDs stay out of client code.
+The server maps product slugs to Polar product IDs. Clients request a slug such as `"pro"`. The server checks the catalog before calling Polar, so Polar IDs stay out of client code. An unknown slug returns `BAD_REQUEST` "Unknown product."
 
 Slugs are normalized to lowercase:
 
 - `POLAR_PRODUCT_PRO=prod_abc123` → slug `"pro"`
-- `POLAR_PRODUCT_STARTER=prod_def456` → slug `"starter"`
+- `POLAR_PRODUCT_STARTER=prod_def456` → slug `"starter"` (add it to `infra/api.ts` under Alchemy)
 
 ## Customer identity
 
@@ -69,6 +84,7 @@ The billable customer is the Better Auth organization. Polar stores it as `exter
 
 - Service and Layers live in `apps/api/src/platform/billing/billing-service.ts`
 - Webhook HTTP lives in `apps/api/src/http/polar-webhook.ts`
+- Billing role gate lives in `apps/api/src/http/orpc.ts` (`BILLING_MANAGER_ROLES`)
 - Ledger tables live in `apps/api/src/platform/db/billing-schema.ts`
 - Contracts live in `packages/contracts/src/billing.ts`
 - Module handlers live in `apps/api/src/modules/billing/service.ts`

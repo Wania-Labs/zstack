@@ -30,6 +30,20 @@ The admin app keeps private console content behind a `/_console` layout. That la
 
 User list and role changes call Better Auth `admin.listUsers` / `admin.setRole` (not new oRPC staff routes).
 
+## Origin and API routing
+
+The staff console is its own origin. Better Auth trusts it through `ADMIN_URL`:
+
+| Context       | `ADMIN_URL`                                               |
+| ------------- | --------------------------------------------------------- |
+| `alchemy:dev` | Defaults to `http://localhost:3001`                       |
+| Wrangler      | `apps/api/.dev.vars` (`http://localhost:3001` in example) |
+| Deploy        | Required, `https://` (custom domain or workers.dev URL)   |
+
+Sign-in from an origin that is not `BETTER_AUTH_URL` or `ADMIN_URL` fails with `403` `INVALID_ORIGIN`.
+
+Deployed, `apps/admin/src/routes/api/$.ts` forwards only `/api/auth/*` and `/api/rpc/*` to the API service binding. Object routes and the Polar webhook are not reachable from the admin origin (`404`). SSR guards forward the browser cookie, so a hard refresh inside `/_console` keeps the session. See [Deploy](/docs/guides/deploy).
+
 ## UI stack
 
 Admin uses the same shadcn base-nova setup as web. Add components with:

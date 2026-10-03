@@ -31,6 +31,19 @@ This Worker is authoring-only. Product clones deploy with Alchemy. Do not add `@
 
 Never fold docs typecheck or install into the product CI job.
 
+Product CI is one job, in order:
+
+1. `pnpm install --frozen-lockfile` (also compiles Paraglide via `@zstack/i18n` `prepare`)
+2. `pnpm typecheck` (includes `apps/api/tsconfig.test.json` for tests, scripts, and root configs)
+3. `pnpm lint`, then `pnpm format:check`
+4. `pnpm test` (API unit, deterministic evals, `apps/web` unit)
+5. `pnpm test:workers` (workerd pool smoke)
+6. `pnpm build` (api wrangler dry-run, web/admin Vite builds)
+7. `drizzle-kit check`
+8. `drizzle-kit generate` guard: fails if it writes anything under `apps/api/drizzle`
+
+No step needs Postgres. drizzle-kit reads `DATABASE_URL` from the committed `.env.development` but only diffs snapshots. The workers pool only reads the Hyperdrive connection string. If you change `schema.ts`, run `pnpm db:generate` and commit `apps/api/drizzle`.
+
 Production deploy is **Workers Builds** in the Cloudflare dashboard, not GitHub Actions:
 
 | Setting           | Value                                  |

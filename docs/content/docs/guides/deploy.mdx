@@ -7,6 +7,12 @@ Alchemy v2 is the sole owner of provisioned Cloudflare resources, secret binding
 
 The authoring docs site is a separate Cloudflare Worker (`zstack`) via Workers Builds. That path is not a product deploy. See [Authoring this repo](/docs/authoring).
 
+## Env files Alchemy reads
+
+The Alchemy CLI reads the shell plus the **root `.env`** (shell wins). `--env-file <file>` replaces `.env` and wins over the shell. Alchemy never reads `.env.local`, `.env.development`, or `apps/api/.dev.vars`.
+
+Put `BETTER_AUTH_SECRET` and vendor keys for `alchemy:dev` in root `.env` (gitignored). Keep deploy values in a stage file.
+
 ## Local full stack
 
 ```bash
@@ -14,17 +20,69 @@ pnpm dev:services
 pnpm alchemy:dev
 ```
 
-Hyperdrive origin is Compose. PlanetScale is not created.
+Hyperdrive origin is Compose (`composeDevOrigin` in `infra/database.ts`). PlanetScale is not created. `BETTER_AUTH_URL` and `ADMIN_URL` default to `http://localhost:3000` and `http://localhost:3001`.
 
 ## Cloud deploy
 
 ```bash
 alchemy login
-export BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
-pnpm alchemy:deploy
+# .env.prod (gitignored)
+BETTER_AUTH_SECRET=<openssl rand -base64 32>
+BETTER_AUTH_URL=https://app.example.com    # public web origin
+ADMIN_URL=https://admin.example.com        # public staff console origin
+# plus any vendor keys you intend to enable
+
+pnpm alchemy:deploy --stage prod --env-file .env.prod
 ```
 
-Deploy provisions PlanetScale Postgres and Hyperdrive for the cloud origin. Optional `PLANETSCALE_REGION` defaults to `us-east`. Cluster size follows the template (`PS_DEV`, Postgres 18 to match Compose).
+Deploy provisions PlanetScale Postgres, a branch, a least-privilege role, and Hyperdrive for the cloud origin. Optional `PLANETSCALE_REGION` defaults to `us-east`. Cluster size follows the template (`PS_DEV`, Postgres 18 to match Compose).
+
+Do not deploy with the local `.env`. It holds `http://localhost` origins, and deploy rejects them.
+
+### Public origins
+
+`BETTER_AUTH_URL` and `ADMIN_URL` are **required and must be `https://`** outside `alchemy dev`. Deploy fails with a `ConfigError` naming the variable otherwise. `BETTER_AUTH_URL` is Better Auth's `baseURL` (Secure cookies, email links). Both origins are Better Auth `trustedOrigins`. Localhost ports are trusted only while `BETTER_AUTH_URL` is `http://localhost`.
+
+They are not derived from the Worker URLs. Web and admin bind the API Worker, so the API cannot also take their URLs as inputs without a resource cycle.
+
+- **Custom domains (recommended):** attach them with the Worker `domain` prop in `infra/web.ts` / `infra/admin.ts` and set both variables to those origins.
+- **workers.dev only:** generated Worker names carry a random suffix, so the first deploy cannot know them. Deploy once with placeholders (`https://placeholder.invalid` for both), copy the `webUrl` / `adminUrl` stack outputs, then redeploy with the real values.
+
+An https `BETTER_AUTH_URL` also turns on Better Auth rate limiting (per-isolate memory store) and redacts links in console-transport email logs.
+
+### Same-origin `/api`
+
+Browsers only call `/api/*` on the web or admin origin. Deployed, the TanStack Start server route `src/routes/api/$.ts` forwards those requests to the API Worker through the `API` service binding. Method, headers, cookies, streamed body, and redirects pass through untouched. Admin forwards only `/api/auth/*` and `/api/rpc/*`. Everything else on the admin origin returns `404`.
+
+SSR route guards use the same path. `apiFetch` forwards the incoming Cookie header, adds a same-origin `Origin` for mutations, and relays `Set-Cookie` onto the SSR response. Hard refreshes of protected pages see the session.
+
+### Preview stages
+
+`pr-*` stages reuse the `staging` stage's PlanetScale database and create their own branch. Deploy `--stage staging` before any preview stage.
+
+### Database role and migrations
+
+The Hyperdrive `AppRole` inherits `pg_read_all_data` + `pg_write_all_data` (DML only). It cannot run migrations, and its credentials stay off stack outputs. Changing `inheritedRoles` likely replaces the role and rotates Hyperdrive credentials on the next deploy.
+
+Alchemy does not run Drizzle 1.0 migration folders. Migrate with drizzle-kit:
+
+1. In the PlanetScale dashboard, open the stage's database and branch.
+2. **Connect** → create a role that can run DDL. Copy the **direct** Postgres URL (port 5432, `sslmode=verify-full`), not the PSBouncer URL on 6432.
+3. Run:
+
+```bash
+DATABASE_URL='postgresql://<role>:<password>@<host>:5432/postgres?sslmode=verify-full' pnpm db:migrate:remote
+```
+
+`db:migrate:remote` refuses to run without `DATABASE_URL` in the shell, so it never falls back to Compose.
+
+### Worker env keys
+
+Alchemy binds only the keys listed in `infra/api.ts` `env`, using `Config.String` and `Config.Redacted` (Effect 4 names). Code reads any `POLAR_PRODUCT_<SLUG>` or `FEATURE_FLAG_<KEY>`, but a new key reaches the Worker only after you add an entry there. Today: `POLAR_PRODUCT_PRO`, `POLAR_PRODUCT_ENTERPRISE`, `FEATURE_FLAG_EXAMPLE_READY`.
+
+### Compatibility date
+
+One `compatibility` constant in `infra/shared.ts` sets the Workers compatibility date and `nodejs_compat` for api, web, and admin. Keep `compatibility_date` in each app's `wrangler.jsonc` in sync.
 
 ## Wrangler escape
 
@@ -40,5 +98,6 @@ Alchemy can stay while you swap platform adapters (for example R2→S3 later). S
 
 ## Related
 
+- Clone playbook: `.agent/playbooks/deploy-alchemy.md`
 - [Capabilities](/docs/concepts/capabilities)
 - [Local development](/docs/local-development)

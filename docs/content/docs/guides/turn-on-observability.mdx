@@ -18,11 +18,27 @@ VITE_SENTRY_DSN_ADMIN=…    # Alchemy → apps/admin VITE_SENTRY_DSN
 
 For the wrangler + Vite escape hatch, set `VITE_SENTRY_DSN` in each app's Vite env instead. Prefer empty defaults over dummy projects.
 
-3. Restart or redeploy.
-4. Trigger an error or a traced request and confirm it in Sentry.
+3. Optional. Tune API tracing:
+
+```bash
+SENTRY_ENVIRONMENT=production   # default "development"
+SENTRY_RELEASE=…
+SENTRY_TRACES_SAMPLE_RATE=0.1   # API Worker default
+```
+
+`SENTRY_TRACES_SAMPLE_RATE` is clamped to `0`–`1`. `0` turns API tracing off. Blank or non-numeric values fall back to `0.1`. The browser SDKs read `VITE_SENTRY_TRACES_SAMPLE_RATE` from Vite env instead (default `1`). Alchemy does not bind it.
+
+4. Restart or redeploy.
+5. Trigger an error or a traced request and confirm it in Sentry.
 
 ## What you should see
 
 Without DSNs, reporting stays quiet. With DSNs, errors and traces reach your Sentry projects.
+
+Server failures in object routes, the Polar webhook ingest, health, oRPC usage reporting, and queue jobs go to the evlog request logger and Sentry. Responses stay generic. Rejected Polar webhooks log a warning without Sentry.
+
+`GET /health` on the API Worker returns `200` with `database: "up"`, or `503` with `{ ok: false, database: "down" }` when the ping fails or Postgres is unreachable. oRPC `health` maps the same case to `SERVICE_UNAVAILABLE`. Point uptime monitors at it.
+
+Each response carries `x-request-id`. A client value is kept only when it matches `[A-Za-z0-9._-]{1,128}`. Otherwise the Worker uses `cf-ray`, then a fresh UUID.
 
 Product analytics is a separate capability. See [Turn on analytics](/docs/guides/turn-on-analytics).

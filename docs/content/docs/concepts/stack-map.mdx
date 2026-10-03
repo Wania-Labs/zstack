@@ -8,6 +8,8 @@ description: Apps, packages, request path, and what lives outside consumer clone
 ```text
 Browser (web or admin)
   → same-origin /api/*
+  → web/admin Worker: src/routes/api/$.ts  (Vite proxy under plain vite dev)
+  → API service binding
   → apps/api Hono Worker
   → oRPC + Zod contracts  |  Better Auth
   → Effect use cases
@@ -16,7 +18,11 @@ Browser (web or admin)
   ← Alchemy bindings (Hyperdrive, secrets, Workers)
 ```
 
-Frontends import `@zstack/contracts`, `@zstack/i18n`, and `@zstack/analytics` only. They do not import `apps/api` source.
+The browser never calls the API Worker's own URL. Web forwards every `/api/*` path. Admin forwards only `/api/auth/*` and `/api/rpc/*` and returns `404` for the rest. Method, headers, cookies, streamed body, and redirects pass through untouched.
+
+SSR uses the same path. Better Auth and oRPC clients share an isomorphic `apiFetch`. On the server it forwards the incoming Cookie header (plus a same-origin `Origin` on mutations) through the binding and relays `Set-Cookie` onto the SSR response. Route guards see the session on hard refresh. Under plain `vite dev` the server side falls back to `API_ORIGIN` (default `http://127.0.0.1:8787`).
+
+Frontends import client-safe packages only: `@zstack/contracts`, `@zstack/i18n`, `@zstack/analytics`, and `@zstack/auth-access` (Better Auth admin roles for the client plugin). They do not import `apps/api` source.
 
 ## Apps
 
@@ -41,14 +47,18 @@ Frontends import `@zstack/contracts`, `@zstack/i18n`, and `@zstack/analytics` on
 
 Alchemy (`alchemy.run.ts` + `infra/*`) owns Cloudflare resources and deploy. `product.config.ts` declares capability intent. Never put secrets there.
 
-Local Postgres is Compose (`compose.yaml`). Deploy uses PlanetScale Postgres through Hyperdrive.
+Local Postgres is Compose (`compose.yaml`). Deploy uses PlanetScale Postgres through Hyperdrive with a DML-only role.
+
+api, web, and admin share one Workers compatibility date from `infra/shared.ts`.
+
+Two Postgres clients run in the API. Product modules use `@effect/sql-pg` through `Database`. Version 4 speaks the Postgres protocol directly and no longer wraps `pg`. Better Auth has no Effect adapter, so session and auth routes use `pg.Client` with `drizzle-orm/node-postgres`.
 
 ## Inside the API
 
 | Area      | Path                      | Role                                                                                                                |
 | --------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | HTTP edge | `apps/api/src/http/`      | Session, mount auth/oRPC/health/objects                                                                             |
-| Modules   | `apps/api/src/modules/`   | Product verticals (auth, ai, staff, health, billing)                                                                |
+| Modules   | `apps/api/src/modules/`   | Product verticals (auth, ai, staff, health, billing, objects)                                                       |
 | Platform  | `apps/api/src/platform/`  | Ports and adapters (email, ai, db, billing, analytics, object store, flags, queue, workflow, observability, effect) |
 | Queues    | `apps/api/src/queues/`    | `JOBS` consumer on this Worker                                                                                      |
 | Workflows | `apps/api/src/workflows/` | Cloudflare Workflow classes on this Worker                                                                          |
