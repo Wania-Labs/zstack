@@ -6,6 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "BETTER_AUTH_URL": "http://localhost:3000",
+    "ADMIN_URL": "http://localhost:3001",
   },
   "hyperdrive": [
     {

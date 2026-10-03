@@ -10,10 +10,12 @@ import {
 } from "../../platform/analytics/analytics-service";
 import { emailLiveFromEnv } from "../../platform/email/email-service";
 import { createBetterAuthOptions } from "./options";
+import { resolveTrustedOrigins } from "./trusted-origins";
 
 export type AuthEnv = Pick<
   ApiBindings,
   | "BETTER_AUTH_URL"
+  | "ADMIN_URL"
   | "BETTER_AUTH_SECRET"
   | "EMAIL_FROM"
   | "BENTO_SITE_UUID"
@@ -53,16 +55,7 @@ export function createAuth(
     }),
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [
-      env.BETTER_AUTH_URL,
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-      "http://localhost:3001",
-      "http://127.0.0.1:3001",
-      // Direct API curls during local development.
-      "http://localhost:8787",
-      "http://127.0.0.1:8787",
-    ],
+    trustedOrigins: resolveTrustedOrigins(env),
   });
 }
 

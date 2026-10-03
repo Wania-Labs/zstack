@@ -99,7 +99,12 @@ export function createBetterAuthOptions(input: BetterAuthOptionsInput) {
         adminRoles: [...betterAuthAdminRoleNames],
       }),
     ],
+    // Better Auth only rate-limits when NODE_ENV=production, which workerd never
+    // sets. Turn it on for HTTPS deploys explicitly (per-isolate memory store).
+    rateLimit: { enabled: resolveSecureCookies(input.baseURL) },
     advanced: {
+      // Cloudflare sets cf-connecting-ip; web/admin SSR forwards it to the API.
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"] },
       defaultCookieAttributes: {
         sameSite: "lax",
         // Local HTTP needs Secure=false. HTTPS BETTER_AUTH_URL forces Secure cookies.

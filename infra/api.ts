@@ -1,6 +1,8 @@
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Config from "effect/Config";
 
+import { compatibility, publicOrigin } from "./shared.ts";
+
 /**
  * Hono API Worker — async entry at `apps/api/src/index.ts`.
  * Workflows, queues, steps, and cron live in that same Worker.
@@ -12,10 +14,7 @@ export const Api = (
 ) =>
   Cloudflare.Worker("Api", {
     main: "./apps/api/src/index.ts",
-    compatibility: {
-      date: "2026-07-11",
-      flags: ["nodejs_compat"],
-    },
+    compatibility,
     env: {
       HYPERDRIVE: hyperdrive,
       OBJECTS: objects,
@@ -23,9 +22,10 @@ export const Api = (
       EXAMPLE_WORKFLOW: Cloudflare.Workflow("ExampleWorkflow", {
         className: "ExampleWorkflow",
       }),
-      BETTER_AUTH_URL: Config.String("BETTER_AUTH_URL").pipe(
-        Config.withDefault("http://localhost:3000"),
-      ),
+      // Public web origin. Required (https) on deploy; localhost only under alchemy dev.
+      BETTER_AUTH_URL: publicOrigin("BETTER_AUTH_URL", "http://localhost:3000"),
+      // Staff console origin, added to Better Auth trustedOrigins.
+      ADMIN_URL: publicOrigin("ADMIN_URL", "http://localhost:3001"),
       BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
       // Empty defaults keep console EmailService until Bento secrets are set.
       EMAIL_FROM: Config.String("EMAIL_FROM").pipe(Config.withDefault("")),

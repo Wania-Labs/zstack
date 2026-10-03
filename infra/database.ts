@@ -30,10 +30,12 @@ export const PlanetscaleDb = Effect.gen(function* () {
   const { stage } = yield* Alchemy.Stack;
   const regionSlug = yield* Config.String("PLANETSCALE_REGION").pipe(Config.withDefault("us-east"));
 
-  // Preview stages reuse a staging database; personal/prod stages own one.
+  // Preview stages (`pr-*`) reuse the `staging` stage's database and get their
+  // own branch below; personal/prod stages own a database. Deploy `staging`
+  // before any preview stage.
   const database = stage.startsWith("pr-")
     ? yield* Planetscale.PostgresDatabase.ref("Database", {
-        stage: `staging-${stage}`,
+        stage: "staging",
       })
     : yield* Planetscale.PostgresDatabase("Database", {
         region: { slug: regionSlug },
@@ -46,10 +48,13 @@ export const PlanetscaleDb = Effect.gen(function* () {
     parentBranch: "main",
   });
 
+  // Least privilege for the Worker runtime (via Hyperdrive): DML on all
+  // tables/sequences, no DDL or role management. Migrations run separately
+  // with drizzle-kit against `DATABASE_URL` (a schema-owning credential).
   const role = yield* Planetscale.PostgresRole("AppRole", {
     database,
     branch,
-    inheritedRoles: ["postgres"],
+    inheritedRoles: ["pg_read_all_data", "pg_write_all_data"],
   });
 
   return { database, branch, role };

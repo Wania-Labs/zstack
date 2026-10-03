@@ -50,6 +50,8 @@ alchemy login
 # BETTER_AUTH_SECRET must be in the environment for alchemy
 export BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
 pnpm alchemy:dev                                   # api :8787 + web :3000 + admin :3001 (Compose only)
+# deploy also needs the public https origins (see .agent/playbooks/deploy-alchemy.md)
+export BETTER_AUTH_URL=https://app.example.com ADMIN_URL=https://admin.example.com
 pnpm alchemy:deploy                                # provisions PlanetScale + Hyperdrive
 ```
 

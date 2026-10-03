@@ -12,6 +12,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --config vitest.config.ts",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
@@ -52,6 +53,7 @@
     "@zstack/typescript-config": "workspace:*",
     "typescript": "7.0.2",
     "vite": "8.3.2",
+    "vitest": "^4.1.11",
     "wrangler": "4.147.0"
   }
 }

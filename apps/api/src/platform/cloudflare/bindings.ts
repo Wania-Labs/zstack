@@ -9,8 +9,11 @@ export type ApiBindings = {
   JOBS?: Queue<JobMessage>;
   /** Cloudflare Workflow binding for the example workflow class. Absent → fake. */
   EXAMPLE_WORKFLOW?: Workflow<ExampleWorkflowParams>;
+  /** Public web origin (Better Auth `baseURL`). HTTPS when deployed. */
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
+  /** Staff console origin, trusted by Better Auth. Empty → admin sign-in rejected. */
+  ADMIN_URL?: string;
   /** Verified sender used by Bento (`from`). Absent → console transport. */
   EMAIL_FROM?: string;
   BENTO_SITE_UUID?: string;
