@@ -63,3 +63,6 @@ packages/i18n/project.inlang/cache
 packages/i18n/project.inlang/.meta.json
 packages/i18n/project.inlang/README.md
 packages/i18n/project.inlang/.gitignore
+
+# Coding-agent worktrees (Claude Code)
+.claude/worktrees/
