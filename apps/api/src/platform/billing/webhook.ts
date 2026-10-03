@@ -1,4 +1,9 @@
 export type PolarWebhookEvent = {
+  /**
+   * Standard Webhooks `webhook-id`: unique per event and stable across retries.
+   * Polar payloads carry no top-level event id; `data.id` is the resource id
+   * (e.g. the subscription) and repeats across every event for that resource.
+   */
   id: string;
   type: string;
   payload: Record<string, unknown>;
@@ -28,6 +33,21 @@ async function hmacSha256Base64(secretBytes: Uint8Array, payload: string): Promi
     binary += String.fromCharCode(byte);
   }
   return btoa(binary);
+}
+
+/**
+ * Constant-time string comparison. Length is not secret (HMAC-SHA256 base64 is
+ * always 44 chars), so a length mismatch may return early.
+ */
+export function timingSafeEqualString(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let diff = 0;
+  for (let index = 0; index < a.length; index += 1) {
+    diff |= a.charCodeAt(index) ^ b.charCodeAt(index);
+  }
+  return diff === 0;
 }
 
 function decodeWebhookSecret(secret: string): Uint8Array {
@@ -74,7 +94,12 @@ export async function verifyPolarWebhook(input: {
     }
     return [];
   });
-  if (!offered.includes(expected)) {
+  // Compare every offered signature without short-circuiting on a match.
+  const matched = offered.reduce(
+    (found, signature) => timingSafeEqualString(signature, expected) || found,
+    false,
+  );
+  if (!matched) {
     throw new Error("invalid polar webhook signature");
   }
 
@@ -86,12 +111,7 @@ export async function verifyPolarWebhook(input: {
   const type = typeof parsed.type === "string" ? parsed.type : "unknown";
   const data = isRecord(parsed.data) ? parsed.data : parsed;
   const organizationId = readOrganizationId(data);
-  const id =
-    (typeof parsed.id === "string" && parsed.id) ||
-    (typeof data.id === "string" && data.id) ||
-    webhookId;
-
-  return { id, type, payload: parsed, ...(organizationId ? { organizationId } : {}) };
+  return { id: webhookId, type, payload: parsed, ...(organizationId ? { organizationId } : {}) };
 }
 
 function readOrganizationId(data: Record<string, unknown>): string | undefined {

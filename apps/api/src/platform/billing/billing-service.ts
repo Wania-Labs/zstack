@@ -68,7 +68,7 @@ function readFeature(metadata: unknown): string | undefined {
   return typeof feature === "string" && feature.trim() ? feature.trim() : undefined;
 }
 
-function normalizeCustomerState(value: unknown): PolarCustomerState {
+export function normalizeCustomerState(value: unknown): PolarCustomerState {
   if (!isRecord(value)) {
     return { grantedBenefits: [], meters: [] };
   }
@@ -88,10 +88,9 @@ function normalizeCustomerState(value: unknown): PolarCustomerState {
         : typeof entry.benefitId === "string"
           ? entry.benefitId
           : undefined;
-    const feature =
-      readFeature(entry.benefit_metadata) ??
-      readFeature(entry.benefitMetadata) ??
-      (typeof entry.benefit_type === "string" ? entry.benefit_type : undefined);
+    // Only explicit `feature` metadata names a capability. `benefit_type` is a
+    // Polar category ("custom", "license_keys", …), not an entitlement.
+    const feature = readFeature(entry.benefit_metadata) ?? readFeature(entry.benefitMetadata);
     return [
       {
         ...(benefitId ? { benefitId } : {}),

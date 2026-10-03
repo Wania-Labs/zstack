@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { snapshotFromPolarState, verifyPolarWebhook } from "../../src/platform/billing/webhook";
+import { normalizeCustomerState } from "../../src/platform/billing/billing-service";
+import {
+  snapshotFromPolarState,
+  timingSafeEqualString,
+  verifyPolarWebhook,
+} from "../../src/platform/billing/webhook";
 
 async function hmacSha256Base64(secretBytes: Uint8Array, payload: string): Promise<string> {
   const key = await crypto.subtle.importKey(
@@ -70,6 +75,95 @@ describe("verifyPolarWebhook", () => {
     await expect(verifyPolarWebhook({ body, headers, secret })).rejects.toThrow(
       "polar webhook timestamp expired",
     );
+  });
+});
+
+describe("verifyPolarWebhook dedupe key", () => {
+  const secret = "polar_whsec_test";
+
+  it("keys events by webhook-id, not the shared resource data.id", async () => {
+    // Polar sends no top-level id; every event for a subscription shares data.id.
+    const created = JSON.stringify({
+      type: "subscription.created",
+      data: { id: "sub_123", status: "incomplete", customer: { external_id: "org_1" } },
+    });
+    const activated = JSON.stringify({
+      type: "subscription.active",
+      data: { id: "sub_123", status: "active", customer: { external_id: "org_1" } },
+    });
+
+    const first = await verifyPolarWebhook({
+      body: created,
+      headers: await signedHeaders({ secret, body: created, id: "msg_1" }),
+      secret,
+    });
+    const second = await verifyPolarWebhook({
+      body: activated,
+      headers: await signedHeaders({ secret, body: activated, id: "msg_2" }),
+      secret,
+    });
+
+    expect(first.id).toBe("msg_1");
+    expect(second.id).toBe("msg_2");
+    expect(first.id).not.toBe(second.id);
+    expect(second.organizationId).toBe("org_1");
+  });
+
+  it("keeps the same key when Polar retries a delivery", async () => {
+    const body = JSON.stringify({ type: "order.paid", data: { id: "ord_1" } });
+    const attempt1 = await verifyPolarWebhook({
+      body,
+      headers: await signedHeaders({ secret, body, id: "msg_retry" }),
+      secret,
+    });
+    const attempt2 = await verifyPolarWebhook({
+      body,
+      headers: await signedHeaders({ secret, body, id: "msg_retry" }),
+      secret,
+    });
+    expect(attempt1.id).toBe(attempt2.id);
+  });
+
+  it("accepts a valid signature among several offered", async () => {
+    const body = JSON.stringify({ type: "order.paid", data: {} });
+    const headers = await signedHeaders({ secret, body, id: "msg_multi" });
+    headers.set(
+      "webhook-signature",
+      `v1,dG90YWxseV93cm9uZw== ${headers.get("webhook-signature") ?? ""}`,
+    );
+    await expect(verifyPolarWebhook({ body, headers, secret })).resolves.toMatchObject({
+      id: "msg_multi",
+    });
+  });
+});
+
+describe("timingSafeEqualString", () => {
+  it("compares by value", () => {
+    expect(timingSafeEqualString("abc", "abc")).toBe(true);
+    expect(timingSafeEqualString("abc", "abd")).toBe(false);
+    expect(timingSafeEqualString("abc", "abcd")).toBe(false);
+    expect(timingSafeEqualString("", "")).toBe(true);
+  });
+});
+
+describe("normalizeCustomerState", () => {
+  it("only grants capabilities named by explicit feature metadata", () => {
+    const state = normalizeCustomerState({
+      granted_benefits: [
+        { benefit_id: "ben_custom", benefit_type: "custom" },
+        {
+          benefit_id: "ben_ai",
+          benefit_type: "custom",
+          benefit_metadata: { feature: "ai.chat.smart" },
+        },
+      ],
+      active_meters: [],
+    });
+    expect(state.grantedBenefits).toEqual([
+      { benefitId: "ben_custom" },
+      { benefitId: "ben_ai", feature: "ai.chat.smart" },
+    ]);
+    expect(snapshotFromPolarState(state).capabilities).not.toContain("custom");
   });
 });
 
