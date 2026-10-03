@@ -1,6 +1,8 @@
 import * as Sentry from "@sentry/tanstackstart-react";
 import type { AnyRouter } from "@tanstack/react-router";
 
+import { parseSampleRate } from "./sample-rate";
+
 /**
  * Sentry `service` tag per browser app. One name per line so renamed clones
  * stay inside the formatter's print width.
@@ -21,9 +23,11 @@ export function initBrowserSentry(router: AnyRouter, service: SentryService) {
     return;
   }
 
-  const tracesSampleRate = Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE ?? "1") || 1;
-  const replaysSessionSampleRate =
-    Number(import.meta.env.VITE_SENTRY_REPLAYS_SESSION_SAMPLE_RATE ?? "0.1") || 0.1;
+  const tracesSampleRate = parseSampleRate(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE, 0.1);
+  const replaysSessionSampleRate = parseSampleRate(
+    import.meta.env.VITE_SENTRY_REPLAYS_SESSION_SAMPLE_RATE,
+    0.1,
+  );
 
   Sentry.init({
     dsn,

@@ -23,6 +23,13 @@ export const Web = (api: Cloudflare.Worker) =>
         Config.withDefault("development"),
       ),
       VITE_SENTRY_RELEASE: Config.String("SENTRY_RELEASE").pipe(Config.withDefault("")),
+      // Empty → 0.1 in the browser. "0" turns tracing / replays off.
+      VITE_SENTRY_TRACES_SAMPLE_RATE: Config.String("VITE_SENTRY_TRACES_SAMPLE_RATE").pipe(
+        Config.withDefault(""),
+      ),
+      VITE_SENTRY_REPLAYS_SESSION_SAMPLE_RATE: Config.String(
+        "VITE_SENTRY_REPLAYS_SESSION_SAMPLE_RATE",
+      ).pipe(Config.withDefault("")),
       VITE_PUBLIC_POSTHOG_KEY: Config.String("VITE_PUBLIC_POSTHOG_KEY").pipe(
         Config.withDefault(""),
       ),
