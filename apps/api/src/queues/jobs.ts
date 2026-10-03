@@ -57,14 +57,20 @@ export async function handleJobsQueue(
       message.ack();
     } catch (error) {
       // Retry is the recovery path, but a silently retried job hides outages.
+      // A malformed body must not throw here or the rest of the batch is skipped.
+      const body: unknown = message.body;
+      const job =
+        typeof body === "object" && body !== null && "name" in body
+          ? String((body as { name: unknown }).name)
+          : "unknown";
       log.error({
         action: "jobs.queue",
-        job: message.body.name,
+        job,
         messageId: message.id,
         attempts: message.attempts,
         error: error instanceof Error ? error.message : String(error),
       });
-      Sentry.captureException(error, { tags: { operation: "jobs.queue", job: message.body.name } });
+      Sentry.captureException(error, { tags: { operation: "jobs.queue", job } });
       message.retry();
     }
   }

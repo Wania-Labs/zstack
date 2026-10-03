@@ -75,7 +75,9 @@ function requireBillingManager(context: OrpcContext, action: string): string {
 const os = implement(appContract).$context<OrpcContext>();
 
 const health = os.health.handler(async ({ context }) => {
-  const status = await context.runEffect(getHealth());
+  // Building the request layer connects to Postgres, so an unreachable database
+  // can throw before the ping runs. Both cases are "unavailable", not a 500.
+  const status = await context.runEffect(getHealth()).catch(() => ({ ok: false as const }));
   if (!status.ok) {
     throw new ORPCError("SERVICE_UNAVAILABLE", { message: "Database unavailable." });
   }
@@ -203,7 +205,8 @@ export const rpcHandler = new RPCHandler(router, {
     onError((error) => {
       if (error instanceof ORPCError) {
         const status = typeof error.status === "number" ? error.status : 500;
-        if (status < 500) {
+        // 503 is an expected outage signal (health polling); don't page on it.
+        if (status < 500 || status === 503) {
           return;
         }
       }

@@ -202,4 +202,11 @@ describe("/health", () => {
     const client = rpcClient(testApp({ database: failingDatabase }));
     expect(await rpcErrorCode(client.health())).toBe("SERVICE_UNAVAILABLE");
   });
+
+  it("maps an unreachable database to SERVICE_UNAVAILABLE over oRPC", async () => {
+    const client = rpcClient(
+      testApp({ runRequest: () => Promise.reject(new Error("connect ECONNREFUSED")) }),
+    );
+    expect(await rpcErrorCode(client.health())).toBe("SERVICE_UNAVAILABLE");
+  });
 });
