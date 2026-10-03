@@ -24,30 +24,72 @@ export class Analytics extends Context.Service<
   }
 >()("@zstack/api/platform/analytics/Analytics") {}
 
-function swallow(run: () => Promise<void>): Effect.Effect<void> {
-  return Effect.promise(async () => {
-    try {
-      await run();
-    } catch {
-      return;
-    }
-  });
+/** Worker `ctx.waitUntil`: keeps a promise alive after the response is sent. */
+export type BackgroundTaskRunner = (promise: Promise<unknown>) => void;
+
+export type AnalyticsLiveOptions = {
+  /** Applied when a capture does not set `environment` explicitly. */
+  environment?: string;
+  /** When set, PostHog requests run after the response instead of inline. */
+  waitUntil?: BackgroundTaskRunner;
+};
+
+function reportAnalyticsFailure(error: unknown): void {
+  console.warn("[analytics] capture failed", error instanceof Error ? error.message : error);
 }
 
-function makeAnalytics(client: AnalyticsClient): Analytics["Service"] {
+function dispatch(run: () => Promise<void>, waitUntil: BackgroundTaskRunner | undefined) {
+  if (waitUntil) {
+    return Effect.sync(() => {
+      waitUntil(run().catch(reportAnalyticsFailure));
+    });
+  }
+  return Effect.promise(() => run().catch(reportAnalyticsFailure));
+}
+
+export function makeAnalytics(
+  client: AnalyticsClient,
+  options: AnalyticsLiveOptions = {},
+): Analytics["Service"] {
   return Analytics.of({
-    capture: (event, context) => swallow(() => client.capture(event, context)),
-    identify: (identity) => swallow(() => client.identify(identity)),
+    capture: (event, context) =>
+      dispatch(
+        () =>
+          client.capture(event, {
+            ...(options.environment ? { environment: options.environment } : {}),
+            ...context,
+          }),
+        options.waitUntil,
+      ),
+    identify: (identity) => dispatch(() => client.identify(identity), options.waitUntil),
   });
 }
 
 export const FakeAnalyticsLive = Layer.succeed(Analytics, makeAnalytics(createNoopAnalytics()));
 
-export function analyticsLiveFromEnv(env: {
-  POSTHOG_API_KEY?: string | undefined;
-  POSTHOG_HOST?: string | undefined;
-}): Layer.Layer<Analytics> {
-  return Layer.succeed(Analytics, makeAnalytics(analyticsClientFromEnv(env)));
+/**
+ * Deployment environment label for analytics/observability. Reuses
+ * SENTRY_ENVIRONMENT (set per Alchemy stage) instead of a second variable.
+ */
+export function deploymentEnvironment(env: { SENTRY_ENVIRONMENT?: string | undefined }): string {
+  return env.SENTRY_ENVIRONMENT?.trim() || "development";
+}
+
+export function analyticsLiveFromEnv(
+  env: {
+    POSTHOG_API_KEY?: string | undefined;
+    POSTHOG_HOST?: string | undefined;
+    SENTRY_ENVIRONMENT?: string | undefined;
+  },
+  waitUntil?: BackgroundTaskRunner,
+): Layer.Layer<Analytics> {
+  return Layer.succeed(
+    Analytics,
+    makeAnalytics(analyticsClientFromEnv(env), {
+      environment: deploymentEnvironment(env),
+      ...(waitUntil ? { waitUntil } : {}),
+    }),
+  );
 }
 
 export async function runAnalyticsEffect<A>(
