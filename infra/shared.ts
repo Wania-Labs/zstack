@@ -32,7 +32,7 @@ export const publicOrigin = (name: string, devDefault: string) =>
     dev: Alchemy.ALCHEMY_DEV,
     value: Config.option(Config.String(name)),
   }).pipe(
-    Config.mapOrFail(({ dev, value }) => {
+    Config.mapEffect(({ dev, value }) => {
       const raw = Option.getOrElse(value, () => "").trim();
       if (raw === "") {
         return dev

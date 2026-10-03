@@ -1,5 +1,6 @@
 // C0 controls + DEL. Browsers strip tab/CR/LF from URLs, so `/\t/evil.com`
 // navigates to `//evil.com`.
+// oxlint-disable-next-line no-control-regex -- matching control chars is the point
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 
 const PROBE_ORIGIN = "http://internal.invalid";
