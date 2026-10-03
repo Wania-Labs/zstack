@@ -21,7 +21,7 @@ ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-agents --force --yes -
 
 Defaults to `gh:Wania-Labs/zstack` (override with `--template` or `ZSTACK_TEMPLATE`). Local paths use giget's `git:` provider (`git:$(pwd)` or `git:./`), not `file:`, and read committed HEAD. Always strips authoring paths (guide, AUTHORING, create-zstack, docs, …, including their dotfiles) via a giget `ignore` predicate plus a post-download sweep.
 
-`pnpm smoke:create` generates three clones (Acme Cloud / `@acme`; default identity + `--agent-tools=all`; `zstack-demo`) and runs each clone's install, typecheck, lint, format:check, and test.
+`pnpm smoke:create` generates clones for several identities (Acme Cloud / `@acme`, default + `--agent-tools=all`, `zstack-demo`, shortest, longest) and runs each clone's install, typecheck, lint, format:check, and test, plus quick checks for wide-character and punctuation names and `--force` into an existing directory.
 
 Requires Node.js `>=22.5`.
 
@@ -29,7 +29,7 @@ Requires Node.js `>=22.5`.
 
 | Flag                                              | Effect                                                                                                             |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `--name`                                          | Display name: letters, digits, spaces, `. ' & -`, max 32 (default: title-cased target directory basename)          |
+| `--name`                                          | Display name: letters, digits, spaces, `. ' & -`, max 32 columns (default: title-cased target directory basename)  |
 | `--scope`                                         | npm scope for workspace packages (`@acme` or `acme`; default `@<slug>`)                                            |
 | `--keep-identity`                                 | Skip personalization; keep template `zstack` / `@zstack` names                                                     |
 | `--package-manager` / `-p`                        | `pnpm` only. Clones are pnpm workspaces; other values fail with an explanation                                     |
@@ -38,6 +38,6 @@ Requires Node.js `>=22.5`.
 | `--skills=copy\|symlink\|none`                    | Install `.agent/skills` into tool skill dirs (default `copy`; `symlink` keeps one source of truth)                 |
 | `--yes` / `-y`                                    | Skip prompts                                                                                                       |
 
-Identity is validated before the template download. When `--name` is given the target directory name is not validated, so `create-zstack 2026-app --name Acme` works. After download, the clone is rewritten to the chosen name/scope (packages, Compose/Postgres, Alchemy stack, workers, queue/workflow names, brand strings) unless `--keep-identity` is set. If that fails, a directory the CLI created is removed again.
+Identity is validated before the template download. When `--name` is given the target directory name is not validated, so `create-zstack 2026-app --name Acme` works. After download, the clone is rewritten to the chosen name/scope (packages, Compose/Postgres, Alchemy stack, workers, queue/workflow names, brand strings) unless `--keep-identity` is set. If that fails, a directory the CLI created is removed again. With `--force`, existing paths the authoring sweep would delete (`docs/`, `.cursor/`, `repos/`, …) are kept.
 
 The target may be missing or an empty directory; a non-empty directory needs `--force`.
