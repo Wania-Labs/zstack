@@ -8,18 +8,19 @@ Published as `@wanialabs/create-zstack` (citty + giget + nypm). The package sour
 ## Commands
 
 ```bash
-npm create @wanialabs/zstack@latest my-app
 pnpm create @wanialabs/zstack@latest my-app
+npm create @wanialabs/zstack@latest my-app
 yarn create @wanialabs/zstack@latest my-app
 bunx @wanialabs/create-zstack@latest my-app
 
 pnpm create @wanialabs/zstack@latest my-app --template git:$(pwd) --force --yes
 pnpm create @wanialabs/zstack@latest my-app --no-install --yes
-pnpm create @wanialabs/zstack@latest my-app --yes --package-manager=npm
 pnpm create @wanialabs/zstack@latest my-app --yes --agent-tools=all
 pnpm create @wanialabs/zstack@latest my-app --yes --agent-tools=cursor,claude --mcp=defaults --skills=symlink
 pnpm create @wanialabs/zstack@latest acme --name Acme --scope acme --yes
 ```
+
+Any launcher works, but the clone is a pnpm workspace and always installs with pnpm. `--package-manager` only accepts `pnpm`. When pnpm is not on `PATH`, the CLI skips the install and tells you to run `corepack enable pnpm` (or `npm i -g pnpm`) and then `pnpm install`.
 
 Environment override: `ZSTACK_TEMPLATE`. Default remote: `gh:Wania-Labs/zstack` (public). Local paths use `git:$(pwd)` or `git:./` (not `file:`). Requires Node.js `>=22.5`. Pin `@latest` on first scaffold so `pnpm create` does not reuse a cached CLI.
 
@@ -33,7 +34,7 @@ Optional tool adapters live in `create-zstack/packs/` and are copied **after** d
 
 | Flag                       | Values                                                    | Notes                                                                                                                                      |
 | -------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--package-manager` / `-p` | `pnpm`, `npm`, `yarn`, `bun`                              | TTY prompts when omitted; `--yes` / non-TTY → `pnpm`. Template is a pnpm workspace; non-pnpm still installs via nypm                       |
+| `--package-manager` / `-p` | `pnpm`                                                    | Clones are pnpm workspaces. Other values are rejected before download; npm/yarn/bun still work as launchers                                |
 | `--agent-tools`            | `none`, `all`, or `claude,cursor,opencode,codex`          | Omit to prompt on a TTY. Non-TTY / `--yes` → none                                                                                          |
 | `--mcp`                    | `none`, `defaults`/`docs`, `account`, `all`, or comma ids | Docs: `cloudflare-docs`, `context7`, `shadcn`. Account (OAuth): `sentry`, `planetscale`, `cloudflare-bindings`, `cloudflare-observability` |
 | `--skills`                 | `copy` (default), `symlink`, `none`                       | Install `.agent/skills` into `.cursor/skills` / `.claude/skills` as a copy or relative symlink (Windows: junction)                         |
@@ -73,24 +74,51 @@ By default the scaffold personalizes the clone from the target directory basenam
 | `--scope`         | npm scope for `@scope/*` packages (default: `@<slug>`) |
 | `--keep-identity` | Leave template `zstack` / `@zstack` names alone        |
 
-Identity is validated before download. Personalization covers packages, Compose/Postgres locals, Alchemy stack, Worker names, brand copy, and related filters/imports. A full-tree residual scan aborts if unapproved `zstack` / `@zstack` remains.
+Display names use letters, digits, spaces, and `. ' & -`, start with a letter or digit, and fit in 32 columns (East Asian wide characters count as 2). The slug comes from the name and must start with a letter. Scopes are capped at 32 characters after `@`. These caps keep personalized lines inside the formatter's print width, so clones pass their own `pnpm format:check`. When `--name` is omitted the name is the title-cased directory, and an invalid directory name asks you to pass `--name`.
 
-After download, `stripAuthoringManifest` also:
+Identity is validated before download. Personalization covers packages, Compose/Postgres locals, Alchemy stack, Worker names, brand copy, and related filters/imports. A full-tree residual scan aborts if unapproved `zstack` / `@zstack` remains. It matches whole name segments (`-` and `_` are boundaries) and ignores spans that belong to the new identity, so names like `zstack-demo` scaffold.
+
+## Target directory
+
+- A missing directory is created right before download. If download, personalization, or agent packs fail, the CLI removes it, but only if it created it.
+- An existing empty directory is accepted without `--force`.
+- `--force` writes into a non-empty directory in place. Authoring paths that already existed there (your own `docs/`, `.cursor/`, `repos/`, and so on) are never deleted, rewritten, or scanned.
+- A file or dangling symlink at the target is rejected and left alone.
+
+Template download uses a function-based ignore (`isConsumerIgnored`), so dot-prefixed files under ignored directories (`docs/.npmrc`) stay out too. After download, `stripAuthoringManifest` also:
 
 - drops the `create-zstack` workspace member from `pnpm-workspace.yaml`
 - removes the root `create-zstack` and `smoke:create` scripts from `package.json`
 - removes the `create-zstack` importer from `pnpm-lock.yaml`
 - deletes `.github/workflows/docs.yml` and `.github/workflows/generate-clone.yml` (`docs.yml` is also in `CONSUMER_IGNORE`)
 - deletes `scripts/smoke-create-zstack`
+- removes authoring directories and files again (`docs/`, `.cursor/`, `create-zstack/`, `repos/`, `AUTHORING.md`, `apps/*/.cta.json`, …) unless they existed before download
+- scrubs authoring-only references from clone configs (`.oxlintrc.json` / `.oxfmtrc.json` ignores, `ci.yml` docs `paths-ignore`, the AUTHORING.md line in `product.config.ts`)
 - rewrites consumer README so it no longer points at authoring-only paths
 
-Then `applyPackageManagerChoice` may rewrite `packageManager` (and drop `pnpm-lock.yaml` for non-pnpm). `applyAgentPacks` may write selected tool adapters, MCP configs, and skills (copy or symlink).
+Then `applyAgentPacks` may write selected tool adapters, MCP configs, and skills (copy or symlink). MCP JSON is written in the formatter's style so clones stay format-clean.
 
-Keep `create-zstack/src/cli.ts` (`CONSUMER_IGNORE`), `create-zstack/src/prepare-consumer.ts`, `create-zstack/src/apply-agent-packs.ts`, `AUTHORING.md`, and this page in sync when you add authoring-only paths or pack flags.
+Keep `CONSUMER_IGNORE` and the cleanup in `create-zstack/src/prepare-consumer.ts`, `create-zstack/src/apply-agent-packs.ts`, `AUTHORING.md`, and this page in sync when you add authoring-only paths or pack flags.
 
 ## Local smoke
 
 ```bash
 pnpm smoke:create
+ZSTACK_SMOKE_VARIANTS="acme force" pnpm smoke:create
 ZSTACK_TEMPLATE=git:$(pwd) pnpm create-zstack /tmp/zstack-smoke-agents --force --yes --agent-tools=all --skills=symlink
 ```
+
+giget reads committed `HEAD`, so commit before smoking. Variants:
+
+| Variant       | What it scaffolds                                                | Checks                     |
+| ------------- | ---------------------------------------------------------------- | -------------------------- |
+| `acme`        | `--name "Acme Cloud" --scope @acme`                              | Every `ci.yml` step        |
+| `my-product`  | Default identity, `--agent-tools=all`                            | Every `ci.yml` step        |
+| `zstack-demo` | A name containing `zstack`                                       | Every `ci.yml` step        |
+| `short`       | `--name A` (scope `@a`)                                          | Every `ci.yml` step        |
+| `max`         | 32-column name, 32-character scope, `--agent-tools=all`          | Every `ci.yml` step        |
+| `wide`        | East Asian wide name                                             | Format only                |
+| `punct`       | Punctuation allowed in names                                     | Format only                |
+| `force`       | `--force` into a dir with existing `docs/`, `.cursor/`, `repos/` | Pre-existing paths survive |
+
+`ZSTACK_SMOKE_KEEP=1` keeps the temporary clones for inspection. The `Generate clone` workflow runs every variant on PRs.
