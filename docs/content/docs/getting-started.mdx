@@ -22,12 +22,11 @@ bunx @wanialabs/create-zstack@latest my-product
 # non-interactive + coding-agent packs (symlink skills into Cursor/Claude dirs):
 pnpm create @wanialabs/zstack@latest my-product --yes --agent-tools=cursor,claude --skills=symlink
 
-# pick install tool explicitly (default with --yes is pnpm):
-pnpm create @wanialabs/zstack@latest my-product --yes --package-manager=npm
-
 # name the product (default: title-cased directory + @<slug> packages):
 pnpm create @wanialabs/zstack@latest acme --name Acme --scope acme --yes
 ```
+
+Any launcher works; the clone is a pnpm workspace and always installs with pnpm. Names use letters, digits, spaces, and `. ' & -`, up to 32 characters.
 
 Pin `@latest` on first scaffold. Bare `pnpm create @wanialabs/zstack` can reuse a cached CLI.
 

@@ -1,6 +1,6 @@
 /**
  * Builds the "copy prompt" and CLI commands shown on the landing page and in docs.
- * Slug rules mirror `create-zstack/src/project-identity.ts` so the preview never
+ * Name and slug rules mirror `create-zstack/src/project-identity.ts` so the preview never
  * shows a name the CLI would reject.
  */
 
@@ -28,8 +28,35 @@ export const packageManagers = [
 export type PackageManagerId = (typeof packageManagers)[number]["id"];
 
 export const DEFAULT_PROJECT_NAME = "My Product";
-const MAX_PROJECT_SLUG_LENGTH = 54; // 63 minus the longest resource suffix, "-postgres"
-const DISPLAY_NAME = /^[\p{L}\p{N} .'&-]+$/u;
+const MAX_DISPLAY_NAME_COLUMNS = 32;
+const DISPLAY_NAME = /^[\p{L}\p{N}][\p{L}\p{N} .'&-]*$/u;
+
+/** East Asian Wide / Fullwidth ranges, matching create-zstack's displayWidth. */
+const WIDE_RANGES: ReadonlyArray<readonly [number, number]> = [
+  [0x1100, 0x115f],
+  [0x2e80, 0x303e],
+  [0x3041, 0x33ff],
+  [0x3400, 0x4dbf],
+  [0x4e00, 0x9fff],
+  [0xa000, 0xa4cf],
+  [0xa960, 0xa97f],
+  [0xac00, 0xd7a3],
+  [0xf900, 0xfaff],
+  [0xfe30, 0xfe4f],
+  [0xff00, 0xff60],
+  [0xffe0, 0xffe6],
+  [0x1b000, 0x1b2ff],
+  [0x20000, 0x3fffd],
+];
+
+function displayWidth(text: string): number {
+  let width = 0;
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0;
+    width += WIDE_RANGES.some(([lo, hi]) => code >= lo && code <= hi) ? 2 : 1;
+  }
+  return width;
+}
 
 export type ProjectName =
   | { ok: true; displayName: string; slug: string }
@@ -38,15 +65,21 @@ export type ProjectName =
 export type ValidProjectName = Extract<ProjectName, { ok: true }>;
 
 export function parseProjectName(raw: string): ProjectName {
-  const displayName = raw.trim();
+  const displayName = raw.normalize("NFC").trim();
   if (!displayName) return { ok: false, error: "Enter a project name." };
   if (!DISPLAY_NAME.test(displayName)) {
-    return { ok: false, error: "Use letters, digits, spaces, and . ' & - only." };
+    return {
+      ok: false,
+      error: "Use letters, digits, spaces, and . ' & - only, starting with a letter or digit.",
+    };
+  }
+  if (displayWidth(displayName) > MAX_DISPLAY_NAME_COLUMNS) {
+    return { ok: false, error: `Keep it to ${MAX_DISPLAY_NAME_COLUMNS} characters or fewer.` };
   }
 
   const slug = displayName
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
@@ -54,9 +87,6 @@ export function parseProjectName(raw: string): ProjectName {
 
   if (!slug) return { ok: false, error: "Include at least one ASCII letter or digit." };
   if (!/^[a-z]/.test(slug)) return { ok: false, error: "Start with a letter." };
-  if (slug.length > MAX_PROJECT_SLUG_LENGTH) {
-    return { ok: false, error: `Keep the slug to ${MAX_PROJECT_SLUG_LENGTH} characters or fewer.` };
-  }
   return { ok: true, displayName, slug };
 }
 
@@ -122,7 +152,7 @@ Read first
 - ${page("guides/coding-agents")}
 
 Steps
-1. Scaffold (Node >= 22.5 and pnpm):
+1. Scaffold (Node >= 22.5; the clone always installs with pnpm):
    ${createCommand(project, tool)}
 2. cd ${project.slug} and read AGENTS.md end to end, plus the nested AGENTS.md next to any code you touch. Treat them as the rules for this repo.
 3. Secrets: copy apps/api/.dev.vars.example to apps/api/.dev.vars. Generate one value with \`openssl rand -base64 32\` and set it as BETTER_AUTH_SECRET in both apps/api/.dev.vars (wrangler) and the root .env (Alchemy). Write it to files; shell exports do not persist between your commands. Both files are gitignored.
